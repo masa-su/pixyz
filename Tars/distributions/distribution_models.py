@@ -38,6 +38,20 @@ class DistributionModel(nn.Module):
 
         return self.dist.sample(sample_shape=sample_shape)
 
+    def _get_log_like(self, x):
+        # input : dict
+        # output : tensor
+
+        x_targets = get_dict_values(x, self.var)
+        return self.dist.log_prob(*x_targets)
+
+    def _get_forward(self, x):
+        # input : dict
+        # output : tensor
+
+        x_inputs = get_dict_values(x, self.cond_var)
+        return self.forward(*x_inputs)
+
     def sample(self, x=None, shape=None, batch_size=1, return_all=True,
                reparam=True):
         # input : tensor, list or dict
@@ -67,9 +81,7 @@ class DistributionModel(nn.Module):
             else:
                 raise ValueError("Invalid input")
 
-            x_inputs = get_dict_values(x, self.cond_var)
-
-            params = self.forward(*x_inputs)
+            params = self._get_forward(x)
             self._set_dist(params)
 
             output = {self.var[0]: self._get_sample(reparam=reparam)}
@@ -89,13 +101,10 @@ class DistributionModel(nn.Module):
             raise ValueError("Input's keys are not valid.")
 
         if len(self.cond_var) > 0:  # conditional distribution
-            x_inputs = get_dict_values(x, self.cond_var)
-            params = self.forward(*x_inputs)
+            params = self._get_forward(x)
             self._set_dist(params)
 
-        x_targets = get_dict_values(x, self.var)
-        log_like = self.dist.log_prob(*x_targets)
-
+        log_like = self._get_log_like(x)
         return mean_sum_samples(log_like)
 
     def __mul__(self, other):
