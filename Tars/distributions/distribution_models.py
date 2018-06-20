@@ -125,8 +125,7 @@ class NormalModel(DistributionModel):
         self.dist = Normal(loc=loc, scale=scale)
 
     def sample_mean(self, x):
-        x_list = get_dict_values(x, self.cond_var)
-        mu, _ = self.forward(*x_list)
+        mu, _ = self._get_forward(x)
         return mu
 
 
@@ -143,8 +142,7 @@ class BernoulliModel(DistributionModel):
         self.dist = Bernoulli(probs=probs)
 
     def sample_mean(self, x):
-        x_list = get_dict_values(x, self.cond_var)
-        mu = self.forward(*x_list)
+        mu = self._get_forward(x)
         return mu
 
 
