@@ -117,10 +117,8 @@ class NormalModel(DistributionModel):
         super(NormalModel, self).__init__(*args, **kwargs)
 
         if (loc is not None) and (scale is not None):
-            self.distribution_name = "UnitNormal"
             self._set_dist([loc, scale])
-        else:
-            self.distribution_name = "Normal"
+        self.distribution_name = "Normal"
 
     def _set_dist(self, params):
         [loc, scale] = params
@@ -138,10 +136,8 @@ class BernoulliModel(DistributionModel):
         super(BernoulliModel, self).__init__(*args, **kwargs)
 
         if probs:
-            self.distribution_name = "UnitBernoulli"
             self._set_dist(probs)
-        else:
-            self.distribution_name = "Bernoulli"
+        self.distribution_name = "Bernoulli"
 
     def _set_dist(self, probs):
         self.dist = Bernoulli(probs=probs)
