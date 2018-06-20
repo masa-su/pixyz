@@ -1,6 +1,6 @@
 from .distribution_models import (
     DistributionModel,
-    GaussianModel,
+    NormalModel,
     BernoulliModel,
 )
 from .operators import (

@@ -88,16 +88,16 @@ class DistributionModel(nn.Module):
     def __mul__(self, other):
         return MultiplyDistributionModel(self, other)
     
-class GaussianModel(DistributionModel):
+class NormalModel(DistributionModel):
 
     def __init__(self, loc=None, scale=None, *args, **kwargs):
-        super(GaussianModel, self).__init__(*args, **kwargs)
+        super(NormalModel, self).__init__(*args, **kwargs)
 
         if (loc is not None) and (scale is not None):
-            self.distribution_name = "UnitGaussian"
+            self.distribution_name = "UnitNormal"
             self.dist = self._set_dist([loc, scale])
         else:
-            self.distribution_name = "Gaussian"
+            self.distribution_name = "Normal"
     
     def _set_dist(self, params):
         [loc, scale] = params
