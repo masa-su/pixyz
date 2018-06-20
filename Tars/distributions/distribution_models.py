@@ -26,7 +26,20 @@ class DistributionModel(nn.Module):
     def _set_dist(self):
         NotImplementedError
 
-    def sample(self, x=None, shape=None, batch_size=1, return_all=True):
+    def _get_sample(self, dist, reparam=True,
+                    sample_shape=torch.Size()):
+
+        if reparam:
+            try:
+                return dist.rsample(sample_shape=sample_shape)
+            except NotImplementedError:
+                print("We can not use the reparameterization trick"
+                      "for this distribution.")
+
+        return self.dist.sample(sample_shape=sample_shape)
+
+    def sample(self, x=None, shape=None, batch_size=1, return_all=True,
+               reparam=True):
         # input : tensor, list or dict
         # output : dict
 
@@ -37,7 +50,8 @@ class DistributionModel(nn.Module):
                 sample_shape = (batch_size, self.dim)
 
             output =\
-                {self.var[0]: self.dist.rsample(sample_shape=sample_shape)}
+                {self.var[0]: self._get_sample(self.dist, reparam=reparam,
+                                               sample_shape=sample_shape)}
 
         elif x is not None:
             if type(x) is torch.Tensor:
@@ -58,7 +72,7 @@ class DistributionModel(nn.Module):
             params = self.forward(*x_inputs)
             dist = self._set_dist(params)
 
-            output = {self.var[0]: dist.rsample()}
+            output = {self.var[0]: self._get_sample(dist, reparam=reparam)}
 
             if return_all:
                 output.update(x)
