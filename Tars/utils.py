@@ -18,9 +18,9 @@ def get_dict_values(dicts, keys, return_dict=False):
     # >> [2]
     # get_dict_values(x, ["b","d"], True)
     # >> {'b': 2}
-    
+
     values = [dicts[key] for key in keys if key in list(dicts.keys())]
     if return_dict:
         return dict(zip(keys, values))
-    
+
     return values
