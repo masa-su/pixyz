@@ -26,12 +26,12 @@ class DistributionModel(nn.Module):
     def _set_dist(self):
         NotImplementedError
 
-    def _get_sample(self, dist, reparam=True,
+    def _get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
 
         if reparam:
             try:
-                return dist.rsample(sample_shape=sample_shape)
+                return self.dist.rsample(sample_shape=sample_shape)
             except NotImplementedError:
                 print("We can not use the reparameterization trick"
                       "for this distribution.")
@@ -43,17 +43,17 @@ class DistributionModel(nn.Module):
         # input : tensor, list or dict
         # output : dict
 
-        if (self.dist is not None) and (x is None):
+        if (len(self.cond_var) == 0) and (x is None):  # unconditional
             if shape:
                 sample_shape = shape
             else:
                 sample_shape = (batch_size, self.dim)
 
             output =\
-                {self.var[0]: self._get_sample(self.dist, reparam=reparam,
+                {self.var[0]: self._get_sample(reparam=reparam,
                                                sample_shape=sample_shape)}
 
-        elif x is not None:
+        elif x is not None:  # conditional
             if type(x) is torch.Tensor:
                 x = {self.cond_var[0]: x}
 
@@ -70,9 +70,9 @@ class DistributionModel(nn.Module):
             x_inputs = get_dict_values(x, self.cond_var)
 
             params = self.forward(*x_inputs)
-            dist = self._set_dist(params)
+            self._set_dist(params)
 
-            output = {self.var[0]: self._get_sample(dist, reparam=reparam)}
+            output = {self.var[0]: self._get_sample(reparam=reparam)}
 
             if return_all:
                 output.update(x)
@@ -88,17 +88,13 @@ class DistributionModel(nn.Module):
         if not set(list(x.keys())) == set(self.cond_var + self.var):
             raise ValueError("Input's keys are not valid.")
 
-        if self.dist:
-            x_targets = get_dict_values(x, self.var)
-            log_like = self.dist.log_prob(*x_targets)
-
-        else:
+        if len(self.cond_var) > 0:  # conditional distribution
             x_inputs = get_dict_values(x, self.cond_var)
             params = self.forward(*x_inputs)
+            self._set_dist(params)
 
-            dist = self._set_dist(params)
-            x_targets = get_dict_values(x, self.var)
-            log_like = dist.log_prob(*x_targets)
+        x_targets = get_dict_values(x, self.var)
+        log_like = self.dist.log_prob(*x_targets)
 
         return mean_sum_samples(log_like)
 
@@ -113,14 +109,13 @@ class NormalModel(DistributionModel):
 
         if (loc is not None) and (scale is not None):
             self.distribution_name = "UnitNormal"
-            self.dist = self._set_dist([loc, scale])
+            self._set_dist([loc, scale])
         else:
             self.distribution_name = "Normal"
 
     def _set_dist(self, params):
         [loc, scale] = params
-        dist = Normal(loc=loc, scale=scale)
-        return dist
+        self.dist = Normal(loc=loc, scale=scale)
 
     def sample_mean(self, x):
         x_list = get_dict_values(x, self.cond_var)
@@ -135,13 +130,12 @@ class BernoulliModel(DistributionModel):
 
         if probs:
             self.distribution_name = "UnitBernoulli"
-            self.dist = self._set_dist(probs)
+            self._set_dist(probs)
         else:
             self.distribution_name = "Bernoulli"
 
     def _set_dist(self, probs):
-        dist = Bernoulli(probs=probs)
-        return dist
+        self.dist = Bernoulli(probs=probs)
 
     def sample_mean(self, x):
         x_list = get_dict_values(x, self.cond_var)
