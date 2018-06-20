@@ -1,7 +1,7 @@
 from __future__ import print_function
 import torch
 from torch import nn
-from torch.distributions import Normal, Bernoulli
+from torch.distributions import Normal, Bernoulli, Categorical
 
 from ..utils import get_dict_values
 from .operators import MultiplyDistributionModel
@@ -146,6 +146,42 @@ class BernoulliModel(DistributionModel):
         return mu
 
 
+class CategoricalModel(DistributionModel):
+
+    def __init__(self, probs=None, one_hot=True, *args, **kwargs):
+        super(CategoricalModel, self).__init__(*args, **kwargs)
+
+        self.one_hot = one_hot
+        if probs:
+            self._set_dist(probs)
+        self.distribution_name = "Categorical"
+
+    def _get_sample(self, *args, **kwargs):
+        samples = super(CategoricalModel,
+                        self)._get_sample(*args, **kwargs)
+
+        if self.one_hot:
+            # convert to one-hot vectors
+            samples = torch.eye(self.dist._num_events)[samples]
+
+        return samples
+
+    def _get_log_like(self, x, *args, **kwargs):
+        [x_target] = get_dict_values(x, self.var)
+
+        # for one-hot representation
+        x_target = torch.argmax(x_target, dim=1)
+
+        return self.dist.log_prob(x_target)
+
+    def _set_dist(self, probs):
+        self.dist = Categorical(probs=probs)
+
+    def sample_mean(self, x):
+        mu = self._get_forward(x)
+        return mu
+
+
 def mean_sum_samples(samples):
     dim = samples.dim()
     if dim == 4:
@@ -154,5 +190,7 @@ def mean_sum_samples(samples):
         return torch.sum(torch.sum(samples, dim=-1), dim=-1)
     elif dim == 2:
         return torch.sum(samples, dim=-1)
+    elif dim == 1:
+        return samples
     raise ValueError("The dim of samples must be any of 2, 3, or 4,"
                      "got dim %s." % dim)
