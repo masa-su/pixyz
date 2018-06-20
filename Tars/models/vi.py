@@ -1,9 +1,7 @@
-import numpy as np
 import torch
 
-from ..utils import get_dict_values
-from ..distributions.estimate_kl import analytical_kl
 from ..models.model import Model
+
 
 class VI(Model):
     def __init__(self, p, approximate_dist,
@@ -18,7 +16,7 @@ class VI(Model):
         q_params = list(self.q.parameters())
         p_params = list(self.p.parameters())
         params = q_params + p_params
-        
+
         self.optimizer = optimizer(params, **optimizer_params)
 
     def train(self, train_x, annealing_beta=1):
@@ -51,7 +49,7 @@ class VI(Model):
         """
         samples = self.q.sample(x)
         lower_bound = self.p.log_likelihood(samples) -\
-                      self.q.log_likelihood(samples)
+            self.q.log_likelihood(samples)
 
         loss = -torch.mean(lower_bound)
 

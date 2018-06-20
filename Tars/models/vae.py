@@ -1,9 +1,8 @@
-import numpy as np
 import torch
 
-from ..utils import get_dict_values
 from ..distributions.estimate_kl import analytical_kl
 from ..models.model import Model
+
 
 class VAE(Model):
     def __init__(self, q, p, prior,
@@ -19,7 +18,7 @@ class VAE(Model):
         q_params = list(self.q.parameters())
         p_params = list(self.p.parameters())
         params = q_params + p_params
-        
+
         self.optimizer = optimizer(params, **optimizer_params)
 
     def train(self, train_x, annealing_beta=1):

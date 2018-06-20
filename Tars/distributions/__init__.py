@@ -6,3 +6,11 @@ from .distribution_models import (
 from .operators import (
     MultiplyDistributionModel,
 )
+
+
+__all__ = [
+    'DistributionModel',
+    'NormalModel',
+    'BernoulliModel',
+    'MultiplyDistributionModel',
+]
