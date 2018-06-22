@@ -6,8 +6,7 @@ from ..models.model import Model
 
 class VAE(Model):
     def __init__(self, q, p, prior,
-                 optimizer, optimizer_params={},
-                 seed=1234):
+                 optimizer, optimizer_params={}):
         super(VAE, self).__init__()
 
         self.q = q

@@ -5,8 +5,7 @@ from ..models.model import Model
 
 class ML(Model):
     def __init__(self, p,
-                 optimizer, optimizer_params={},
-                 seed=1234):
+                 optimizer, optimizer_params={}):
         super(ML, self).__init__()
 
         self.p = p
