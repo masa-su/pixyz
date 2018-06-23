@@ -1,11 +1,13 @@
 import torch
+from torch import optim
 
 from ..models.model import Model
 
 
 class ML(Model):
     def __init__(self, p,
-                 optimizer, optimizer_params={}):
+                 optimizer=optim.Adam,
+                 optimizer_params={}):
         super(ML, self).__init__()
 
         self.p = p
