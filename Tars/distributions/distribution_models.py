@@ -110,6 +110,9 @@ class DistributionModel(nn.Module):
     def __mul__(self, other):
         return MultiplyDistributionModel(self, other)
 
+    def forward(self, *input):
+        return super(DistributionModel, self).__init__(*input)
+
 
 class NormalModel(DistributionModel):
 
@@ -118,6 +121,8 @@ class NormalModel(DistributionModel):
 
         if (loc is not None) and (scale is not None):
             self._set_dist([loc, scale])
+            self.mu = loc
+            self.sigma = scale
         self.distribution_name = "Normal"
 
     def _set_dist(self, params):
@@ -136,6 +141,7 @@ class BernoulliModel(DistributionModel):
 
         if probs:
             self._set_dist(probs)
+            self.probs = probs
         self.distribution_name = "Bernoulli"
 
     def _set_dist(self, probs):
@@ -154,6 +160,7 @@ class CategoricalModel(DistributionModel):
         self.one_hot = one_hot
         if probs:
             self._set_dist(probs)
+            self.probs = probs
         self.distribution_name = "Categorical"
 
     def _get_sample(self, *args, **kwargs):

@@ -1,6 +1,6 @@
 import torch
 
-from ..distributions.estimate_kl import analytical_kl
+from ..distributions.divergences import KullbackLeibler
 from ..models.model import Model
 
 
@@ -12,6 +12,8 @@ class VAE(Model):
         self.q = q
         self.p = p
         self.prior = prior
+
+        self.kl = KullbackLeibler(q, prior)
 
         # set params and optim
         q_params = list(self.q.parameters())
@@ -52,7 +54,7 @@ class VAE(Model):
         samples = self.q.sample(x)
         log_like = self.p.log_likelihood(samples)
 
-        kl = analytical_kl(self.q, self.prior, given=[x, None])
+        kl = self.kl.estimate(x)
 
         lower_bound = torch.stack((-kl, log_like), dim=-1)
         loss = -torch.mean(log_like - annealing_beta * kl)
