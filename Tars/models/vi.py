@@ -1,12 +1,13 @@
 import torch
+from torch import optim
 
 from ..models.model import Model
 
 
 class VI(Model):
     def __init__(self, p, approximate_dist,
-                 optimizer, optimizer_params={},
-                 seed=1234):
+                 optimizer=optim.Adam,
+                 optimizer_params={}):
         super(VI, self).__init__()
 
         self.p = p

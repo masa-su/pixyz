@@ -1,7 +1,7 @@
 from __future__ import print_function
 import torch
 from torch import nn
-from torch.distributions import Normal, Bernoulli
+from torch.distributions import Normal, Bernoulli, Categorical
 
 from ..utils import get_dict_values
 from .operators import MultiplyDistributionModel
@@ -26,20 +26,48 @@ class DistributionModel(nn.Module):
     def _set_dist(self):
         NotImplementedError
 
-    def sample(self, x=None, shape=None, batch_size=1, return_all=True):
+    def _get_sample(self, reparam=True,
+                    sample_shape=torch.Size()):
+
+        if reparam:
+            try:
+                return self.dist.rsample(sample_shape=sample_shape)
+            except NotImplementedError:
+                print("We can not use the reparameterization trick"
+                      "for this distribution.")
+
+        return self.dist.sample(sample_shape=sample_shape)
+
+    def _get_log_like(self, x):
+        # input : dict
+        # output : tensor
+
+        x_targets = get_dict_values(x, self.var)
+        return self.dist.log_prob(*x_targets)
+
+    def _get_forward(self, x):
+        # input : dict
+        # output : tensor
+
+        x_inputs = get_dict_values(x, self.cond_var)
+        return self.forward(*x_inputs)
+
+    def sample(self, x=None, shape=None, batch_size=1, return_all=True,
+               reparam=True):
         # input : tensor, list or dict
         # output : dict
 
-        if (self.dist is not None) and (x is None):
+        if (len(self.cond_var) == 0) and (x is None):  # unconditional
             if shape:
                 sample_shape = shape
             else:
                 sample_shape = (batch_size, self.dim)
 
             output =\
-                {self.var[0]: self.dist.rsample(sample_shape=sample_shape)}
+                {self.var[0]: self._get_sample(reparam=reparam,
+                                               sample_shape=sample_shape)}
 
-        elif x is not None:
+        elif x is not None:  # conditional
             if type(x) is torch.Tensor:
                 x = {self.cond_var[0]: x}
 
@@ -53,12 +81,10 @@ class DistributionModel(nn.Module):
             else:
                 raise ValueError("Invalid input")
 
-            x_inputs = get_dict_values(x, self.cond_var)
+            params = self._get_forward(x)
+            self._set_dist(params)
 
-            params = self.forward(*x_inputs)
-            dist = self._set_dist(params)
-
-            output = {self.var[0]: dist.rsample()}
+            output = {self.var[0]: self._get_sample(reparam=reparam)}
 
             if return_all:
                 output.update(x)
@@ -74,22 +100,18 @@ class DistributionModel(nn.Module):
         if not set(list(x.keys())) == set(self.cond_var + self.var):
             raise ValueError("Input's keys are not valid.")
 
-        if self.dist:
-            x_targets = get_dict_values(x, self.var)
-            log_like = self.dist.log_prob(*x_targets)
+        if len(self.cond_var) > 0:  # conditional distribution
+            params = self._get_forward(x)
+            self._set_dist(params)
 
-        else:
-            x_inputs = get_dict_values(x, self.cond_var)
-            params = self.forward(*x_inputs)
-
-            dist = self._set_dist(params)
-            x_targets = get_dict_values(x, self.var)
-            log_like = dist.log_prob(*x_targets)
-
+        log_like = self._get_log_like(x)
         return mean_sum_samples(log_like)
 
     def __mul__(self, other):
         return MultiplyDistributionModel(self, other)
+
+    def forward(self, *input):
+        return super(DistributionModel, self).__init__(*input)
 
 
 class NormalModel(DistributionModel):
@@ -98,19 +120,17 @@ class NormalModel(DistributionModel):
         super(NormalModel, self).__init__(*args, **kwargs)
 
         if (loc is not None) and (scale is not None):
-            self.distribution_name = "UnitNormal"
-            self.dist = self._set_dist([loc, scale])
-        else:
-            self.distribution_name = "Normal"
+            self._set_dist([loc, scale])
+            self.mu = loc
+            self.sigma = scale
+        self.distribution_name = "Normal"
 
     def _set_dist(self, params):
         [loc, scale] = params
-        dist = Normal(loc=loc, scale=scale)
-        return dist
+        self.dist = Normal(loc=loc, scale=scale)
 
     def sample_mean(self, x):
-        x_list = get_dict_values(x, self.cond_var)
-        mu, _ = self.forward(*x_list)
+        mu, _ = self._get_forward(x)
         return mu
 
 
@@ -120,18 +140,52 @@ class BernoulliModel(DistributionModel):
         super(BernoulliModel, self).__init__(*args, **kwargs)
 
         if probs:
-            self.distribution_name = "UnitBernoulli"
-            self.dist = self._set_dist(probs)
-        else:
-            self.distribution_name = "Bernoulli"
+            self._set_dist(probs)
+            self.probs = probs
+        self.distribution_name = "Bernoulli"
 
     def _set_dist(self, probs):
-        dist = Bernoulli(probs=probs)
-        return dist
+        self.dist = Bernoulli(probs=probs)
 
     def sample_mean(self, x):
-        x_list = get_dict_values(x, self.cond_var)
-        mu = self.forward(*x_list)
+        mu = self._get_forward(x)
+        return mu
+
+
+class CategoricalModel(DistributionModel):
+
+    def __init__(self, probs=None, one_hot=True, *args, **kwargs):
+        super(CategoricalModel, self).__init__(*args, **kwargs)
+
+        self.one_hot = one_hot
+        if probs:
+            self._set_dist(probs)
+            self.probs = probs
+        self.distribution_name = "Categorical"
+
+    def _get_sample(self, *args, **kwargs):
+        samples = super(CategoricalModel,
+                        self)._get_sample(*args, **kwargs)
+
+        if self.one_hot:
+            # convert to one-hot vectors
+            samples = torch.eye(self.dist._num_events)[samples]
+
+        return samples
+
+    def _get_log_like(self, x, *args, **kwargs):
+        [x_target] = get_dict_values(x, self.var)
+
+        # for one-hot representation
+        x_target = torch.argmax(x_target, dim=1)
+
+        return self.dist.log_prob(x_target)
+
+    def _set_dist(self, probs):
+        self.dist = Categorical(probs=probs)
+
+    def sample_mean(self, x):
+        mu = self._get_forward(x)
         return mu
 
 
@@ -143,5 +197,7 @@ def mean_sum_samples(samples):
         return torch.sum(torch.sum(samples, dim=-1), dim=-1)
     elif dim == 2:
         return torch.sum(samples, dim=-1)
+    elif dim == 1:
+        return samples
     raise ValueError("The dim of samples must be any of 2, 3, or 4,"
                      "got dim %s." % dim)
