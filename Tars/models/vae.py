@@ -15,7 +15,7 @@ class VAE(Model):
         self.encoder = encoder
         self.decoder = decoder
         self.regularizer = regularizer
-        self.additional_regularizer= additional_regularizer
+        self.additional_regularizer = additional_regularizer
 
         # set params and optim
         q_params = list(self.encoder.parameters())
