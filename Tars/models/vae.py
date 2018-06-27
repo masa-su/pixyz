@@ -40,7 +40,7 @@ class VAE(Model):
         return lower_bound, loss
 
     def test(self, test_x):
-        self.p.eval()
+        self.decoder.eval()
         self.encoder.eval()
 
         with torch.no_grad():
