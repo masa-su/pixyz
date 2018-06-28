@@ -24,3 +24,9 @@ def get_dict_values(dicts, keys, return_dict=False):
         return dict(zip(keys, values))
 
     return values
+
+
+def tolist(a):
+    if type(a) is list:
+        return a
+    return [a]
