@@ -7,6 +7,7 @@ from ..utils import tolist
 
 class VAE(Model):
     def __init__(self, encoder, decoder,
+                 other_distributions=[],
                  regularizer=[],
                  optimizer=optim.Adam,
                  optimizer_params={}):
@@ -20,6 +21,10 @@ class VAE(Model):
         q_params = list(self.encoder.parameters())
         p_params = list(self.decoder.parameters())
         params = q_params + p_params
+
+        other_distributions = tolist(other_distributions)
+        for distribution in other_distributions:
+            params += list(distribution.parameters())
 
         self.optimizer = optimizer(params, **optimizer_params)
 
@@ -38,12 +43,12 @@ class VAE(Model):
 
         return lower_bound, loss
 
-    def test(self, test_x):
+    def test(self, test_x, coef=1):
         self.decoder.eval()
         self.encoder.eval()
 
         with torch.no_grad():
-            lower_bound, loss = self._elbo(test_x)
+            lower_bound, loss = self._elbo(test_x, coef)
 
         return lower_bound, loss
 

@@ -28,5 +28,10 @@ setup(
     author='Masahiro Suzuki',
     install_requires=[
         'torch',
+        'torchvision',
+        'tqdm',
+        'tensorflow',
+        'tensorboardX',
+        'tensorboard',
     ]
 )
