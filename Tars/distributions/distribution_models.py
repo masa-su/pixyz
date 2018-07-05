@@ -49,8 +49,8 @@ class DistributionModel(nn.Module):
         # input : dict
         # output : tensor
 
-        x_inputs = get_dict_values(x, self.cond_var)
-        return self.forward(*x_inputs)
+        x_inputs = get_dict_values(x, self.cond_var, True)
+        return self.forward(**x_inputs)
 
     def sample(self, x=None, shape=None, batch_size=1, return_all=True,
                reparam=True):
@@ -109,9 +109,6 @@ class DistributionModel(nn.Module):
 
     def __mul__(self, other):
         return MultiplyDistributionModel(self, other)
-
-    def forward(self, *input):
-        return super(DistributionModel, self).__init__(*input)
 
 
 class NormalModel(DistributionModel):
