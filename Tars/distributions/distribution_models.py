@@ -9,7 +9,8 @@ from .operators import MultiplyDistributionModel
 
 class DistributionModel(nn.Module):
 
-    def __init__(self, cond_var=[], var=["default_variable"], dim=1):
+    def __init__(self, cond_var=[], var=["default_variable"], dim=1,
+                 **kwargs):
         super(DistributionModel, self).__init__()
         self.cond_var = cond_var
         self.var = var
@@ -20,8 +21,11 @@ class DistributionModel(nn.Module):
                              + ','.join(cond_var) + ")"
         self.prob_factorized_text = self.prob_text
 
-        self.dist = None  # whether I'm a deep distribution or not
+        # whether I'm a distribution with constant parameters
+        self.dist = None
+
         self.dim = dim  # default: 1
+        self.params_name = []  # It depends on each distribution
 
     def _set_dist(self):
         NotImplementedError
@@ -45,19 +49,39 @@ class DistributionModel(nn.Module):
         x_targets = get_dict_values(x, self.var)
         return self.dist.log_prob(*x_targets)
 
-    def _get_forward(self, x):
-        # input : dict
-        # output : tensor
+    def _verify_input(self, x, var=None):
+        # To verify whether input is valid.
+        # input : tensor, list or dict
+        # output : dict
 
-        x_inputs = get_dict_values(x, self.cond_var, True)
-        return self.forward(**x_inputs)
+        if var is None:
+            var = self.cond_var
+
+        if type(x) is torch.Tensor:
+            x = {var[0]: x}
+
+        elif type(x) is list:
+            x = dict(zip(var, x))
+
+        elif type(x) is dict:
+            if not set(list(x.keys())) == set(var):
+                raise ValueError("Input's keys are not valid.")
+
+        else:
+            raise ValueError("The type of input is not valid, got %s."
+                             % type(x))
+
+        return x
 
     def sample(self, x=None, shape=None, batch_size=1, return_all=True,
                reparam=True):
         # input : tensor, list or dict
         # output : dict
 
-        if (len(self.cond_var) == 0) and (x is None):  # unconditional
+        if x is None:  # unconditional
+            if len(self.cond_var) != 0:
+                raise ValueError("You should set inputs or parameters")
+
             if shape:
                 sample_shape = shape
             else:
@@ -67,29 +91,16 @@ class DistributionModel(nn.Module):
                 {self.var[0]: self._get_sample(reparam=reparam,
                                                sample_shape=sample_shape)}
 
-        elif x is not None:  # conditional
-            if type(x) is torch.Tensor:
-                x = {self.cond_var[0]: x}
-
-            elif type(x) is list:
-                x = dict(zip(self.cond_var, x))
-
-            elif type(x) is dict:
-                if not set(list(x.keys())) == set(self.cond_var):
-                    raise ValueError("Input's keys are not valid.")
-
-            else:
-                raise ValueError("Invalid input")
-
-            params = self._get_forward(x)
-            self._set_dist(params)
+        else:  # conditional
+            x = self._verify_input(x)
+            params = self.forward(**x)
+            print(params)
+            self._set_dist(**params)
 
             output = {self.var[0]: self._get_sample(reparam=reparam)}
 
             if return_all:
                 output.update(x)
-        else:
-            raise ValueError("You should set inputs or paramaters")
 
         return output
 
@@ -101,11 +112,15 @@ class DistributionModel(nn.Module):
             raise ValueError("Input's keys are not valid.")
 
         if len(self.cond_var) > 0:  # conditional distribution
-            params = self._get_forward(x)
+            x = get_dict_values(x, self.cond_var, True)
+            params = self.forward(**x)
             self._set_dist(params)
 
         log_like = self._get_log_like(x)
         return mean_sum_samples(log_like)
+
+    def forward(self, **x):
+        return x
 
     def __mul__(self, other):
         return MultiplyDistributionModel(self, other)
@@ -113,22 +128,36 @@ class DistributionModel(nn.Module):
 
 class NormalModel(DistributionModel):
 
-    def __init__(self, loc=None, scale=None, *args, **kwargs):
-        super(NormalModel, self).__init__(*args, **kwargs)
-
-        if (loc is not None) and (scale is not None):
-            self._set_dist([loc, scale])
-            self.mu = loc
-            self.sigma = scale
+    def __init__(self, **kwargs):
+        self.params_keys = ["loc", "scale"]
         self.distribution_name = "Normal"
 
-    def _set_dist(self, params):
-        [loc, scale] = params
-        self.dist = Normal(loc=loc, scale=scale)
+        super(NormalModel, self).__init__(**kwargs)
+
+        self.constant_params = {}
+        self.variable_params = {}
+
+        for keys in self.params_keys:
+            if keys in kwargs.keys():
+                if type(kwargs[keys]) is str:
+                    self.variable_params[keys] = kwargs[keys]
+                else:
+                    self.constant_params[keys] = kwargs[keys]
+            else:
+                raise ValueError("You should set all parameters")
+
+        if self.variable_params == {}:
+            # pass a blank dictionary to _set_dist
+            self._set_dist(**self.variable_params)
+
+    def _set_dist(self, **params):
+        # append constant_params to variable_params
+        params.update(self.constant_params)
+        self.dist = Normal(**params)
 
     def sample_mean(self, x):
-        mu, _ = self._get_forward(x)
-        return mu
+        params = self.forward(**x)
+        return params["loc"]
 
 
 class BernoulliModel(DistributionModel):
