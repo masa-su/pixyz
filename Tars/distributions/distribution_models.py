@@ -209,7 +209,7 @@ class CategoricalModel(DistributionModel):
 
         return self.dist.log_prob(x_target)
 
-    def _set_dist(self, probs):
+    def _set_dist(self, params):
         # append constant_params to variable_params
         params.update(self.constant_params)
 
