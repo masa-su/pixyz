@@ -27,6 +27,26 @@ class DistributionModel(nn.Module):
         self.dim = dim  # default: 1
         self.params_name = []  # It depends on each distribution
 
+        self.constant_params = {}
+        self.variable_params = {}
+
+        # Check whether all parameters are set in initialization.
+        params_flag = False
+
+        for keys in self.params_keys:
+            if keys in kwargs.keys():
+                if type(kwargs[keys]) is str:
+                    self.variable_params[keys] = kwargs[keys]
+                else:
+                    self.constant_params[keys] = kwargs[keys]
+            else:
+                params_flag = True
+
+        # Set the distribution if all parameters are constant and
+        # set in initialization.
+        if params_flag is False and self.variable_params == {}:
+            self._set_dist(**self.variable_params)
+
     def _set_dist(self):
         NotImplementedError
 
@@ -132,24 +152,6 @@ class NormalModel(DistributionModel):
 
         super(NormalModel, self).__init__(**kwargs)
 
-        self.constant_params = {}
-        self.variable_params = {}
-
-        # check whether all parameters are set in initialization.
-        params_flag = False
-
-        for keys in self.params_keys:
-            if keys in kwargs.keys():
-                if type(kwargs[keys]) is str:
-                    self.variable_params[keys] = kwargs[keys]
-                else:
-                    self.constant_params[keys] = kwargs[keys]
-            else:
-                params_flag = True
-
-        if params_flag is False and self.variable_params == {}:
-            self._set_dist(**self.variable_params)
-
     def _set_dist(self, **params):
         # append constant_params to variable_params
         params.update(self.constant_params)
@@ -164,19 +166,20 @@ class NormalModel(DistributionModel):
 class BernoulliModel(DistributionModel):
 
     def __init__(self, probs=None, *args, **kwargs):
+        self.params_keys = ["probs"]
+        self.distribution_name = "Normal"
+
         super(BernoulliModel, self).__init__(*args, **kwargs)
 
-        if probs:
-            self._set_dist(probs)
-            self.probs = probs
-        self.distribution_name = "Bernoulli"
+    def _set_dist(self, **params):
+        # append constant_params to variable_params
+        params.update(self.constant_params)
 
-    def _set_dist(self, probs):
-        self.dist = Bernoulli(probs=probs)
+        self.dist = Bernoulli(**params)
 
     def sample_mean(self, x):
-        mu = self._get_forward(x)
-        return mu
+        params = self.forward(x)
+        return params["probs"]
 
 
 class CategoricalModel(DistributionModel):
@@ -185,9 +188,7 @@ class CategoricalModel(DistributionModel):
         super(CategoricalModel, self).__init__(*args, **kwargs)
 
         self.one_hot = one_hot
-        if probs:
-            self._set_dist(probs)
-            self.probs = probs
+        self.params_keys = ["probs"]
         self.distribution_name = "Categorical"
 
     def _get_sample(self, *args, **kwargs):
@@ -209,11 +210,14 @@ class CategoricalModel(DistributionModel):
         return self.dist.log_prob(x_target)
 
     def _set_dist(self, probs):
-        self.dist = Categorical(probs=probs)
+        # append constant_params to variable_params
+        params.update(self.constant_params)
+
+        self.dist = Categorical(**params)
 
     def sample_mean(self, x):
-        mu = self._get_forward(x)
-        return mu
+        params = self.forward(x)
+        return params["probs"]
 
 
 def mean_sum_samples(samples):
