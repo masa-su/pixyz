@@ -45,11 +45,10 @@ class DistributionModel(nn.Module):
         # map_dict = {"loc": "a", "scale": "scale"}
         # params = {"a": 0, "scale": 1}
         # -> params_new = {"loc":0, "scale": 1}
+        # TODO: This function tends to become slow.
 
-        params_new = {}
-        for k, v in self.map_dict.items():
-            if v in params.keys():
-                params_new[k] = params[v]
+        params_new =\
+            {k: params[v] for k, v in self.map_dict.items() if v in params.keys()}
 
         # append constant_params to map_dict
         params_new.update(self.constant_params)
