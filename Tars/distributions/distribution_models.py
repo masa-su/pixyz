@@ -45,7 +45,6 @@ class DistributionModel(nn.Module):
     def _get_log_like(self, x):
         # input : dict
         # output : tensor
-
         x_targets = get_dict_values(x, self.var)
         return self.dist.log_prob(*x_targets)
 
@@ -94,7 +93,6 @@ class DistributionModel(nn.Module):
         else:  # conditional
             x = self._verify_input(x)
             params = self.forward(**x)
-            print(params)
             self._set_dist(**params)
 
             output = {self.var[0]: self._get_sample(reparam=reparam)}
@@ -112,9 +110,9 @@ class DistributionModel(nn.Module):
             raise ValueError("Input's keys are not valid.")
 
         if len(self.cond_var) > 0:  # conditional distribution
-            x = get_dict_values(x, self.cond_var, True)
-            params = self.forward(**x)
-            self._set_dist(params)
+            _x = get_dict_values(x, self.cond_var, True)
+            params = self.forward(**_x)
+            self._set_dist(**params)
 
         log_like = self._get_log_like(x)
         return mean_sum_samples(log_like)
@@ -137,6 +135,9 @@ class NormalModel(DistributionModel):
         self.constant_params = {}
         self.variable_params = {}
 
+        # check whether all parameters are set in initialization.
+        params_flag = False
+
         for keys in self.params_keys:
             if keys in kwargs.keys():
                 if type(kwargs[keys]) is str:
@@ -144,15 +145,15 @@ class NormalModel(DistributionModel):
                 else:
                     self.constant_params[keys] = kwargs[keys]
             else:
-                raise ValueError("You should set all parameters")
+                params_flag = True
 
-        if self.variable_params == {}:
-            # pass a blank dictionary to _set_dist
+        if params_flag is False and self.variable_params == {}:
             self._set_dist(**self.variable_params)
 
     def _set_dist(self, **params):
         # append constant_params to variable_params
         params.update(self.constant_params)
+
         self.dist = Normal(**params)
 
     def sample_mean(self, x):
