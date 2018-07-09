@@ -14,6 +14,8 @@ class DistributionModel(nn.Module):
         super(DistributionModel, self).__init__()
         self.cond_var = cond_var
         self.var = var
+        self.dim = dim  # default: 1
+
         if len(cond_var) == 0:
             self.prob_text = "p(" + ','.join(var) + ")"
         else:
@@ -24,31 +26,35 @@ class DistributionModel(nn.Module):
         # whether I'm a distribution with constant parameters
         self.dist = None
 
-        self.dim = dim  # default: 1
-        self.params_name = []  # It depends on each distribution
-
         self.constant_params = {}
-        self.variable_params = {}
-
-        # Check whether all parameters are set in initialization.
-        params_flag = False
+        self.map_dict = {i: i for i in self.params_keys}
 
         for keys in self.params_keys:
             if keys in kwargs.keys():
                 if type(kwargs[keys]) is str:
-                    self.variable_params[keys] = kwargs[keys]
+                    self.map_dict[keys] = kwargs[keys]
                 else:
                     self.constant_params[keys] = kwargs[keys]
-            else:
-                params_flag = True
 
         # Set the distribution if all parameters are constant and
         # set in initialization.
-        if params_flag is False and self.variable_params == {}:
-            self._set_dist(**self.variable_params)
+        if len(self.constant_params) == len(self.params_keys):
+            self._set_dist(**{})
 
-    def _set_dist(self):
-        NotImplementedError
+    def _set_dist(self, **params):
+        # map_dict = {"loc": "a", "scale": "scale"}
+        # params = {"a": 0, "scale": 1}
+        # -> params_new = {"loc":0, "scale": 1}
+
+        params_new = {}
+        for k, v in self.map_dict.items():
+            if v in params.keys():
+                params_new[k] = params[v]
+
+        # append constant_params to map_dict
+        params_new.update(self.constant_params)
+
+        self.dist = self.Distribution_torch(**params_new)
 
     def _get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
@@ -149,14 +155,9 @@ class NormalModel(DistributionModel):
     def __init__(self, **kwargs):
         self.params_keys = ["loc", "scale"]
         self.distribution_name = "Normal"
+        self.Distribution_torch = Normal
 
         super(NormalModel, self).__init__(**kwargs)
-
-    def _set_dist(self, **params):
-        # append constant_params to variable_params
-        params.update(self.constant_params)
-
-        self.dist = Normal(**params)
 
     def sample_mean(self, x):
         params = self.forward(**x)
@@ -165,17 +166,12 @@ class NormalModel(DistributionModel):
 
 class BernoulliModel(DistributionModel):
 
-    def __init__(self, probs=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.params_keys = ["probs"]
-        self.distribution_name = "Normal"
+        self.distribution_name = "Bernoulli"
+        self.Distribution_torch = Bernoulli
 
         super(BernoulliModel, self).__init__(*args, **kwargs)
-
-    def _set_dist(self, **params):
-        # append constant_params to variable_params
-        params.update(self.constant_params)
-
-        self.dist = Bernoulli(**params)
 
     def sample_mean(self, x):
         params = self.forward(x)
@@ -184,12 +180,13 @@ class BernoulliModel(DistributionModel):
 
 class CategoricalModel(DistributionModel):
 
-    def __init__(self, probs=None, one_hot=True, *args, **kwargs):
+    def __init__(self, one_hot=True, *args, **kwargs):
         super(CategoricalModel, self).__init__(*args, **kwargs)
 
         self.one_hot = one_hot
         self.params_keys = ["probs"]
         self.distribution_name = "Categorical"
+        self.Distribution_torch = Categorical
 
     def _get_sample(self, *args, **kwargs):
         samples = super(CategoricalModel,
@@ -208,12 +205,6 @@ class CategoricalModel(DistributionModel):
         x_target = torch.argmax(x_target, dim=1)
 
         return self.dist.log_prob(x_target)
-
-    def _set_dist(self, params):
-        # append constant_params to variable_params
-        params.update(self.constant_params)
-
-        self.dist = Categorical(**params)
 
     def sample_mean(self, x):
         params = self.forward(x)
