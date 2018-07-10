@@ -1,18 +1,18 @@
-from .distribution_models import (
-    DistributionModel,
-    NormalModel,
-    BernoulliModel,
-    CategoricalModel,
+from .distributions import (
+    Distribution,
+    Normal,
+    Bernoulli,
+    Categorical,
 )
 from .operators import (
-    MultiplyDistributionModel,
+    MultiplyDistribution,
 )
 
 
 __all__ = [
-    'DistributionModel',
-    'NormalModel',
-    'BernoulliModel',
-    'CategoricalModel',
-    'MultiplyDistributionModel',
+    'Distribution',
+    'Normal',
+    'Bernoulli',
+    'Categorical',
+    'MultiplyDistribution',
 ]

@@ -1,17 +1,19 @@
 from __future__ import print_function
 import torch
 from torch import nn
-from torch.distributions import Normal, Bernoulli, Categorical
+from torch.distributions import Normal as NormalTorch
+from torch.distributions import Bernoulli as BernoulliTorch
+from torch.distributions import Categorical as CategoricalTorch
 
 from ..utils import get_dict_values
-from .operators import MultiplyDistributionModel
+from .operators import MultiplyDistribution
 
 
-class DistributionModel(nn.Module):
+class Distribution(nn.Module):
 
     def __init__(self, cond_var=[], var=["default_variable"], dim=1,
                  **kwargs):
-        super(DistributionModel, self).__init__()
+        super(Distribution, self).__init__()
         self.cond_var = cond_var
         self.var = var
         self.dim = dim  # default: 1
@@ -45,7 +47,7 @@ class DistributionModel(nn.Module):
         # append constant_params to map_dict
         params.update(self.constant_params)
 
-        self.dist = self.Distribution_torch(**params)
+        self.dist = self.DistributionTorch(**params)
 
     def _get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
@@ -135,59 +137,66 @@ class DistributionModel(nn.Module):
         return mean_sum_samples(log_like)
 
     def forward(self, **x):
-        # Example:
-        # map_dict = {"a": "loc"}
-        # x = {"a": 0}
-        # -> output = {"loc": 0}
-        # TODO: This function tends to become slow.
+        """
+        Examples
+        --------
+        >> > distribution.map_dict = {"a": "loc"}
+        >> > x = {"a": 0}
+        >> > output = distribution.forward(x)
+        >> > {"loc": 0}
+        """
 
         output = {self.map_dict[key]: value for key, value in x.items()}
         return output
 
+    def sample_mean(self):
+        NotImplementedError
+
     def __mul__(self, other):
-        return MultiplyDistributionModel(self, other)
+        return MultiplyDistribution(self, other)
 
 
-class NormalModel(DistributionModel):
+class Normal(Distribution):
 
     def __init__(self, **kwargs):
         self.params_keys = ["loc", "scale"]
         self.distribution_name = "Normal"
-        self.Distribution_torch = Normal
+        self.DistributionTorch = NormalTorch
 
-        super(NormalModel, self).__init__(**kwargs)
+        super(Normal, self).__init__(**kwargs)
 
     def sample_mean(self, x):
         params = self.forward(**x)
         return params["loc"]
 
 
-class BernoulliModel(DistributionModel):
+class Bernoulli(Distribution):
 
     def __init__(self, *args, **kwargs):
         self.params_keys = ["probs"]
         self.distribution_name = "Bernoulli"
-        self.Distribution_torch = Bernoulli
+        self.DistributionTorch = BernoulliTorch
 
-        super(BernoulliModel, self).__init__(*args, **kwargs)
+        super(Bernoulli, self).__init__(*args, **kwargs)
 
     def sample_mean(self, x):
         params = self.forward(x)
         return params["probs"]
 
 
-class CategoricalModel(DistributionModel):
+class Categorical(Distribution):
 
     def __init__(self, one_hot=True, *args, **kwargs):
-        super(CategoricalModel, self).__init__(*args, **kwargs)
+        super(Categorical, self).__init__(*args, **kwargs)
 
         self.one_hot = one_hot
         self.params_keys = ["probs"]
         self.distribution_name = "Categorical"
-        self.Distribution_torch = Categorical
+        self.DistributionTorch = CategoricalTorch
+        # TODO: use OneHotCategorical
 
     def _get_sample(self, *args, **kwargs):
-        samples = super(CategoricalModel,
+        samples = super(Categorical,
                         self)._get_sample(*args, **kwargs)
 
         if self.one_hot:
