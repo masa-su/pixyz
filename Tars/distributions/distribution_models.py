@@ -27,12 +27,12 @@ class DistributionModel(nn.Module):
         self.dist = None
 
         self.constant_params = {}
-        self.map_dict = {i: i for i in self.params_keys}
+        self.map_dict = {}
 
         for keys in self.params_keys:
             if keys in kwargs.keys():
                 if type(kwargs[keys]) is str:
-                    self.map_dict[keys] = kwargs[keys]
+                    self.map_dict[kwargs[keys]] = keys
                 else:
                     self.constant_params[keys] = kwargs[keys]
 
@@ -42,18 +42,10 @@ class DistributionModel(nn.Module):
             self._set_dist(**{})
 
     def _set_dist(self, **params):
-        # map_dict = {"loc": "a", "scale": "scale"}
-        # params = {"a": 0, "scale": 1}
-        # -> params_new = {"loc":0, "scale": 1}
-        # TODO: This function tends to become slow.
-
-        params_new =\
-            {k: params[v] for k, v in self.map_dict.items() if v in params.keys()}
-
         # append constant_params to map_dict
-        params_new.update(self.constant_params)
+        params.update(self.constant_params)
 
-        self.dist = self.Distribution_torch(**params_new)
+        self.dist = self.Distribution_torch(**params)
 
     def _get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
@@ -143,7 +135,14 @@ class DistributionModel(nn.Module):
         return mean_sum_samples(log_like)
 
     def forward(self, **x):
-        return x
+        # Example:
+        # map_dict = {"a": "loc"}
+        # x = {"a": 0}
+        # -> output = {"loc": 0}
+        # TODO: This function tends to become slow.
+
+        output = {self.map_dict[key]: value for key, value in x.items()}
+        return output
 
     def __mul__(self, other):
         return MultiplyDistributionModel(self, other)
