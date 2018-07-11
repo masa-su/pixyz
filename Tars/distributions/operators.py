@@ -3,25 +3,25 @@ from torch import nn
 from ..utils import get_dict_values
 
 
-class MultiplyDistributionModel(nn.Module):
+class MultiplyDistribution(nn.Module):
     """
     p(x,y|z) = p(x|z,y)p(y|z)
 
-    Paramaters
+    Parameters
     -------
-    A : DistributionModel or MultiplyDistributionModel
-    B : DistributionModel or MultiplyDistributionModel
+    A : Distribution or MultiplyDistribution
+    B : Distribution or MultiplyDistribution
 
     Examples
     --------
-    >>> p_multi = MultipleDistributionModel([A, B])
+    >>> p_multi = MultipleDistribution([A, B])
     >>> p_multi = A * B
 
     TODO: how about add_module?
     """
 
     def __init__(self, A, B):
-        super(MultiplyDistributionModel, self).__init__()
+        super(MultiplyDistribution, self).__init__()
         """
         Set parents and children
         If "inherited variables" are exist (which means p(e|c)p(c|a,b)),
@@ -180,4 +180,4 @@ class MultiplyDistributionModel(nn.Module):
         NotImplementedError
 
     def __mul__(self, other):
-        return MultiplyDistributionModel(self, other)
+        return MultiplyDistribution(self, other)
