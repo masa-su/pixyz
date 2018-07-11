@@ -39,15 +39,10 @@ class Distribution(nn.Module):
                     self.constant_params[keys] = kwargs[keys]
 
         # Set the distribution if all parameters are constant and
-        # set in initialization.
+        # set at initialization.
         if len(self.constant_params) == len(self.params_keys):
-            self._set_dist(**{})
-
-    def _set_dist(self, **params):
-        # append constant_params to map_dict
-        params.update(self.constant_params)
-
-        self.dist = self.DistributionTorch(**params)
+            params = self.get_params()
+            self.dist = self.DistributionTorch(**params)
 
     def _get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
@@ -64,6 +59,7 @@ class Distribution(nn.Module):
     def _get_log_like(self, x):
         # input : dict
         # output : tensor
+
         x_targets = get_dict_values(x, self.var)
         return self.dist.log_prob(*x_targets)
 
@@ -91,6 +87,27 @@ class Distribution(nn.Module):
 
         return x
 
+    def get_params(self, **params):
+        """
+        Examples
+        --------
+        >> > print(dist_1.prob_text, dist_1.distribution_name)
+        >> > p(x) Normal
+        >> > dist_1.get_params()
+        >> > {"loc": 0, "scale": 1}
+        >> > print(dist_2.prob_text, dist_2.distribution_name)
+        >> > p(x|z) Normal
+        >> > dist_1.get_params({"z": 1})
+        >> > {"loc": 0, "scale": 1}
+        """
+
+        outputs = self.forward(**params)
+
+        # append constant_params to map_dict
+        outputs.update(self.constant_params)
+
+        return outputs
+
     def sample(self, x=None, shape=None, batch_size=1, return_all=True,
                reparam=True):
         # input : tensor, list or dict
@@ -105,21 +122,21 @@ class Distribution(nn.Module):
             else:
                 sample_shape = (batch_size, self.dim)
 
-            output =\
+            outputs =\
                 {self.var[0]: self._get_sample(reparam=reparam,
                                                sample_shape=sample_shape)}
 
         else:  # conditional
             x = self._verify_input(x)
-            params = self.forward(**x)
-            self._set_dist(**params)
+            params = self.get_params(**x)
+            self.dist = self.DistributionTorch(**params)
 
-            output = {self.var[0]: self._get_sample(reparam=reparam)}
+            outputs = {self.var[0]: self._get_sample(reparam=reparam)}
 
             if return_all:
-                output.update(x)
+                outputs.update(x)
 
-        return output
+        return outputs
 
     def log_likelihood(self, x):
         # input : dict
@@ -130,8 +147,8 @@ class Distribution(nn.Module):
 
         if len(self.cond_var) > 0:  # conditional distribution
             _x = get_dict_values(x, self.cond_var, True)
-            params = self.forward(**_x)
-            self._set_dist(**params)
+            params = self.get_params(**_x)
+            self.dist = self.DistributionTorch(**params)
 
         log_like = self._get_log_like(x)
         return mean_sum_samples(log_like)
@@ -140,9 +157,10 @@ class Distribution(nn.Module):
         """
         Examples
         --------
-        >> > distribution.map_dict = {"a": "loc"}
+        >> > distribution.map_dict
+        >> > {"a": "loc"}
         >> > x = {"a": 0}
-        >> > output = distribution.forward(x)
+        >> > distribution.forward(x)
         >> > {"loc": 0}
         """
 
@@ -165,7 +183,7 @@ class Normal(Distribution):
 
         super(Normal, self).__init__(**kwargs)
 
-    def sample_mean(self, x):
+    def sample_mean(self, **x):
         params = self.forward(**x)
         return params["loc"]
 
@@ -179,21 +197,21 @@ class Bernoulli(Distribution):
 
         super(Bernoulli, self).__init__(*args, **kwargs)
 
-    def sample_mean(self, x):
-        params = self.forward(x)
+    def sample_mean(self, **x):
+        params = self.forward(**x)
         return params["probs"]
 
 
 class Categorical(Distribution):
 
     def __init__(self, one_hot=True, *args, **kwargs):
-        super(Categorical, self).__init__(*args, **kwargs)
-
         self.one_hot = one_hot
         self.params_keys = ["probs"]
         self.distribution_name = "Categorical"
         self.DistributionTorch = CategoricalTorch
         # TODO: use OneHotCategorical
+
+        super(Categorical, self).__init__(*args, **kwargs)
 
     def _get_sample(self, *args, **kwargs):
         samples = super(Categorical,
@@ -213,8 +231,8 @@ class Categorical(Distribution):
 
         return self.dist.log_prob(x_target)
 
-    def sample_mean(self, x):
-        params = self.forward(x)
+    def sample_mean(self, **x):
+        params = self.forward(**x)
         return params["probs"]
 
 
