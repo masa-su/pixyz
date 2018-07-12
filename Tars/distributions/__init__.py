@@ -8,6 +8,10 @@ from .operators import (
     MultiplyDistribution,
 )
 
+from .flows import (
+    PlanarFlow,
+)
+
 
 __all__ = [
     'Distribution',
@@ -15,4 +19,5 @@ __all__ = [
     'Bernoulli',
     'Categorical',
     'MultiplyDistribution',
+    'PlanarFlow',
 ]
