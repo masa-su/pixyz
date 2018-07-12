@@ -1,6 +1,4 @@
-import numpy as np
-
-_EPSILON = np.finfo(np.float32).eps
+_EPSILON = 1e-7
 
 
 def set_epsilon(eps):
