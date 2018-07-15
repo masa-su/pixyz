@@ -8,18 +8,23 @@ import torch.nn.functional as F
 from ..utils import get_dict_values, epsilon
 
 
-class PlanarFlow(nn.Module):
-    def __init__(self, dist, in_features, num_layers=1,
-                 var=[]):
-        super(PlanarFlow, self).__init__()
+class Flow(nn.Module):
+    def __init__(self, dist, in_features, num_layers=1, var=[],
+                 flow_layer=None, flow_name=None):
+        super(Flow, self).__init__()
         self.dist = dist
         self.var = var
         self.cond_var = self.dist.cond_var
         self.var_dist = self.dist.var
-        self.flows = nn.ModuleList([PlanarFlowLayer(in_features)
+        self.flows = nn.ModuleList([flow_layer(in_features)
                                     for _ in range(num_layers)])
+        self.flow_name = flow_name
 
-        self.prob_text = "Flow(" + ','.join(var) + ";" + dist.prob_text + ")"
+        self.prob_text = "{}({} ; {})".format(
+            flow_name,
+            ','.join(var),
+            dist.prob_text
+        )
         self.prob_factorized_text = self.prob_text
 
     def forward(self, x, jacobian=False):
@@ -52,6 +57,16 @@ class PlanarFlow(nn.Module):
         logdet_jacobian = self.forward(x_values[0], jacobian=True)
 
         return log_dist - logdet_jacobian
+
+
+class PlanarFlow(Flow):
+    def __init__(self, dist, in_features, num_layers=1,
+                 var=[]):
+        super(PlanarFlow, self).__init__(dist, in_features,
+                                         num_layers=num_layers,
+                                         var=var,
+                                         flow_layer=PlanarFlowLayer,
+                                         flow_name="PlanarFlow")
 
 
 class PlanarFlowLayer(nn.Module):
