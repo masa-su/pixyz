@@ -13,6 +13,10 @@ from .flows import (
     PlanarFlow,
 )
 
+from .real_nvp import (
+    RealNVP,
+)
+
 
 __all__ = [
     'Distribution',
@@ -22,4 +26,5 @@ __all__ = [
     'Categorical',
     'MultiplyDistribution',
     'PlanarFlow',
+    'RealNVP',
 ]
