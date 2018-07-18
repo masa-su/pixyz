@@ -42,9 +42,12 @@ class Flow(nn.Module):
 
         return output
 
-    def sample(self, x):
-        samples = self.dist.sample(x)
-        _samples = get_dict_values(samples, self.var_dist)
+    def sample(self, x=None, only_flow=False, **kwargs):
+        if only_flow:
+            _samples = get_dict_values(x, self.var)
+        else:
+            samples = self.dist.sample(x, **kwargs)
+            _samples = get_dict_values(samples, self.var_dist)
         output = self.forward(_samples[0], jacobian=False)
 
         samples[self.var[0]] = output

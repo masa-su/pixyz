@@ -1,5 +1,6 @@
 from .distributions import (
     Distribution,
+    CustomLikelihoodDistribution,
     Normal,
     Bernoulli,
     Categorical,
@@ -15,6 +16,7 @@ from .flows import (
 
 __all__ = [
     'Distribution',
+    'CustomLikelihoodDistribution',
     'Normal',
     'Bernoulli',
     'Categorical',
