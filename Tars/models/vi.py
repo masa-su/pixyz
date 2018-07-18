@@ -20,12 +20,12 @@ class VI(Model):
 
         self.optimizer = optimizer(params, **optimizer_params)
 
-    def train(self, train_x, annealing_beta=1):
+    def train(self, train_x=None, **kwargs):
         self.p.train()
         self.q.train()
 
         self.optimizer.zero_grad()
-        lower_bound, loss = self._elbo(train_x)
+        lower_bound, loss = self._elbo(train_x, **kwargs)
 
         # backprop
         loss.backward()
@@ -35,20 +35,20 @@ class VI(Model):
 
         return lower_bound, loss
 
-    def test(self, test_x):
+    def test(self, test_x=None, **kwargs):
         self.p.eval()
         self.q.eval()
 
         with torch.no_grad():
-            lower_bound, loss = self._elbo(test_x)
+            lower_bound, loss = self._elbo(test_x, **kwargs)
 
         return lower_bound, loss
 
-    def _elbo(self, x):
+    def _elbo(self, x, **kwargs):
         """
         The evidence lower bound
         """
-        samples = self.q.sample(x)
+        samples = self.q.sample(x, **kwargs)
         lower_bound = self.p.log_likelihood(samples) -\
             self.q.log_likelihood(samples)
 

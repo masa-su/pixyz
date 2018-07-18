@@ -11,7 +11,7 @@ from .operators import MultiplyDistribution
 
 class Distribution(nn.Module):
 
-    def __init__(self, cond_var=[], var=["default_variable"], dim=1,
+    def __init__(self, cond_var=[], var=["x"], dim=1,
                  **kwargs):
         super(Distribution, self).__init__()
         self.cond_var = cond_var
@@ -19,10 +19,14 @@ class Distribution(nn.Module):
         self.dim = dim  # default: 1
 
         if len(cond_var) == 0:
-            self.prob_text = "p(" + ','.join(var) + ")"
+            self.prob_text = "p({})".format(
+                ','.join(var)
+            )
         else:
-            self.prob_text = "p(" + ','.join(var) + "|"\
-                             + ','.join(cond_var) + ")"
+            self.prob_text = "p({}|{})".format(
+                ','.join(var),
+                ','.join(cond_var)
+            )
         self.prob_factorized_text = self.prob_text
 
         # whether I'm a distribution with constant parameters
@@ -41,8 +45,11 @@ class Distribution(nn.Module):
         # Set the distribution if all parameters are constant and
         # set at initialization.
         if len(self.constant_params) == len(self.params_keys):
-            params = self.get_params()
-            self.dist = self.DistributionTorch(**params)
+            self._set_distribution()
+
+    def _set_distribution(self, x={}):
+        params = self.get_params(**x)
+        self.dist = self.DistributionTorch(**params)
 
     def _get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
@@ -101,12 +108,12 @@ class Distribution(nn.Module):
         >> > {"loc": 0, "scale": 1}
         """
 
-        outputs = self.forward(**params)
+        output = self.forward(**params)
 
         # append constant_params to map_dict
-        outputs.update(self.constant_params)
+        output.update(self.constant_params)
 
-        return outputs
+        return output
 
     def sample(self, x=None, shape=None, batch_size=1, return_all=True,
                reparam=True):
@@ -122,33 +129,31 @@ class Distribution(nn.Module):
             else:
                 sample_shape = (batch_size, self.dim)
 
-            outputs =\
+            output =\
                 {self.var[0]: self._get_sample(reparam=reparam,
                                                sample_shape=sample_shape)}
 
         else:  # conditional
             x = self._verify_input(x)
-            params = self.get_params(**x)
-            self.dist = self.DistributionTorch(**params)
+            self._set_distribution(x)
 
-            outputs = {self.var[0]: self._get_sample(reparam=reparam)}
+            output = {self.var[0]: self._get_sample(reparam=reparam)}
 
             if return_all:
-                outputs.update(x)
+                output.update(x)
 
-        return outputs
+        return output
 
     def log_likelihood(self, x):
         # input : dict
         # output : dict
 
-        if not set(list(x.keys())) == set(self.cond_var + self.var):
+        if not set(list(x.keys())) >= set(self.cond_var + self.var):
             raise ValueError("Input's keys are not valid.")
 
         if len(self.cond_var) > 0:  # conditional distribution
             _x = get_dict_values(x, self.cond_var, True)
-            params = self.get_params(**_x)
-            self.dist = self.DistributionTorch(**params)
+            self._set_distribution(_x)
 
         log_like = self._get_log_like(x)
         return mean_sum_samples(log_like)
@@ -174,6 +179,38 @@ class Distribution(nn.Module):
         return MultiplyDistribution(self, other)
 
 
+class CustomLikelihoodDistribution(Distribution):
+
+    def __init__(self, var=["x"],  likelihood=None,
+                 **kwargs):
+        if likelihood is None:
+            raise ValueError("You should set the likelihood"
+                             " of this distribution.")
+        self.likelihood = likelihood
+        self.params_keys = []
+        self.distribution_name = "Custom Distribution"
+        self.DistributionTorch = None
+
+        super(CustomLikelihoodDistribution,
+              self).__init__(var=var, cond_var=[], **kwargs)
+
+    def _set_distribution(self, x={}):
+        pass
+
+    def _get_log_like(self, x):
+        # input : dict
+        # output : tensor
+
+        x_targets = get_dict_values(x, self.var)
+        return torch.log(self.likelihood(x_targets[0]))
+
+    def get_params(self, **kwargs):
+        pass
+
+    def sample(self, **kwargs):
+        pass
+
+
 class Normal(Distribution):
 
     def __init__(self, **kwargs):
@@ -183,7 +220,7 @@ class Normal(Distribution):
 
         super(Normal, self).__init__(**kwargs)
 
-    def sample_mean(self, **x):
+    def sample_mean(self, x):
         params = self.forward(**x)
         return params["loc"]
 
@@ -197,7 +234,7 @@ class Bernoulli(Distribution):
 
         super(Bernoulli, self).__init__(*args, **kwargs)
 
-    def sample_mean(self, **x):
+    def sample_mean(self, x):
         params = self.forward(**x)
         return params["probs"]
 
@@ -231,7 +268,7 @@ class Categorical(Distribution):
 
         return self.dist.log_prob(x_target)
 
-    def sample_mean(self, **x):
+    def sample_mean(self, x):
         params = self.forward(**x)
         return params["probs"]
 
