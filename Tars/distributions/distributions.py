@@ -3,7 +3,8 @@ import torch
 from torch import nn
 from torch.distributions import Normal as NormalTorch
 from torch.distributions import Bernoulli as BernoulliTorch
-from torch.distributions import Categorical as CategoricalTorch
+from torch.distributions.one_hot_categorical\
+    import OneHotCategorical as CategoricalTorch
 
 from ..utils import get_dict_values
 from .operators import MultiplyDistribution
@@ -246,27 +247,8 @@ class Categorical(Distribution):
         self.params_keys = ["probs"]
         self.distribution_name = "Categorical"
         self.DistributionTorch = CategoricalTorch
-        # TODO: use OneHotCategorical
 
         super(Categorical, self).__init__(*args, **kwargs)
-
-    def _get_sample(self, *args, **kwargs):
-        samples = super(Categorical,
-                        self)._get_sample(*args, **kwargs)
-
-        if self.one_hot:
-            # convert to one-hot vectors
-            samples = torch.eye(self.dist._num_events)[samples]
-
-        return samples
-
-    def _get_log_like(self, x, *args, **kwargs):
-        [x_target] = get_dict_values(x, self.var)
-
-        # for one-hot representation
-        x_target = torch.argmax(x_target, dim=1)
-
-        return self.dist.log_prob(x_target)
 
     def sample_mean(self, x):
         params = self.forward(**x)
