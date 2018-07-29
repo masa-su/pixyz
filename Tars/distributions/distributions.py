@@ -95,7 +95,8 @@ class Distribution(nn.Module):
         x_targets = get_dict_values(x, self.var)
         log_like = self.dist.log_prob(*x_targets)
         if self.sequential:
-            return self._deflatten_sequential(log_like)
+            log_like = self._deflatten_sequential(log_like)
+            return torch.sum(log_like, dim=0)
         else:
             return log_like
 
