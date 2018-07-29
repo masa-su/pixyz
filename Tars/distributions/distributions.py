@@ -13,11 +13,13 @@ from .operators import MultiplyDistribution
 class Distribution(nn.Module):
 
     def __init__(self, cond_var=[], var=["x"], dim=1,
-                 **kwargs):
+                 sequential=False, **kwargs):
         super(Distribution, self).__init__()
         self.cond_var = cond_var
         self.var = var
         self.dim = dim  # default: 1
+
+        self.sequential = sequential
 
         if len(cond_var) == 0:
             self.prob_text = "p({})".format(
@@ -48,28 +50,54 @@ class Distribution(nn.Module):
         if len(self.constant_params) == len(self.params_keys):
             self._set_distribution()
 
+    def _flatten_sequential(self, params):
+        for k, v in params.items():
+            v_shape = v.shape
+            v.reshape([v_shape[0] * v_shape[1]] + list(v_shape[2:]))
+            params[k] = v
+
+        self.seq_batch_shape = list(v_shape[:2])
+        return params
+
+    def _deflatten_sequential(self, params):
+        return params.reshape(self.seq_batch_shape + list(params.shape[2:]))
+
     def _set_distribution(self, x={}):
         params = self.get_params(**x)
+        if self.sequential:
+            params = self._flatten_sequential(params)
         self.dist = self.DistributionTorch(**params)
 
     def _get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
 
         if reparam:
-            try:
-                return self.dist.rsample(sample_shape=sample_shape)
-            except NotImplementedError:
-                print("We can not use the reparameterization trick"
-                      "for this distribution.")
+            samples = self.dist.rsample(sample_shape=sample_shape)
+            if self.sequential:
+                return self._deflatten_sequential(samples)
 
-        return self.dist.sample(sample_shape=sample_shape)
+            else:
+                return samples
+
+        else:
+            samples = self.dist.sample(sample_shape=sample_shape)
+
+            if self.sequential:
+                return self._deflatten_sequential(samples)
+
+            else:
+                return samples
 
     def _get_log_like(self, x):
         # input : dict
         # output : tensor
 
         x_targets = get_dict_values(x, self.var)
-        return self.dist.log_prob(*x_targets)
+        log_like = self.dist.log_prob(*x_targets)
+        if self.sequential:
+            return self._deflatten_sequential(log_like)
+        else:
+            return log_like
 
     def _verify_input(self, x, var=None):
         # To verify whether input is valid.
