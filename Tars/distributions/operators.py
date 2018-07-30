@@ -73,7 +73,8 @@ class MultiplyDistribution(nn.Module):
             if len(self.parents_var.cond_var) > 0:
                 raise ValueError("You should set inputs.")
 
-            parents_output = self.parents_var.sample(batch_size=batch_size)
+            parents_output = self.parents_var.sample(batch_size=batch_size,
+                                                     **kwargs)
 
         else:
             if batch_size == 1:
@@ -89,10 +90,10 @@ class MultiplyDistribution(nn.Module):
                 parents_input = get_dict_values(
                     x, self.parents_var.cond_var, return_dict=True)
                 parents_output = self.parents_var.sample(
-                    parents_input, return_all=False)
+                    parents_input, return_all=False, **kwargs)
             else:
                 parents_output = self.parents_var.sample(
-                    batch_size=batch_size, return_all=False)
+                    batch_size=batch_size, return_all=False, **kwargs)
 
         # sample from the child distribution
         children_input_inh = get_dict_values(
@@ -107,7 +108,7 @@ class MultiplyDistribution(nn.Module):
             children_input.update(children_input_inh)
 
         children_output = self.children_var.sample(
-            children_input, return_all=False)
+            children_input, return_all=False, **kwargs)
 
         output = parents_output
         output.update(children_output)
@@ -162,7 +163,7 @@ class MultiplyDistribution(nn.Module):
         output = self.children_var.sample_mean(children_input)
         return output
 
-    def log_likelihood(self, x):
+    def log_likelihood(self, x, **kwargs):
         # input : dict
         # output : dict
 
@@ -173,8 +174,8 @@ class MultiplyDistribution(nn.Module):
             x, self.children_var.cond_var + self.children_var.var,
             return_dict=True)
 
-        return self.parents_var.log_likelihood(parents_x) +\
-            self.children_var.log_likelihood(children_x)
+        return self.parents_var.log_likelihood(parents_x, **kwargs) +\
+            self.children_var.log_likelihood(children_x, **kwargs)
 
     def forward(self, *args, **kwargs):
         NotImplementedError
