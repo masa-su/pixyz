@@ -6,7 +6,8 @@ from ..utils import get_dict_values
 
 class SimilarityLoss(object):
     """
-    Learning Modality-Invariant Representations for Speech and Images (Leidai et. al.)
+    Learning Modality-Invariant Representations
+    for Speech and Images (Leidai et. al.)
     """
     def __init__(self, p1, p2, var=["z"], margin=0):
         self.p1 = p1
