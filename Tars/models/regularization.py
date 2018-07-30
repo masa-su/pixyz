@@ -56,9 +56,9 @@ class Regularization(Model):
         for i, reg in enumerate(self.regularizer):
             _reg = reg.estimate(x)
             lower_bound.append(-_reg)
-            reg_loss += reg_coef[i] * _reg
+            reg_loss += reg_coef[i] * _reg.mean()
 
         lower_bound = torch.stack(lower_bound, dim=-1)
-        loss = torch.mean(reg_loss)
+        loss = reg_loss
 
         return lower_bound, loss
