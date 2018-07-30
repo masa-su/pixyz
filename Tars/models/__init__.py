@@ -6,4 +6,5 @@ __all__ = [
     'ML',
     'VAE',
     'VI',
+    'Regularization'
 ]
