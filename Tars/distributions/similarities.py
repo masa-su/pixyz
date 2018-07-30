@@ -12,17 +12,17 @@ class SimilarityLoss(object):
         self.p1 = p1
         self.p2 = p2
         self.var = var
-        self.loss = nn.MarginRankingLoss(margin=margin)
+        self.loss = nn.MarginRankingLoss(margin=margin, reduce=False)
 
     def _sim(self, x1, x2):
-        return x1*x2
+        return torch.sum(x1*x2, dim=1)
 
     def estimate(self, x):
         inputs = get_dict_values(x, self.p1.cond_var, True)
-        sample1 = get_dict_values(self.p1.sample(inputs), self.var)
+        sample1 = get_dict_values(self.p1.sample(inputs), self.var)[0]
 
         inputs = get_dict_values(x, self.p2.cond_var, True)
-        sample2 = get_dict_values(self.p2.sample(inputs), self.var)
+        sample2 = get_dict_values(self.p2.sample(inputs), self.var)[0]
 
         batch_size = sample1.shape[0]
         shuffle_id = torch.randperm(batch_size)
@@ -33,7 +33,9 @@ class SimilarityLoss(object):
         sim1_2 = self._sim(sample1, _sample2)
         sim_12 = self._sim(_sample1, sample2)
 
-        loss = self.loss(sim12, sim1_2) + self.loss(sim12, sim_12)
+        dummy_label = torch.ones_like(sim12)
+        loss = self.loss(sim12, sim1_2, dummy_label) \
+            + self.loss(sim12, sim_12, dummy_label)
 
         return loss
 
@@ -49,7 +51,7 @@ class MultiModalContrastivenessLoss(object):
         self.loss = nn.MarginRankingLoss(margin=margin)
 
     def _sim(self, x1, x2):
-        return torch.exp(-(x1-x2)**2 / 2)
+        return torch.exp(-torch.norm(x1-x2, 2, dim=1) / 2)
 
     def estimate(self, x):
         inputs = get_dict_values(x, self.p1.cond_var, True)
@@ -67,6 +69,8 @@ class MultiModalContrastivenessLoss(object):
         sim1_2 = self._sim(sample1, _sample2)
         sim_12 = self._sim(_sample1, sample2)
 
-        loss = self.loss(sim12, sim1_2) + self.loss(sim12, sim_12)
+        dummy_label = torch.ones_like(sim12)
+        loss = self.loss(sim12, sim1_2, dummy_label) \
+            + self.loss(sim12, sim_12, dummy_label)
 
         return loss
