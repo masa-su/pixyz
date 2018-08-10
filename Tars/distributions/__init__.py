@@ -2,7 +2,9 @@ from .distributions import (
     Distribution,
     CustomLikelihoodDistribution,
     Normal,
+    NormalPoE,
     Bernoulli,
+    FactorizedBernoulli,
     Categorical,
 )
 from .operators import (
@@ -22,7 +24,9 @@ __all__ = [
     'Distribution',
     'CustomLikelihoodDistribution',
     'Normal',
+    'NormalPoE',
     'Bernoulli',
+    'FactorizedBernoulli',
     'Categorical',
     'MultiplyDistribution',
     'PlanarFlow',

@@ -48,8 +48,8 @@ class Distribution(nn.Module):
         if len(self.constant_params) == len(self.params_keys):
             self._set_distribution()
 
-    def _set_distribution(self, x={}):
-        params = self.get_params(**x)
+    def _set_distribution(self, x={}, **kwargs):
+        params = self.get_params(x, **kwargs)
         self.dist = self.DistributionTorch(**params)
 
     def _get_sample(self, reparam=True,
@@ -95,7 +95,7 @@ class Distribution(nn.Module):
 
         return x
 
-    def get_params(self, **params):
+    def get_params(self, params, **kwargs):
         """
         Examples
         --------
@@ -117,7 +117,7 @@ class Distribution(nn.Module):
         return output
 
     def sample(self, x=None, shape=None, batch_size=1, return_all=True,
-               reparam=True):
+               reparam=True, **kwargs):
         # input : tensor, list or dict
         # output : dict
 
@@ -136,7 +136,7 @@ class Distribution(nn.Module):
 
         else:  # conditional
             x = self._verify_input(x)
-            self._set_distribution(x)
+            self._set_distribution(x, **kwargs)
 
             output = {self.var[0]: self._get_sample(reparam=reparam)}
 
@@ -226,6 +226,35 @@ class Normal(Distribution):
         return params["loc"]
 
 
+class NormalPoE(Normal):
+    """
+    Generative Models of Visually Grounded Imagination
+    """
+
+    def __init__(self, **kwargs):
+        super(NormalPoE, self).__init__(**kwargs)
+
+    def get_params(self, params, **kwargs):
+        if "poe" in kwargs.keys() and kwargs["poe"] is True:
+            x = get_dict_values(params, self.cond_var)[0]
+            num_of_experts = x.shape[1]
+
+            eye = torch.eye(num_of_experts).to(x.device)
+
+            outputs_loc = [self.forward(x * eye[i])["loc"] * x[:, i].view(-1, 1) for i in range(num_of_experts)]
+            outputs_prec = [1. / self.forward(x * eye[i])["scale"] * x[:, i].view(-1, 1) for i in range(num_of_experts)]
+
+            outputs_loc = torch.stack(outputs_loc)
+            outputs_prec = torch.stack(outputs_prec)
+
+            prec = torch.sum(outputs_prec, dim=0)
+            loc = 1. / prec * torch.sum(outputs_loc * outputs_prec, dim=0)
+
+            return {"loc": loc, "scale": 1. / prec}
+        else:
+            return super(NormalPoE, self).get_params(params, **kwargs)
+
+
 class Bernoulli(Distribution):
 
     def __init__(self, *args, **kwargs):
@@ -238,6 +267,21 @@ class Bernoulli(Distribution):
     def sample_mean(self, x):
         params = self.forward(**x)
         return params["probs"]
+
+
+class FactorizedBernoulli(Bernoulli):
+    """
+    Generative Models of Visually Grounded Imagination
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(FactorizedBernoulli, self).__init__(*args, **kwargs)
+
+    def _get_log_like(self, x):
+        log_like = super(FactorizedBernoulli, self)._get_log_like(x)
+        [_x] = get_dict_values(x, self.var)
+        log_like[_x == 0] = 0
+        return log_like
 
 
 class Categorical(Distribution):
