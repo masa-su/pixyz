@@ -7,25 +7,27 @@ from ..models.model import Model
 from ..utils import tolist, get_dict_values
 
 
-class SemiVAE(Model):
-    def __init__(self, encoder, decoder,
+class SemiVI(Model):
+    def __init__(self, p, approximate_dist,
                  discriminator,
                  other_distributions=[],
                  regularizer=[],
                  optimizer=optim.Adam,
                  optimizer_params={}):
-        super(SemiVAE, self).__init__()
+        super(SemiVI, self).__init__()
 
-        self.encoder = encoder
-        self.decoder = decoder
+        self.p = p
+        self.q = approximate_dist
+        self.d = discriminator
         self.regularizer = tolist(regularizer)
 
-        self.input_var = copy(self.encoder.cond_var)
+        self.input_var = copy(self.q.cond_var)
 
         # set params and optim
-        q_params = list(self.encoder.parameters())
-        p_params = list(self.decoder.parameters())
-        params = q_params + p_params
+        q_params = list(self.q.parameters())
+        p_params = list(self.p.parameters())
+        d_params = list(self.d.parameters())
+        params = q_params + p_params + d_params
 
         self.other_distributions = tolist(other_distributions)
         for distribution in other_distributions:
@@ -35,14 +37,19 @@ class SemiVAE(Model):
         self.input_var = list(set(self.input_var))
         self.optimizer = optimizer(params, **optimizer_params)
 
-    def train(self, train_x, coef=1):
-        self.decoder.train()
-        self.encoder.train()
+    def train(self, train_x, u_train_x, supervised_rate=1, **kwargs):
+        self.p.train()
+        self.q.train()
+        self.d.train()
         for distribution in self.other_distributions:
             distribution.train()
 
         self.optimizer.zero_grad()
-        lower_bound, loss = self._elbo(train_x, coef)
+        lower_bound, loss = self._elbo(train_x, **kwargs)
+        _, u_loss = self._u_elbo(u_train_x, **kwargs)
+        d_loss = self._d_loss(train_x)
+
+        loss = loss + u_loss + supervised_rate * d_loss
 
         # backprop
         loss.backward()
@@ -52,33 +59,28 @@ class SemiVAE(Model):
 
         return lower_bound, loss
 
-    def test(self, test_x, coef=1):
-        self.decoder.eval()
-        self.encoder.eval()
+    def test(self, test_x, supervised_rate=1, **kwargs):
+        self.p.eval()
+        self.q.eval()
         for distribution in self.other_distributions:
             distribution.eval()
 
         with torch.no_grad():
-            lower_bound, loss = self._elbo(test_x, coef)
+            lower_bound, loss = self._elbo(test_x, **kwargs)
 
         return lower_bound, loss
 
-    def _elbo(self, x, reg_coef=[1]):
+    def _elbo(self, x, reg_coef=[], **kwargs):
         """
-        The evidence lower bound (original VAE)
-        [Kingma+ 2013] Auto-Encoding Variational Bayes
+        The evidence lower bound
         """
-        if not set(list(x.keys())) == set(self.input_var):
-            raise ValueError("Input's keys are not valid.")
-        reg_coef = tolist(reg_coef)
 
-        # reconstrunction error
-        _x = get_dict_values(x, self.encoder.cond_var, True)
-        samples = self.encoder.sample(_x)
-        log_like = self.decoder.log_likelihood(samples)
+        lower_bound = []
+        # lower bound
+        samples = self.q.sample(x, **kwargs)
+        lower_bound.append(self.p.log_likelihood(samples) -
+                           self.q.log_likelihood(samples))
 
-        # regularization term
-        lower_bound = [log_like]
         reg_loss = 0
         for i, reg in enumerate(self.regularizer):
             _reg = reg.estimate(x)
@@ -86,33 +88,20 @@ class SemiVAE(Model):
             reg_loss += reg_coef[i] * _reg
 
         lower_bound = torch.stack(lower_bound, dim=-1)
-        loss = -torch.mean(log_like - reg_loss)
+        loss = -torch.mean(lower_bound)
 
         return lower_bound, loss
 
-    def _semi_elbo(self, x, semi_reg_coef=[1]):
-        """
-        The evidence lower bound (original VAE)
-        [Kingma+ 2013] Auto-Encoding Variational Bayes
-        """
-        if not set(list(x.keys())) == set(self.input_var):
-            raise ValueError("Input's keys are not valid.")
-        reg_coef = tolist(semi_reg_coef)
+    def _u_elbo(self, x, reg_coef=[], **kwargs):
+        disc_x = get_dict_values(x, self.d.cond_var, True)
+        pred_x = self.d.sample(disc_x, return_all=False)
+        x.update(pred_x)
 
-        # reconstrunction error
-        _x = get_dict_values(x, self.encoder.cond_var, True)
-        samples = self.encoder.sample(_x)
-        log_like = self.decoder.log_likelihood(samples)
+        return self._elbo(x, reg_coef, **kwargs)
 
-        # regularization term
-        lower_bound = [log_like]
-        reg_loss = 0
-        for i, reg in enumerate(self.regularizer):
-            _reg = reg.estimate(x)
-            lower_bound.append(_reg)
-            reg_loss += reg_coef[i] * _reg
+    def _d_loss(self, x):
+        log_like = self.d.log_likelihood(x)
+        loss = -torch.mean(log_like)
 
-        lower_bound = torch.stack(lower_bound, dim=-1)
-        loss = -torch.mean(log_like - reg_loss)
+        return loss
 
-        return lower_bound, loss
