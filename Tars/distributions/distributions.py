@@ -228,6 +228,7 @@ class Normal(Distribution):
 
 class NormalPoE(Normal):
     """
+    Product of expert
     Generative Models of Visually Grounded Imagination
     """
 
@@ -241,16 +242,20 @@ class NormalPoE(Normal):
 
             eye = torch.eye(num_of_experts).to(x.device)
 
-            outputs_loc = [self.forward(x * eye[i])["loc"] * x[:, i].view(-1, 1) for i in range(num_of_experts)]
-            outputs_prec = [1. / self.forward(x * eye[i])["scale"] * x[:, i].view(-1, 1) for i in range(num_of_experts)]
+            outputs = [torch.stack(list(self.forward(x * eye[i]).values()))
+                       * (x[:, i] > 0)[None, :, None].type(x.dtype)
+                       for i in range(num_of_experts)]
 
-            outputs_loc = torch.stack(outputs_loc)
-            outputs_prec = torch.stack(outputs_prec)
+            outputs = torch.stack(outputs)  # (num_of_experts, mean/var, batch_size, output_dim)
 
-            prec = torch.sum(outputs_prec, dim=0)
-            loc = 1. / prec * torch.sum(outputs_loc * outputs_prec, dim=0)
+            prec = 1. / outputs[:, 1, :, :]
+            prec[prec == float("Inf")] = 0
+            scale_sum = 1. / torch.sum(prec, dim=0)
+            scale_sum[scale_sum == float("Inf")] = 1
 
-            return {"loc": loc, "scale": 1. / prec}
+            loc_sum = scale_sum * torch.sum(outputs[:, 0, :, :] * prec, dim=0)
+
+            return {"loc": loc_sum, "scale": scale_sum}
         else:
             return super(NormalPoE, self).get_params(params, **kwargs)
 
