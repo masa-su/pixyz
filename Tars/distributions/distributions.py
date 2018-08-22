@@ -3,6 +3,8 @@ import torch
 from torch import nn
 from torch.distributions import Normal as NormalTorch
 from torch.distributions import Bernoulli as BernoulliTorch
+from torch.distributions import RelaxedBernoulli as RelaxedBernoulliTorch
+from torch.distributions import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
 from torch.distributions.one_hot_categorical\
     import OneHotCategorical as CategoricalTorch
 
@@ -274,6 +276,46 @@ class Bernoulli(Distribution):
         return params["probs"]
 
 
+class RelaxedBernoulli(Distribution):
+
+    def __init__(self, temperature,
+                 *args, **kwargs):
+        self.params_keys = ["probs"]
+        self.distribution_name = "RelaxedBernoulli"
+        self.DistributionTorch = BernoulliTorch
+        # use relaxed version only when sampling
+        self.RelaxedDistributionTorch = RelaxedBernoulliTorch
+        self.temperature = temperature
+
+        super(RelaxedBernoulli, self).__init__(*args, **kwargs)
+
+    def _set_distribution(self, x={}, sampling=True, **kwargs):
+        params = self.get_params(x, **kwargs)
+        if sampling is True:
+            self.dist = self.RelaxedDistributionTorch(temperature=self.temperature,
+                                                      **params)
+        else:
+            self.dist = self.DistributionTorch(**params)
+
+    def log_likelihood(self, x):
+        # input : dict
+        # output : dict
+
+        if not set(list(x.keys())) >= set(self.cond_var + self.var):
+            raise ValueError("Input's keys are not valid.")
+
+        if len(self.cond_var) > 0:  # conditional distribution
+            _x = get_dict_values(x, self.cond_var, True)
+            self._set_distribution(_x, sampling=False)
+
+        log_like = self._get_log_like(x)
+        return mean_sum_samples(log_like)
+
+    def sample_mean(self, x):
+        params = self.forward(**x)
+        return params["probs"]
+
+
 class FactorizedBernoulli(Bernoulli):
     """
     Generative Models of Visually Grounded Imagination
@@ -298,6 +340,46 @@ class Categorical(Distribution):
         self.DistributionTorch = CategoricalTorch
 
         super(Categorical, self).__init__(*args, **kwargs)
+
+    def sample_mean(self, x):
+        params = self.forward(**x)
+        return params["probs"]
+
+
+class RelaxedCategorical(Distribution):
+
+    def __init__(self, temperature,
+                 *args, **kwargs):
+        self.params_keys = ["probs"]
+        self.distribution_name = "RelaxedCategorical"
+        self.DistributionTorch = CategoricalTorch
+        # use relaxed version only when sampling
+        self.RelaxedDistributionTorch = RelaxedOneHotCategoricalTorch
+        self.temperature = temperature
+
+        super(RelaxedCategorical, self).__init__(*args, **kwargs)
+
+    def _set_distribution(self, x={}, sampling=True, **kwargs):
+        params = self.get_params(x, **kwargs)
+        if sampling is True:
+            self.dist = self.RelaxedDistributionTorch(temperature=self.temperature,
+                                                      **params)
+        else:
+            self.dist = self.DistributionTorch(**params)
+
+    def log_likelihood(self, x):
+        # input : dict
+        # output : dict
+
+        if not set(list(x.keys())) >= set(self.cond_var + self.var):
+            raise ValueError("Input's keys are not valid.")
+
+        if len(self.cond_var) > 0:  # conditional distribution
+            _x = get_dict_values(x, self.cond_var, True)
+            self._set_distribution(_x, sampling=False)
+
+        log_like = self._get_log_like(x)
+        return mean_sum_samples(log_like)
 
     def sample_mean(self, x):
         params = self.forward(**x)
