@@ -1,13 +1,13 @@
 from .vae import VAE
-from .ss_vae import SemiVAE
 from .vi import VI
+from .semi_vi import SemiVI
 from .ml import ML
 from .regularization import Regularization
 
 __all__ = [
     'ML',
     'VAE',
-    'SemiVAE',
     'VI',
+    'SemiVI',
     'Regularization',
 ]
