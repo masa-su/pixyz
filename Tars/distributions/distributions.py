@@ -4,7 +4,8 @@ from torch import nn
 from torch.distributions import Normal as NormalTorch
 from torch.distributions import Bernoulli as BernoulliTorch
 from torch.distributions import RelaxedBernoulli as RelaxedBernoulliTorch
-from torch.distributions import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
+from torch.distributions \
+    import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
 from torch.distributions.one_hot_categorical\
     import OneHotCategorical as CategoricalTorch
 
@@ -248,7 +249,8 @@ class NormalPoE(Normal):
                        * (x[:, i] > 0)[None, :, None].type(x.dtype)
                        for i in range(num_of_experts)]
 
-            outputs = torch.stack(outputs)  # (num_of_experts, mean/var, batch_size, output_dim)
+            # (num_of_experts, mean/var, batch_size, output_dim)
+            outputs = torch.stack(outputs)
 
             prec = 1. / outputs[:, 1, :, :]
             prec[prec == float("Inf")] = 0
@@ -292,8 +294,9 @@ class RelaxedBernoulli(Distribution):
     def _set_distribution(self, x={}, sampling=True, **kwargs):
         params = self.get_params(x, **kwargs)
         if sampling is True:
-            self.dist = self.RelaxedDistributionTorch(temperature=self.temperature,
-                                                      **params)
+            self.dist =\
+                self.RelaxedDistributionTorch(temperature=self.temperature,
+                                              **params)
         else:
             self.dist = self.DistributionTorch(**params)
 
@@ -362,8 +365,9 @@ class RelaxedCategorical(Distribution):
     def _set_distribution(self, x={}, sampling=True, **kwargs):
         params = self.get_params(x, **kwargs)
         if sampling is True:
-            self.dist = self.RelaxedDistributionTorch(temperature=self.temperature,
-                                                      **params)
+            self.dist =\
+                self.RelaxedDistributionTorch(temperature=self.temperature,
+                                              **params)
         else:
             self.dist = self.DistributionTorch(**params)
 
