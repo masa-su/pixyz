@@ -7,16 +7,18 @@ from ..models.model import Model
 from ..utils import tolist, get_dict_values
 
 
-class VI(Model):
+class SemiVI(Model):
     def __init__(self, p, approximate_dist,
+                 discriminator,
                  other_distributions=[],
                  regularizer=[],
                  optimizer=optim.Adam,
                  optimizer_params={}):
-        super(VI, self).__init__()
+        super(SemiVI, self).__init__()
 
         self.p = p
         self.q = approximate_dist
+        self.d = discriminator
         self.regularizer = tolist(regularizer)
 
         self.input_var = copy(self.q.cond_var)
@@ -24,7 +26,8 @@ class VI(Model):
         # set params and optim
         q_params = list(self.q.parameters())
         p_params = list(self.p.parameters())
-        params = q_params + p_params
+        d_params = list(self.d.parameters())
+        params = q_params + p_params + d_params
 
         self.other_distributions = tolist(other_distributions)
         for distribution in other_distributions:
@@ -34,14 +37,19 @@ class VI(Model):
         self.input_var = list(set(self.input_var))
         self.optimizer = optimizer(params, **optimizer_params)
 
-    def train(self, train_x=None, coef=[], **kwargs):
+    def train(self, train_x, u_train_x, supervised_rate=1, coef=[], **kwargs):
         self.p.train()
         self.q.train()
+        self.d.train()
         for distribution in self.other_distributions:
             distribution.train()
 
         self.optimizer.zero_grad()
         lower_bound, loss = self._elbo(train_x, coef, **kwargs)
+        _, u_loss = self._u_elbo(u_train_x, coef, **kwargs)
+        d_loss = self._d_loss(train_x)
+
+        loss = loss + u_loss + supervised_rate * d_loss
 
         # backprop
         loss.backward()
@@ -51,7 +59,7 @@ class VI(Model):
 
         return lower_bound, loss
 
-    def test(self, test_x=None, coef=[], **kwargs):
+    def test(self, test_x, coef=[], **kwargs):
         self.p.eval()
         self.q.eval()
         for distribution in self.other_distributions:
@@ -87,3 +95,17 @@ class VI(Model):
         loss = -torch.mean(_lower_bound - reg_loss)
 
         return lower_bound, loss
+
+    def _u_elbo(self, x, reg_coef=[], **kwargs):
+        disc_x = get_dict_values(x, self.d.cond_var, True)
+        pred_x = self.d.sample(disc_x, return_all=False)
+        x.update(pred_x)
+
+        return self._elbo(x, reg_coef, **kwargs)
+
+    def _d_loss(self, x):
+        log_like = self.d.log_likelihood(x)
+        loss = -torch.mean(log_like)
+
+        return loss
+

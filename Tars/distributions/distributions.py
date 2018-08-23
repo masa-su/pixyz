@@ -3,6 +3,8 @@ import torch
 from torch import nn
 from torch.distributions import Normal as NormalTorch
 from torch.distributions import Bernoulli as BernoulliTorch
+from torch.distributions import RelaxedBernoulli as RelaxedBernoulliTorch
+from torch.distributions import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
 from torch.distributions.one_hot_categorical\
     import OneHotCategorical as CategoricalTorch
 
@@ -48,8 +50,8 @@ class Distribution(nn.Module):
         if len(self.constant_params) == len(self.params_keys):
             self._set_distribution()
 
-    def _set_distribution(self, x={}):
-        params = self.get_params(**x)
+    def _set_distribution(self, x={}, **kwargs):
+        params = self.get_params(x, **kwargs)
         self.dist = self.DistributionTorch(**params)
 
     def _get_sample(self, reparam=True,
@@ -95,7 +97,7 @@ class Distribution(nn.Module):
 
         return x
 
-    def get_params(self, **params):
+    def get_params(self, params, **kwargs):
         """
         Examples
         --------
@@ -117,7 +119,7 @@ class Distribution(nn.Module):
         return output
 
     def sample(self, x=None, shape=None, batch_size=1, return_all=True,
-               reparam=True):
+               reparam=True, **kwargs):
         # input : tensor, list or dict
         # output : dict
 
@@ -136,7 +138,7 @@ class Distribution(nn.Module):
 
         else:  # conditional
             x = self._verify_input(x)
-            self._set_distribution(x)
+            self._set_distribution(x, **kwargs)
 
             output = {self.var[0]: self._get_sample(reparam=reparam)}
 
@@ -226,6 +228,40 @@ class Normal(Distribution):
         return params["loc"]
 
 
+class NormalPoE(Normal):
+    """
+    Product of expert
+    Generative Models of Visually Grounded Imagination
+    """
+
+    def __init__(self, **kwargs):
+        super(NormalPoE, self).__init__(**kwargs)
+
+    def get_params(self, params, **kwargs):
+        if "poe" in kwargs.keys() and kwargs["poe"] is True:
+            x = get_dict_values(params, self.cond_var)[0]
+            num_of_experts = x.shape[1]
+
+            eye = torch.eye(num_of_experts).to(x.device)
+
+            outputs = [torch.stack(list(self.forward(x * eye[i]).values()))
+                       * (x[:, i] > 0)[None, :, None].type(x.dtype)
+                       for i in range(num_of_experts)]
+
+            outputs = torch.stack(outputs)  # (num_of_experts, mean/var, batch_size, output_dim)
+
+            prec = 1. / outputs[:, 1, :, :]
+            prec[prec == float("Inf")] = 0
+            scale_sum = 1. / torch.sum(prec, dim=0)
+            scale_sum[scale_sum == float("Inf")] = 1
+
+            loc_sum = scale_sum * torch.sum(outputs[:, 0, :, :] * prec, dim=0)
+
+            return {"loc": loc_sum, "scale": scale_sum}
+        else:
+            return super(NormalPoE, self).get_params(params, **kwargs)
+
+
 class Bernoulli(Distribution):
 
     def __init__(self, *args, **kwargs):
@@ -240,6 +276,61 @@ class Bernoulli(Distribution):
         return params["probs"]
 
 
+class RelaxedBernoulli(Distribution):
+
+    def __init__(self, temperature,
+                 *args, **kwargs):
+        self.params_keys = ["probs"]
+        self.distribution_name = "RelaxedBernoulli"
+        self.DistributionTorch = BernoulliTorch
+        # use relaxed version only when sampling
+        self.RelaxedDistributionTorch = RelaxedBernoulliTorch
+        self.temperature = temperature
+
+        super(RelaxedBernoulli, self).__init__(*args, **kwargs)
+
+    def _set_distribution(self, x={}, sampling=True, **kwargs):
+        params = self.get_params(x, **kwargs)
+        if sampling is True:
+            self.dist = self.RelaxedDistributionTorch(temperature=self.temperature,
+                                                      **params)
+        else:
+            self.dist = self.DistributionTorch(**params)
+
+    def log_likelihood(self, x):
+        # input : dict
+        # output : dict
+
+        if not set(list(x.keys())) >= set(self.cond_var + self.var):
+            raise ValueError("Input's keys are not valid.")
+
+        if len(self.cond_var) > 0:  # conditional distribution
+            _x = get_dict_values(x, self.cond_var, True)
+            self._set_distribution(_x, sampling=False)
+
+        log_like = self._get_log_like(x)
+        return mean_sum_samples(log_like)
+
+    def sample_mean(self, x):
+        params = self.forward(**x)
+        return params["probs"]
+
+
+class FactorizedBernoulli(Bernoulli):
+    """
+    Generative Models of Visually Grounded Imagination
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(FactorizedBernoulli, self).__init__(*args, **kwargs)
+
+    def _get_log_like(self, x):
+        log_like = super(FactorizedBernoulli, self)._get_log_like(x)
+        [_x] = get_dict_values(x, self.var)
+        log_like[_x == 0] = 0
+        return log_like
+
+
 class Categorical(Distribution):
 
     def __init__(self, one_hot=True, *args, **kwargs):
@@ -249,6 +340,46 @@ class Categorical(Distribution):
         self.DistributionTorch = CategoricalTorch
 
         super(Categorical, self).__init__(*args, **kwargs)
+
+    def sample_mean(self, x):
+        params = self.forward(**x)
+        return params["probs"]
+
+
+class RelaxedCategorical(Distribution):
+
+    def __init__(self, temperature,
+                 *args, **kwargs):
+        self.params_keys = ["probs"]
+        self.distribution_name = "RelaxedCategorical"
+        self.DistributionTorch = CategoricalTorch
+        # use relaxed version only when sampling
+        self.RelaxedDistributionTorch = RelaxedOneHotCategoricalTorch
+        self.temperature = temperature
+
+        super(RelaxedCategorical, self).__init__(*args, **kwargs)
+
+    def _set_distribution(self, x={}, sampling=True, **kwargs):
+        params = self.get_params(x, **kwargs)
+        if sampling is True:
+            self.dist = self.RelaxedDistributionTorch(temperature=self.temperature,
+                                                      **params)
+        else:
+            self.dist = self.DistributionTorch(**params)
+
+    def log_likelihood(self, x):
+        # input : dict
+        # output : dict
+
+        if not set(list(x.keys())) >= set(self.cond_var + self.var):
+            raise ValueError("Input's keys are not valid.")
+
+        if len(self.cond_var) > 0:  # conditional distribution
+            _x = get_dict_values(x, self.cond_var, True)
+            self._set_distribution(_x, sampling=False)
+
+        log_like = self._get_log_like(x)
+        return mean_sum_samples(log_like)
 
     def sample_mean(self, x):
         params = self.forward(**x)
