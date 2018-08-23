@@ -4,7 +4,7 @@ import torch
 from torch import optim
 
 from ..models.model import Model
-from ..utils import tolist, get_dict_values
+from ..utils import tolist
 
 
 class VI(Model):

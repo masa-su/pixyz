@@ -108,4 +108,3 @@ class SemiVI(Model):
         loss = -torch.mean(log_like)
 
         return loss
-
