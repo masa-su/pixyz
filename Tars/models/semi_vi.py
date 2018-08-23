@@ -37,7 +37,7 @@ class SemiVI(Model):
         self.input_var = list(set(self.input_var))
         self.optimizer = optimizer(params, **optimizer_params)
 
-    def train(self, train_x, u_train_x, supervised_rate=1, **kwargs):
+    def train(self, train_x, u_train_x, supervised_rate=1, coef=[], **kwargs):
         self.p.train()
         self.q.train()
         self.d.train()
@@ -45,8 +45,8 @@ class SemiVI(Model):
             distribution.train()
 
         self.optimizer.zero_grad()
-        lower_bound, loss = self._elbo(train_x, **kwargs)
-        _, u_loss = self._u_elbo(u_train_x, **kwargs)
+        lower_bound, loss = self._elbo(train_x, coef, **kwargs)
+        _, u_loss = self._u_elbo(u_train_x, coef, **kwargs)
         d_loss = self._d_loss(train_x)
 
         loss = loss + u_loss + supervised_rate * d_loss
@@ -59,14 +59,14 @@ class SemiVI(Model):
 
         return lower_bound, loss
 
-    def test(self, test_x, supervised_rate=1, **kwargs):
+    def test(self, test_x, coef=[], **kwargs):
         self.p.eval()
         self.q.eval()
         for distribution in self.other_distributions:
             distribution.eval()
 
         with torch.no_grad():
-            lower_bound, loss = self._elbo(test_x, **kwargs)
+            lower_bound, loss = self._elbo(test_x, coef, **kwargs)
 
         return lower_bound, loss
 
@@ -74,12 +74,16 @@ class SemiVI(Model):
         """
         The evidence lower bound
         """
+        if not set(list(x.keys())) == set(self.input_var):
+            raise ValueError("Input's keys are not valid.")
+        reg_coef = tolist(reg_coef)
 
         lower_bound = []
         # lower bound
         samples = self.q.sample(x, **kwargs)
-        lower_bound.append(self.p.log_likelihood(samples) -
-                           self.q.log_likelihood(samples))
+        _lower_bound = self.p.log_likelihood(samples) -\
+            self.q.log_likelihood(samples)
+        lower_bound.append(_lower_bound)
 
         reg_loss = 0
         for i, reg in enumerate(self.regularizer):
@@ -88,7 +92,7 @@ class SemiVI(Model):
             reg_loss += reg_coef[i] * _reg
 
         lower_bound = torch.stack(lower_bound, dim=-1)
-        loss = -torch.mean(lower_bound)
+        loss = -torch.mean(_lower_bound - reg_loss)
 
         return lower_bound, loss
 
