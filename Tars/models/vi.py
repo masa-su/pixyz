@@ -34,14 +34,14 @@ class VI(Model):
         self.input_var = list(set(self.input_var))
         self.optimizer = optimizer(params, **optimizer_params)
 
-    def train(self, train_x=None, **kwargs):
+    def train(self, train_x=None, coef=[], **kwargs):
         self.p.train()
         self.q.train()
         for distribution in self.other_distributions:
             distribution.train()
 
         self.optimizer.zero_grad()
-        lower_bound, loss = self._elbo(train_x, **kwargs)
+        lower_bound, loss = self._elbo(train_x, coef, **kwargs)
 
         # backprop
         loss.backward()
@@ -51,14 +51,14 @@ class VI(Model):
 
         return lower_bound, loss
 
-    def test(self, test_x=None, **kwargs):
+    def test(self, test_x=None, coef=[], **kwargs):
         self.p.eval()
         self.q.eval()
         for distribution in self.other_distributions:
             distribution.eval()
 
         with torch.no_grad():
-            lower_bound, loss = self._elbo(test_x, **kwargs)
+            lower_bound, loss = self._elbo(test_x, coef, **kwargs)
 
         return lower_bound, loss
 
@@ -73,8 +73,9 @@ class VI(Model):
         lower_bound = []
         # lower bound
         samples = self.q.sample(x, **kwargs)
-        lower_bound.append(self.p.log_likelihood(samples) -
-                           self.q.log_likelihood(samples))
+        _lower_bound = self.p.log_likelihood(samples) -\
+            self.q.log_likelihood(samples)
+        lower_bound.append(_lower_bound)
 
         reg_loss = 0
         for i, reg in enumerate(self.regularizer):
@@ -83,6 +84,6 @@ class VI(Model):
             reg_loss += reg_coef[i] * _reg
 
         lower_bound = torch.stack(lower_bound, dim=-1)
-        loss = -torch.mean(lower_bound)
+        loss = -torch.mean(_lower_bound - reg_loss)
 
         return lower_bound, loss
