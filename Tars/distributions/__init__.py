@@ -4,8 +4,10 @@ from .distributions import (
     Normal,
     NormalPoE,
     Bernoulli,
+    RelaxedBernoulli,
     FactorizedBernoulli,
     Categorical,
+    RelaxedCategorical,
 )
 from .operators import (
     MultiplyDistribution,
@@ -26,8 +28,10 @@ __all__ = [
     'Normal',
     'NormalPoE',
     'Bernoulli',
+    'RelaxedBernoulli',
     'FactorizedBernoulli',
     'Categorical',
+    'RelaxedCategorical',
     'MultiplyDistribution',
     'PlanarFlow',
     'RealNVP',
