@@ -47,7 +47,7 @@ class CustomLossModel(Model):
         # update params
         self.optimizer.step()
 
-        return None, loss
+        return loss
 
     def test(self, test_x):
         for distribution in self.distributions:
@@ -56,4 +56,4 @@ class CustomLossModel(Model):
         with torch.no_grad():
             loss = self.test_loss_cls.estimate(test_x).mean()
 
-        return None, loss
+        return loss
