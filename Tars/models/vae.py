@@ -18,7 +18,7 @@ class VAE(Model):
 
         self.encoder = encoder
         self.decoder = decoder
-        self.regularizer = tolist(regularizer)
+        self.regularizer = regularizer
 
         self.reconstruction =\
             StochasticReconstructionLoss(self.encoder, self.decoder)
