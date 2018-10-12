@@ -8,7 +8,7 @@ class Loss(object):
         else:
             _input_var = p.cond_var
             if q is not None:
-                _input_var.append(q.cond_var)
+                _input_var += q.cond_var
                 _input_var = sorted(set(_input_var), key=_input_var.index)
             self.input_var = _input_var
 
