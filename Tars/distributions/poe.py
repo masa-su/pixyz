@@ -26,7 +26,7 @@ class NormalPoE(nn.Module):
         super(NormalPoE, self).__init__()
 
         self.prior = prior
-        self.dists = tolist(dists)
+        self.dists = nn.ModuleList(tolist(dists))
         var = self.prior.var
 
         cond_var = []
