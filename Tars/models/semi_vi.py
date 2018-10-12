@@ -11,7 +11,7 @@ class SemiVI(Model):
     def __init__(self, p, approximate_dist,
                  discriminator,
                  other_distributions=[],
-                 regularizer=[],
+                 other_losses=[],
                  optimizer=optim.Adam,
                  optimizer_params={}):
         super(SemiVI, self).__init__()
@@ -19,7 +19,7 @@ class SemiVI(Model):
         self.p = p
         self.q = approximate_dist
         self.d = discriminator
-        self.regularizer = tolist(regularizer)
+        self.other_losses = other_losses
 
         self.input_var = copy(self.q.cond_var)
 
@@ -37,7 +37,7 @@ class SemiVI(Model):
         self.input_var = list(set(self.input_var))
         self.optimizer = optimizer(params, **optimizer_params)
 
-    def train(self, train_x, u_train_x, supervised_rate=1, coef=[], **kwargs):
+    def train(self, train_x, u_train_x, supervised_rate=1, **kwargs):
         self.p.train()
         self.q.train()
         self.d.train()
@@ -45,8 +45,8 @@ class SemiVI(Model):
             distribution.train()
 
         self.optimizer.zero_grad()
-        lower_bound, loss = self._elbo(train_x, coef, **kwargs)
-        _, u_loss = self._u_elbo(u_train_x, coef, **kwargs)
+        lower_bound, loss = self._elbo(train_x, **kwargs)
+        _, u_loss = self._u_elbo(u_train_x, **kwargs)
         d_loss = self._d_loss(train_x)
 
         loss = loss + u_loss + supervised_rate * d_loss
@@ -59,24 +59,23 @@ class SemiVI(Model):
 
         return lower_bound, loss
 
-    def test(self, test_x, coef=[], **kwargs):
+    def test(self, test_x, **kwargs):
         self.p.eval()
         self.q.eval()
         for distribution in self.other_distributions:
             distribution.eval()
 
         with torch.no_grad():
-            lower_bound, loss = self._elbo(test_x, coef, **kwargs)
+            lower_bound, loss = self._elbo(test_x, **kwargs)
 
         return lower_bound, loss
 
-    def _elbo(self, x, reg_coef=[], **kwargs):
+    def _elbo(self, x, **kwargs):
         """
         The evidence lower bound
         """
         if not set(list(x.keys())) == set(self.input_var):
             raise ValueError("Input's keys are not valid.")
-        reg_coef = tolist(reg_coef)
 
         lower_bound = []
         # lower bound
@@ -85,23 +84,21 @@ class SemiVI(Model):
             self.q.log_likelihood(samples)
         lower_bound.append(_lower_bound)
 
-        reg_loss = 0
-        for i, reg in enumerate(self.regularizer):
-            _reg = reg.estimate(x)
-            lower_bound.append(_reg)
-            reg_loss += reg_coef[i] * _reg
+        # other losses
+        loss = self.other_losses.estimate(x)
+        lower_bound.append(loss)
 
         lower_bound = torch.stack(lower_bound, dim=-1)
-        loss = -torch.mean(_lower_bound - reg_loss)
+        loss = -torch.mean(_lower_bound - loss)
 
         return lower_bound, loss
 
-    def _u_elbo(self, x, reg_coef=[], **kwargs):
+    def _u_elbo(self, x, **kwargs):
         disc_x = get_dict_values(x, self.d.cond_var, True)
         pred_x = self.d.sample(disc_x, return_all=False)
         x.update(pred_x)
 
-        return self._elbo(x, reg_coef, **kwargs)
+        return self._elbo(x, **kwargs)
 
     def _d_loss(self, x):
         log_like = self.d.log_likelihood(x)

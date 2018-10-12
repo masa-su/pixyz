@@ -2,9 +2,10 @@ import torch
 from torch import nn
 
 from ..utils import get_dict_values
+from .losses import Loss
 
 
-class SimilarityLoss(object):
+class SimilarityLoss(Loss):
     """
     Learning Modality-Invariant Representations
     for Speech and Images (Leidai et. al.)
@@ -41,7 +42,7 @@ class SimilarityLoss(object):
         return loss
 
 
-class MultiModalContrastivenessLoss(object):
+class MultiModalContrastivenessLoss(Loss):
     """
     Disentangling by Partitioning:
     A Representation Learning Framework for Multimodal Sensory Data
