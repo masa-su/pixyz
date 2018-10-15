@@ -1,7 +1,7 @@
 from copy import copy
 
 import torch
-from torch import optim
+from torch import optim, nn
 
 from ..models.model import Model
 from ..utils import tolist, get_dict_values
@@ -19,30 +19,29 @@ class SemiVI(Model):
         self.p = p
         self.q = approximate_dist
         self.d = discriminator
-        self.other_losses = other_losses
+        self.other_distributions = nn.ModuleList(tolist(other_distributions))
 
-        self.input_var = copy(self.q.cond_var)
+        self.other_losses = other_losses
 
         # set params and optim
         q_params = list(self.q.parameters())
         p_params = list(self.p.parameters())
         d_params = list(self.d.parameters())
-        params = q_params + p_params + d_params
-
-        self.other_distributions = tolist(other_distributions)
-        for distribution in other_distributions:
-            params += list(distribution.parameters())
-            self.input_var += distribution.cond_var
-
-        self.input_var = list(set(self.input_var))
+        other_params = list(self.other_distributions.parameters())
+        params = q_params + p_params + d_params + other_params
         self.optimizer = optimizer(params, **optimizer_params)
+
+        # set input_var
+        self.input_var = copy(self.q.cond_var)
+        for distribution in self.other_distributions:
+            self.input_var += copy(distribution.cond_var)
+        self.input_var = list(set(self.input_var))
 
     def train(self, train_x, u_train_x, supervised_rate=1, **kwargs):
         self.p.train()
         self.q.train()
         self.d.train()
-        for distribution in self.other_distributions:
-            distribution.train()
+        self.other_distributions.train()
 
         self.optimizer.zero_grad()
         lower_bound, loss = self._elbo(train_x, **kwargs)
@@ -62,8 +61,7 @@ class SemiVI(Model):
     def test(self, test_x, **kwargs):
         self.p.eval()
         self.q.eval()
-        for distribution in self.other_distributions:
-            distribution.eval()
+        self.other_distributions.eval()
 
         with torch.no_grad():
             lower_bound, loss = self._elbo(test_x, **kwargs)
