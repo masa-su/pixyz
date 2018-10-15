@@ -20,7 +20,6 @@ class CustomLossModel(Model):
         self.input_var = None
 
         self.set_loss(loss, test_loss)
-        self.distributions = distributions
 
         # set params and optim
         params = list(self.distributions.parameters())
