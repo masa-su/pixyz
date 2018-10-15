@@ -1,7 +1,7 @@
 from copy import copy
 
 import torch
-from torch import optim
+from torch import optim, nn
 
 from ..models.model import Model
 from ..utils import tolist
@@ -19,30 +19,28 @@ class VAE(Model):
         self.encoder = encoder
         self.decoder = decoder
         self.regularizer = regularizer
+        self.other_distributions = nn.ModuleList(tolist(other_distributions))
 
         self.reconstruction =\
             StochasticReconstructionLoss(self.encoder, self.decoder)
 
-        self.input_var = copy(self.encoder.cond_var)
-
         # set params and optim
         q_params = list(self.encoder.parameters())
         p_params = list(self.decoder.parameters())
-        params = q_params + p_params
-
-        self.other_distributions = tolist(other_distributions)
-        for distribution in other_distributions:
-            params += list(distribution.parameters())
-            self.input_var += distribution.cond_var
-
-        self.input_var = list(set(self.input_var))
+        other_params = list(self.other_distributions.parameters())
+        params = q_params + p_params + other_params
         self.optimizer = optimizer(params, **optimizer_params)
+
+        # set input_var
+        self.input_var = copy(self.encoder.cond_var)
+        for distribution in self.other_distributions:
+            self.input_var += copy(distribution.cond_var)
+        self.input_var = list(set(self.input_var))
 
     def train(self, train_x):
         self.decoder.train()
         self.encoder.train()
-        for distribution in self.other_distributions:
-            distribution.train()
+        self.other_distributions.train()
 
         self.optimizer.zero_grad()
         lower_bound, loss = self._elbo(train_x)
@@ -58,8 +56,7 @@ class VAE(Model):
     def test(self, test_x):
         self.decoder.eval()
         self.encoder.eval()
-        for distribution in self.other_distributions:
-            distribution.eval()
+        self.other_distributions.eval()
 
         with torch.no_grad():
             lower_bound, loss = self._elbo(test_x)

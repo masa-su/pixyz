@@ -1,6 +1,16 @@
+from ..utils import get_dict_values
+
+
 class Loss(object):
-    def __init__(self):
-        pass
+    def __init__(self, p, q=None, input_var=[]):
+        if len(input_var) > 0:
+            self.input_var = input_var
+        else:
+            _input_var = p.cond_var
+            if q is not None:
+                _input_var += q.cond_var
+                _input_var = sorted(set(_input_var), key=_input_var.index)
+            self.input_var = _input_var
 
     def __add__(self, other):
         return AddLoss(self, other)
@@ -14,12 +24,22 @@ class Loss(object):
     def __truediv__(self, other):
         return DivLoss(self, other)
 
-    def estimate(self):
-        pass
+    def estimate(self, x):
+        return get_dict_values(x, self.input_var, True)
 
 
 class LossOperator(object):
     def __init__(self, a, b):
+        _input_var = []
+        if hasattr(a, "input_var"):
+            _input_var += a.input_var
+
+        if hasattr(b, "input_var"):
+            _input_var += b.input_var
+
+        _input_var = sorted(set(_input_var), key=_input_var.index)
+        self.input_var = _input_var
+
         self.a = a
         self.b = b
 

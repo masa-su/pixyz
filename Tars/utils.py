@@ -16,12 +16,11 @@ def get_dict_values(dicts, keys, return_dict=False):
     # >> [2]
     # get_dict_values(x, ["b","d"], True)
     # >> {'b': 2}
+    new_dicts = dict((key, dicts[key]) for key in keys if key in list(dicts.keys()))
+    if return_dict is False:
+        return list(new_dicts.values())
 
-    values = [dicts[key] for key in keys if key in list(dicts.keys())]
-    if return_dict:
-        return dict(zip(keys, values))
-
-    return values
+    return new_dicts
 
 
 def tolist(a):
