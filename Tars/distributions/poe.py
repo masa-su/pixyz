@@ -114,7 +114,7 @@ class NormalPoE(nn.Module):
         return output
 
     def log_likelihood(self, x):
-        pass
+        NotImplementedError
 
     def sample_mean(self, x, **kwargs):
         params = self.get_params(x, **kwargs)

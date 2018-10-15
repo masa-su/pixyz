@@ -30,6 +30,16 @@ class Loss(object):
 
 class LossOperator(object):
     def __init__(self, a, b):
+        _input_var = []
+        if hasattr(a, "input_var"):
+            _input_var += a.input_var
+
+        if hasattr(b, "input_var"):
+            _input_var += b.input_var
+
+        _input_var = sorted(set(_input_var), key=_input_var.index)
+        self.input_var = _input_var
+
         self.a = a
         self.b = b
 
