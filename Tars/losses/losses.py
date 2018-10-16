@@ -43,7 +43,7 @@ class Loss(object):
         return DivLoss(self, other)
 
     def __neg__(self):
-        return MulLoss(self, -1)
+        return NegLoss(self)
 
     def mean(self):
         return BatchMean(self)
@@ -72,26 +72,26 @@ class LossOperator(Loss):
 
     def estimate(self, x, **kwargs):
         if hasattr(self.a, "estimate"):
-            a_estimated = self.a.estimate(x, **kwargs)
+            a_loss = self.a.estimate(x, **kwargs)
         else:
             if isinstance(self.a, numbers.Number):
-                a_estimated = self.a  # just a value
+                a_loss = self.a  # just a value
             elif isinstance(self.a, type(None)):
-                a_estimated = 0
+                a_loss = 0
             else:
                 raise ValueError
 
         if hasattr(self.b, "estimate"):
-            b_estimated = self.b.estimate(x, **kwargs)
+            b_loss = self.b.estimate(x, **kwargs)
         else:
             if isinstance(self.b, numbers.Number):
-                b_estimated = self.b  # just a value
+                b_loss = self.b  # just a value
             elif isinstance(self.b, type(None)):
-                b_estimated = 0
+                b_loss = 0
             else:
                 raise ValueError
 
-        return a_estimated, b_estimated
+        return a_loss, b_loss
 
 
 class AddLoss(LossOperator):
@@ -100,10 +100,10 @@ class AddLoss(LossOperator):
         self.loss_text = "{} + {}".format(str(a), str(b))
 
     def estimate(self, x, **kwargs):
-        a_estimated, b_estimated = \
+        a_loss, b_loss = \
             super(AddLoss, self).estimate(x, **kwargs)
 
-        return a_estimated + b_estimated
+        return a_loss + b_loss
 
 
 class SubLoss(LossOperator):
@@ -112,10 +112,10 @@ class SubLoss(LossOperator):
         self.loss_text = "{} - {}".format(str(a), str(b))
 
     def estimate(self, x, **kwargs):
-        a_estimated, b_estimated = \
+        a_loss, b_loss = \
             super(SubLoss, self).estimate(x, **kwargs)
 
-        return a_estimated - b_estimated
+        return a_loss - b_loss
 
 
 class MulLoss(LossOperator):
@@ -124,10 +124,10 @@ class MulLoss(LossOperator):
         self.loss_text = "{} * {}".format(str(a), str(b))
 
     def estimate(self, x, **kwargs):
-        a_estimated, b_estimated = \
+        a_loss, b_loss = \
             super(MulLoss, self).estimate(x, **kwargs)
 
-        return a_estimated * b_estimated
+        return a_loss * b_loss
 
 
 class DivLoss(LossOperator):
@@ -136,16 +136,27 @@ class DivLoss(LossOperator):
         self.loss_text = "{} / {}".format(str(a), str(b))
 
     def estimate(self, x, **kwargs):
-        a_estimated, b_estimated = \
+        a_loss, b_loss = \
             super(DivLoss, self).estimate(x, **kwargs)
 
-        return a_estimated / b_estimated
+        return a_loss / b_loss
 
 
 class LossSelfOperator(Loss):
     def __init__(self, a):
-        self.input_var = a
+        self.input_var = a.input_var
         self.a = a
+
+
+class NegLoss(LossSelfOperator):
+    def __init__(self, a):
+        super(NegLoss, self).__init__(a)
+        self.loss_text = "- {}".format(str(a))
+
+    def estimate(self, x, **kwargs):
+        loss = self.a.estimate(x, **kwargs)
+
+        return -loss
 
 
 class BatchMean(LossSelfOperator):
