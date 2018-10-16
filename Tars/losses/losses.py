@@ -24,11 +24,17 @@ class Loss(object):
     def __truediv__(self, other):
         return DivLoss(self, other)
 
+    def mean(self):
+        return BatchMean(self)
+
+    def sum(self):
+        return BatchSum(self)
+
     def estimate(self, x):
         return get_dict_values(x, self.input_var, True)
 
 
-class LossOperator(object):
+class LossOperator(Loss):
     def __init__(self, a, b):
         _input_var = []
         if hasattr(a, "input_var"):
@@ -55,18 +61,6 @@ class LossOperator(object):
             b_estimated = self.b  # just a value
 
         return a_estimated, b_estimated
-
-    def __add__(self, other):
-        return AddLoss(self, other)
-
-    def __sub__(self, other):
-        return SubLoss(self, other)
-
-    def __mul__(self, other):
-        return MulLoss(self, other)
-
-    def __truediv__(self, other):
-        return DivLoss(self, other)
 
 
 class AddLoss(LossOperator):
@@ -111,3 +105,27 @@ class DivLoss(LossOperator):
             super(DivLoss, self).estimate(x, **kwargs)
 
         return a_estimated / b_estimated
+
+
+class LossSelfOperator(Loss):
+    def __init__(self, a):
+        self.input_var = a
+        self.a = a
+
+
+class BatchMean(LossSelfOperator):
+    def __init__(self, a):
+        super(BatchMean, self).__init__(a)
+
+    def estimate(self, x, **kwargs):
+        loss = self.a.estimate(x, **kwargs)
+        return loss.mean()
+
+
+class BatchSum(LossSelfOperator):
+    def __init__(self, a):
+        super(BatchSum, self).__init__(a)
+
+    def estimate(self, x, **kwargs):
+        loss = self.a.estimate(x, **kwargs)
+        return loss.sum()
