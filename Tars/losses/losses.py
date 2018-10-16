@@ -52,6 +52,8 @@ class Loss(object):
         return BatchSum(self)
 
     def estimate(self, x):
+        # if not set(list(x.keys())) == set(self.input_var):
+        #     raise ValueError("Input's keys are not valid.")
         return get_dict_values(x, self.input_var, True)
 
 

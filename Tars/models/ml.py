@@ -1,41 +1,44 @@
-import torch
-from torch import optim
+from torch import optim, nn
 
 from ..models.model import Model
+from ..utils import tolist
+from ..losses import NLL
 
 
 class ML(Model):
     def __init__(self, p,
+                 other_distributions=[],
+                 other_losses=None,
                  optimizer=optim.Adam,
                  optimizer_params={}):
-        super(ML, self).__init__()
+        super().__init__()
 
         self.p = p
+        self.other_distributions = nn.ModuleList(tolist(other_distributions))
+
+        # set losses
+        self.nll = NLL(self.p)
+        self.other_losses = other_losses
+        loss_cls = (self.nll + self.other_losses).mean()
+        self.loss_cls = loss_cls
+        self.test_loss_cls = loss_cls
+        self.loss_text = str(loss_cls)
 
         # set params and optim
-        self.optimizer = optimizer(self.p.parameters(),
-                                   **optimizer_params)
+        p_params = list(self.p.parameters())
+        other_params = list(self.other_distributions.parameters())
+        params = p_params + other_params
+        self.optimizer = optimizer(params, **optimizer_params)
 
-    def train(self, train_x):
+    def train(self, train_x, **kwargs):
         self.p.train()
+        self.other_distributions.train()
 
-        self.optimizer.zero_grad()
-        log_like = self.p.log_likelihood(train_x)
-        loss = -torch.mean(log_like)
+        return super().train(train_x, **kwargs)
 
-        # backprop
-        loss.backward()
-
-        # update params
-        self.optimizer.step()
-
-        return log_like, loss
-
-    def test(self, test_x):
+    def test(self, test_x, **kwargs):
         self.p.eval()
+        self.other_distributions.eval()
 
-        with torch.no_grad():
-            log_like = self.p.log_likelihood(test_x)
-            loss = -torch.mean(log_like)
+        return super().test(test_x, **kwargs)
 
-        return log_like, loss
