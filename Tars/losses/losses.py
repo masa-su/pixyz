@@ -1,4 +1,5 @@
 from ..utils import get_dict_values
+import numbers
 
 
 class Loss(object):
@@ -15,14 +16,29 @@ class Loss(object):
     def __add__(self, other):
         return AddLoss(self, other)
 
+    def __radd__(self, other):
+        return AddLoss(self, other)
+
     def __sub__(self, other):
+        return SubLoss(self, other)
+
+    def __rsub__(self, other):
         return SubLoss(self, other)
 
     def __mul__(self, other):
         return MulLoss(self, other)
 
+    def __rmul__(self, other):
+        return MulLoss(self, other)
+
     def __truediv__(self, other):
         return DivLoss(self, other)
+
+    def __rtruediv__(self, other):
+        return DivLoss(self, other)
+
+    def __neg__(self):
+        return MulLoss(self, -1)
 
     def mean(self):
         return BatchMean(self)
@@ -53,12 +69,22 @@ class LossOperator(Loss):
         if hasattr(self.a, "estimate"):
             a_estimated = self.a.estimate(x, **kwargs)
         else:
-            a_estimated = self.a  # just a value
+            if isinstance(self.a, numbers.Number):
+                a_estimated = self.a  # just a value
+            elif isinstance(self.a, type(None)):
+                a_estimated = 0
+            else:
+                raise ValueError
 
         if hasattr(self.b, "estimate"):
             b_estimated = self.b.estimate(x, **kwargs)
         else:
-            b_estimated = self.b  # just a value
+            if isinstance(self.b, numbers.Number):
+                b_estimated = self.b  # just a value
+            elif isinstance(self.b, type(None)):
+                b_estimated = 0
+            else:
+                raise ValueError
 
         return a_estimated, b_estimated
 

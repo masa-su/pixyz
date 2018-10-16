@@ -2,6 +2,9 @@ from .losses import Loss
 
 
 class ELBO(Loss):
+    """
+    The evidence lower bound
+    """
     def __init__(self, p, approximate_dist, input_var=[]):
         super(ELBO, self).__init__(approximate_dist,
                                    input_var=input_var)
