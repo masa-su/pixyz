@@ -13,6 +13,11 @@ class Loss(object):
                 _input_var = sorted(set(_input_var), key=_input_var.index)
             self.input_var = _input_var
 
+        self.loss_text = "loss({},{})".format(p, q)
+
+    def __str__(self):
+        return self.loss_text
+
     def __add__(self, other):
         return AddLoss(self, other)
 
@@ -92,6 +97,7 @@ class LossOperator(Loss):
 class AddLoss(LossOperator):
     def __init__(self, a, b):
         super(AddLoss, self).__init__(a, b)
+        self.loss_text = "{} + {}".format(str(a), str(b))
 
     def estimate(self, x, **kwargs):
         a_estimated, b_estimated = \
@@ -103,6 +109,7 @@ class AddLoss(LossOperator):
 class SubLoss(LossOperator):
     def __init__(self, a, b):
         super(SubLoss, self).__init__(a, b)
+        self.loss_text = "{} - {}".format(str(a), str(b))
 
     def estimate(self, x, **kwargs):
         a_estimated, b_estimated = \
@@ -114,6 +121,7 @@ class SubLoss(LossOperator):
 class MulLoss(LossOperator):
     def __init__(self, a, b):
         super(MulLoss, self).__init__(a, b)
+        self.loss_text = "{} * {}".format(str(a), str(b))
 
     def estimate(self, x, **kwargs):
         a_estimated, b_estimated = \
@@ -125,6 +133,7 @@ class MulLoss(LossOperator):
 class DivLoss(LossOperator):
     def __init__(self, a, b):
         super(DivLoss, self).__init__(a, b)
+        self.loss_text = "{} / {}".format(str(a), str(b))
 
     def estimate(self, x, **kwargs):
         a_estimated, b_estimated = \
@@ -142,6 +151,7 @@ class LossSelfOperator(Loss):
 class BatchMean(LossSelfOperator):
     def __init__(self, a):
         super(BatchMean, self).__init__(a)
+        self.loss_text = str(a)  # TODO: fix it
 
     def estimate(self, x, **kwargs):
         loss = self.a.estimate(x, **kwargs)
@@ -151,6 +161,7 @@ class BatchMean(LossSelfOperator):
 class BatchSum(LossSelfOperator):
     def __init__(self, a):
         super(BatchSum, self).__init__(a)
+        self.loss_text = str(a)  # TODO: fix it
 
     def estimate(self, x, **kwargs):
         loss = self.a.estimate(x, **kwargs)
