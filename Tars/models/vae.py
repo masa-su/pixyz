@@ -1,5 +1,3 @@
-from copy import copy
-
 from torch import optim, nn
 
 from ..models.model import Model

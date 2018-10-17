@@ -1,4 +1,3 @@
-import torch
 from torch import optim, nn
 
 from ..models.model import Model
@@ -39,5 +38,5 @@ class CustomLossModel(Model):
     def test(self, test_x, **kwargs):
         self.distributions.eval()
 
-        return super().teset(test_x, **kwargs)
+        return super().test(test_x, **kwargs)
 
