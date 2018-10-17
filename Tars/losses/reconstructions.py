@@ -1,4 +1,3 @@
-from ..utils import get_dict_values
 from .losses import Loss
 
 
@@ -7,6 +6,9 @@ class StochasticReconstructionLoss(Loss):
         super(StochasticReconstructionLoss, self).__init__(encoder, input_var=input_var)
         self.encoder = encoder
         self.decoder = decoder
+
+        self.loss_text = "E_{}[log {}]".format(self.encoder,
+                                               self.decoder)
 
     def estimate(self, x, **kwargs):
         _x = super(StochasticReconstructionLoss, self).estimate(x)

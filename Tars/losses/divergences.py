@@ -12,6 +12,8 @@ class KullbackLeibler(Loss):
         self.p1_name = self.p1.distribution_name
         self.p2_name = self.p2.distribution_name
 
+        self.loss_text = "KL[{}||{}]".format(p1, p2)
+
     def estimate(self, x, **kwargs):
         x = super(KullbackLeibler, self).estimate(x)
 

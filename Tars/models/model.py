@@ -1,16 +1,29 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
+import torch
 
 
 class Model(object):
     __metaclass__ = ABCMeta
 
     def __init__(self):
-        pass
+        self.loss_cls = None
+        self.test_loss_cls = None
+        self.optimizer = None
 
-    @abstractmethod
-    def train(self):
-        pass
+    def train(self, train_x, **kwargs):
+        self.optimizer.zero_grad()
+        loss = self.loss_cls.estimate(train_x, **kwargs)
 
-    @abstractmethod
-    def test(self):
-        pass
+        # backprop
+        loss.backward()
+
+        # update params
+        self.optimizer.step()
+
+        return loss
+
+    def test(self, test_x, **kwargs):
+        with torch.no_grad():
+            loss = self.test_loss_cls.estimate(test_x, **kwargs)
+
+        return loss

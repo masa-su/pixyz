@@ -182,6 +182,9 @@ class Distribution(nn.Module):
     def __mul__(self, other):
         return MultiplyDistribution(self, other)
 
+    def __str__(self):
+        return self.prob_text
+
 
 class CustomLikelihoodDistribution(Distribution):
 

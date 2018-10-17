@@ -1,4 +1,3 @@
-import torch
 from torch import optim, nn
 
 from ..models.model import Model
@@ -11,14 +10,13 @@ class CustomLossModel(Model):
                  distributions=[],
                  optimizer=optim.Adam,
                  optimizer_params={}):
-        super(CustomLossModel, self).__init__()
+        super().__init__()
 
         self.distributions = nn.ModuleList(tolist(distributions))
 
+        # set losses
         self.loss_cls = None
         self.test_loss_cls = None
-        self.input_var = None
-
         self.set_loss(loss, test_loss)
 
         # set params and optim
@@ -27,30 +25,18 @@ class CustomLossModel(Model):
 
     def set_loss(self, loss, test_loss=None):
         self.loss_cls = loss
-        self.input_var = self.loss_cls.input_var
         if test_loss:
             self.test_loss_cls = test_loss
         else:
             self.test_loss_cls = loss
 
-    def train(self, train_x):
+    def train(self, train_x, **kwargs):
         self.distributions.train()
 
-        self.optimizer.zero_grad()
-        loss = self.loss_cls.estimate(train_x).mean()
+        return super().train(train_x, **kwargs)
 
-        # backprop
-        loss.backward()
-
-        # update params
-        self.optimizer.step()
-
-        return loss
-
-    def test(self, test_x):
+    def test(self, test_x, **kwargs):
         self.distributions.eval()
 
-        with torch.no_grad():
-            loss = self.test_loss_cls.estimate(test_x).mean()
+        return super().test(test_x, **kwargs)
 
-        return loss
