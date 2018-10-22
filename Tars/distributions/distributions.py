@@ -111,7 +111,7 @@ class Distribution(nn.Module):
             Constant parameters of this distribution set at initialization.
             If the values of these dictionaries contain parameters which are named as strings, which means that
             these parameters are set as "variables", the correspondences between these values and the true name of
-            these parameters are stored as a dictionary format (map_dict).
+            these parameters are stored as a dictionary format (`map_dict`).
         """
 
         self.constant_params = {}
