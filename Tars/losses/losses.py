@@ -95,10 +95,8 @@ class LossOperator(Loss):
         self.a = a
         self.b = b
 
-        if len(_loss_text) == 2:
-            self.loss_text = _loss_text[0] + " {} " + _loss_text[1]
-        elif len(_loss_text) == 1:
-            self.loss_text = _loss_text[0]
+        if len(_loss_text) != 0:
+            self.loss_text = ' {} '.join(_loss_text)
         else:
             raise ValueError
 
