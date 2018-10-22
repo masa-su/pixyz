@@ -7,8 +7,8 @@ class StochasticReconstructionLoss(Loss):
         self.encoder = encoder
         self.decoder = decoder
 
-        self.loss_text = "E_{}[log {}]".format(self.encoder,
-                                               self.decoder)
+        self.loss_text = "E_{}[log {}]".format(self.encoder.prob_text,
+                                               self.decoder.prob_text)
 
     def estimate(self, x, **kwargs):
         _x = super(StochasticReconstructionLoss, self).estimate(x)

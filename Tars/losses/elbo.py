@@ -10,9 +10,9 @@ class ELBO(Loss):
                                    input_var=input_var)
         self.p = p
         self.q = approximate_dist
-        self.loss_text = "E_{}[log {}/{}]".format(self.q,
-                                                  self.p,
-                                                  self.q)
+        self.loss_text = "E_{}[log {}/{}]".format(self.q.prob_text,
+                                                  self.p.prob_text,
+                                                  self.q.prob_text)
 
     def estimate(self, x, **kwargs):
         _x = super(ELBO, self).estimate(x)
