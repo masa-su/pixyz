@@ -384,57 +384,78 @@ class Distribution(nn.Module):
 
 class MultiplyDistribution(Distribution):
     """
-    p(x,y|z) = p(x|z,y)p(y|z)
+    Multiply by given distributions, e.g, p(x,y|z) = p(x|z,y)p(y|z).
+    In this class, it is checked if two distributions can be multiplied.
+
+    p(x|z)p(z|y) -> Valid
+    p(x|z)p(y|z) -> Valid
+    p(x|z)p(y|a) -> Valid
+    p(x|z)p(z|x) -> Invalid (recursive)
+    p(x|z)p(x|y) -> Invalid (conflict)
 
     Parameters
     -------
     a : Tars.Distribution
+
     b : Tars.Distribution
 
     Examples
     --------
     >>> p_multi = MultipleDistribution([a, b])
     >>> p_multi = a * b
-
-    TODO: MultiplyDistribution should inherit the Distribution class.
     """
 
     def __init__(self, a, b):
+        if not (isinstance(a, Distribution) and isinstance(b, Distribution)):
+            raise ValueError("Given inputs should be `Tars.Distribution`, got {} and {}.".format(type(a), type(b)))
 
-        """
-        Set parents and children
-        If "inherited variables" are exist (which means p(e|c)p(c|a,b)),
-        then A is a child and B is a parent.
-        Else (which means p(c|a,b)p(e|c) or p(c|a)p(b|a)),
-        then A is a parent and B is a child.
-        """
-        _vars = a.cond_var + b.var
-        _inh_var = [item for item in set(_vars) if _vars.count(item) > 1]
-        if len(_inh_var) > 0:
-            _parents_var = b
-            _children_var = a
+        # Check parent-child relationship between two distributions.
+        # If inherited variables (`_inh_var`) are exist (e.g. c in p(e|c)p(c|a,b)),
+        # then p(e|c) is a child and p(c|a,b) is a parent, otherwise it is opposite.
+        _vars_a_b = a.cond_var + b.var
+        _vars_b_a = b.cond_var + a.var
+        _inh_var_a_b = [var for var in set(_vars_a_b) if _vars_a_b.count(var) > 1]
+        _inh_var_b_a = [var for var in set(_vars_b_a) if _vars_b_a.count(var) > 1]
+
+        if len(_inh_var_a_b) > 0:
+            _children = a
+            _parents = b
+            _inh_var = _inh_var_a_b
+
+        elif len(_inh_var_b_a) > 0:
+            _children = b
+            _parents = a
+            _inh_var = _inh_var_b_a
+
         else:
-            _parents_var = a
-            _children_var = b
+            _children = a
+            _parents = b
+            _inh_var = []
 
-        # set variables
-        _var = _children_var.var + _parents_var.var
-        _var = sorted(set(_var), key=_var.index)
+        # Check if variables of two distributions are "recursive" (e.g. p(x|z)p(z|x)).
+        _check_recursive_vars = _children.var + _parents.cond_var
+        if len(_check_recursive_vars) != len(set(_check_recursive_vars)):
+            raise ValueError("Variables of two distributions, {} and {}, are recursive.".format(_children.prob_text,
+                                                                                                _parents.prob_text))
 
-        # set conditional variables
-        _cond_var = _children_var.cond_var + _parents_var.cond_var
+        # Set variables.
+        _var = _children.var + _parents.var
+        if len(_var) != len(set(_var)):  # e.g. p(x|z)p(x|y)
+            raise ValueError("Variables of two distributions, {} and {}, are conflicted.".format(_children.prob_text,
+                                                                                                 _parents.prob_text))
+
+        # Set conditional variables.
+        _cond_var = _children.cond_var + _parents.cond_var
         _cond_var = sorted(set(_cond_var), key=_cond_var.index)
 
-        # check conflicts in conditional variables
-        _all_var = _var + _cond_var
-        _inh_var = [item for item in set(_all_var) if _all_var.count(item) > 1]
-        _cond_var = [item for item in _cond_var if item not in _inh_var]
+        # Delete inh_var in conditional variables.
+        _cond_var = [var for var in _cond_var if var not in _inh_var]
 
         super().__init__(cond_var=_cond_var, var=_var)
 
         self._inh_var = _inh_var
-        self._parents_var = _parents_var
-        self._children_var = _children_var
+        self._parents = _parents
+        self._children = _children
 
     @property
     def inh_var(self):
@@ -442,24 +463,55 @@ class MultiplyDistribution(Distribution):
 
     @property
     def prob_factorized_text(self):
-        return self._children_var.prob_factorized_text + self._parents_var.prob_text
+        return self._children.prob_factorized_text + self._parents.prob_text
 
     def _initialize_constant_params(self, **kwargs):
         pass
 
     def get_params(self, params):
-        NotImplementedError
+        raise AttributeError
 
-    def sample(self, x=None, batch_size=1, return_all=True, *args, **kwargs):
+    def sample(self, x=None, shape=None, batch_size=1, return_all=True,
+               reparam=True, **kwargs):
+        """
+        Sample variables of this distribution.
+        If `cond_var` is not empty, we should set inputs as a dictionary format.
+
+        Parameters
+        ----------
+        x : torch.Tensor, list, or dict
+            Input variables.
+
+        shape : tuple
+            Shape of samples.
+            If set, `batch_size` and `dim` are ignored.
+
+        batch_size : int
+            Batch size of samples. This is set to 1 by default.
+
+        return_all : bool
+            Choose whether the output contains input variables.
+
+        reparam : bool
+            Choose whether we sample variables with reparameterized trick.
+
+        kwargs : dict
+
+        Returns
+        -------
+        output : dict
+            Samples of this distribution.
+        """
+
         # input : dict
         # output : dict
 
         # sample from the parent distribution
         if x is None:
-            if len(self._parents_var.cond_var) > 0:
+            if len(self._parents.cond_var) > 0:
                 raise ValueError("You should set inputs.")
 
-            parents_output = self._parents_var.sample(batch_size=batch_size)
+            parents_output = self._parents.sample(batch_size=batch_size)
 
         else:
             if batch_size == 1:
@@ -471,13 +523,13 @@ class MultiplyDistribution(Distribution):
             if set(list(x.keys())) != set(self.cond_var):
                 raise ValueError("Input's keys are not valid.")
 
-            if len(self._parents_var.cond_var) > 0:
+            if len(self._parents.cond_var) > 0:
                 parents_input = get_dict_values(
-                    x, self._parents_var.cond_var, return_dict=True)
-                parents_output = self._parents_var.sample(
+                    x, self._parents.cond_var, return_dict=True)
+                parents_output = self._parents.sample(
                     parents_input, return_all=False)
             else:
-                parents_output = self._parents_var.sample(
+                parents_output = self._parents.sample(
                     batch_size=batch_size, return_all=False)
 
         # sample from the child distribution
@@ -487,12 +539,12 @@ class MultiplyDistribution(Distribution):
             children_input = children_input_inh
         else:
             children_cond_exc_inh = list(
-                set(self._children_var.cond_var)-set(self.inh_var))
+                set(self._children.cond_var)-set(self.inh_var))
             children_input = get_dict_values(
                 x, children_cond_exc_inh, return_dict=True)
             children_input.update(children_input_inh)
 
-        children_output = self._children_var.sample(
+        children_output = self._children.sample(
             children_input, return_all=False)
 
         output = parents_output
@@ -509,10 +561,10 @@ class MultiplyDistribution(Distribution):
 
         # sample from the parent distribution
         if x is None:
-            if len(self._parents_var.cond_var) > 0:
+            if len(self._parents.cond_var) > 0:
                 raise ValueError("You should set inputs.")
 
-            parents_output = self._parents_var.sample(batch_size=batch_size)
+            parents_output = self._parents.sample(batch_size=batch_size)
 
         else:
             if batch_size == 1:
@@ -524,13 +576,13 @@ class MultiplyDistribution(Distribution):
             if set(list(x.keys())) != set(self.cond_var):
                 raise ValueError("Input's keys are not valid.")
 
-            if len(self._parents_var.cond_var) > 0:
+            if len(self._parents.cond_var) > 0:
                 parents_input = get_dict_values(
-                    x, self._parents_var.cond_var, return_dict=True)
-                parents_output = self._parents_var.sample(
+                    x, self._parents.cond_var, return_dict=True)
+                parents_output = self._parents.sample(
                     parents_input, return_all=False)
             else:
-                parents_output = self._parents_var.sample(
+                parents_output = self._parents.sample(
                     batch_size=batch_size, return_all=False)
 
         # sample from the child distribution
@@ -540,27 +592,40 @@ class MultiplyDistribution(Distribution):
             children_input = children_input_inh
         else:
             children_cond_exc_inh = list(
-                set(self._children_var.cond_var)-set(self.inh_var))
+                set(self._children.cond_var)-set(self.inh_var))
             children_input = get_dict_values(
                 x, children_cond_exc_inh, return_dict=True)
             children_input.update(children_input_inh)
 
-        output = self._children_var.sample_mean(children_input)
+        output = self._children.sample_mean(children_input)
         return output
 
     def log_likelihood(self, x):
-        # input : dict
-        # output : dict
+        """
+        Estimate the log likelihood of this distribution from inputs formatted by a dictionary.
+
+        Parameters
+        ----------
+        x : dict
+
+
+        Returns
+        -------
+        log_like : torch.Tensor
+
+        """
 
         parents_x = get_dict_values(
-            x, self._parents_var.cond_var + self._parents_var.var,
+            x, self._parents.cond_var + self._parents.var,
             return_dict=True)
         children_x = get_dict_values(
-            x, self._children_var.cond_var + self._children_var.var,
+            x, self._children.cond_var + self._children.var,
             return_dict=True)
 
-        return self._parents_var.log_likelihood(parents_x) +\
-            self._children_var.log_likelihood(children_x)
+        log_like = self._parents.log_likelihood(parents_x) +\
+            self._children.log_likelihood(children_x)
+
+        return log_like
 
     def forward(self, *args, **kwargs):
         NotImplementedError
