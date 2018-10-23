@@ -34,6 +34,10 @@ class Distribution(nn.Module):
     def __init__(self, cond_var=[], var=["x"], name="p", dim=1,
                  **kwargs):
         super().__init__()
+        _vars = cond_var + var
+        if len(_vars) != len(set(_vars)):
+            raise ValueError("There are conflicted variables.")
+
         self._cond_var = cond_var
         self._var = var
         self.dim = dim
@@ -275,7 +279,7 @@ class Distribution(nn.Module):
 
         return output
 
-    def sample(self, x=None, shape=None, batch_size=1, return_all=True,
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=True, **kwargs):
         """
         Sample variables of this distribution.
@@ -307,7 +311,7 @@ class Distribution(nn.Module):
             Samples of this distribution.
         """
 
-        if x is None:  # unconditioned
+        if len(x) == 0:  # unconditioned
             if len(self._cond_var) != 0:
                 raise ValueError("You should set inputs or parameters")
 
@@ -471,7 +475,7 @@ class MultiplyDistribution(Distribution):
     def get_params(self, params):
         raise AttributeError
 
-    def sample(self, x=None, shape=None, batch_size=1, return_all=True,
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=True, **kwargs):
         """
         Sample variables of this distribution.
@@ -503,102 +507,30 @@ class MultiplyDistribution(Distribution):
             Samples of this distribution.
         """
 
-        # input : dict
-        # output : dict
+        x = get_dict_values(x, self._cond_var, return_dict=True)
 
         # sample from the parent distribution
-        if x is None:
-            if len(self._parents.cond_var) > 0:
-                raise ValueError("You should set inputs.")
-
-            parents_output = self._parents.sample(batch_size=batch_size)
-
-        else:
-            if batch_size == 1:
-                batch_size = list(x.values())[0].shape[0]
-
-            if list(x.values())[0].shape[0] != batch_size:
-                raise ValueError("Invalid batch size")
-
-            if set(list(x.keys())) != set(self.cond_var):
-                raise ValueError("Input's keys are not valid.")
-
-            if len(self._parents.cond_var) > 0:
-                parents_input = get_dict_values(
-                    x, self._parents.cond_var, return_dict=True)
-                parents_output = self._parents.sample(
-                    parents_input, return_all=False)
-            else:
-                parents_output = self._parents.sample(
-                    batch_size=batch_size, return_all=False)
+        parents_input = get_dict_values(x, self._parents.cond_var, return_dict=True)
+        parents_output = self._parents.sample(parents_input, shape, batch_size, False, reparam)
 
         # sample from the child distribution
-        children_input_inh = get_dict_values(
-            parents_output, self.inh_var, return_dict=True)
-        if x is None:
-            children_input = children_input_inh
-        else:
-            children_cond_exc_inh = list(
-                set(self._children.cond_var)-set(self.inh_var))
-            children_input = get_dict_values(
-                x, children_cond_exc_inh, return_dict=True)
-            children_input.update(children_input_inh)
+        children_inh_input = get_dict_values(parents_output, self.inh_var, return_dict=True)
+        children_cond_exc_inh_var = list(set(self._children.cond_var)-set(self.inh_var))
+        children_input = get_dict_values(x, children_cond_exc_inh_var, return_dict=True)
+        children_input.update(children_inh_input)
 
-        children_output = self._children.sample(
-            children_input, return_all=False)
+        children_output = self._children.sample(children_input, shape, batch_size, False, reparam)
 
         output = parents_output
         output.update(children_output)
 
-        if return_all and x:
+        if return_all:
             output.update(x)
 
         return output
 
-    def sample_mean(self, x=None, batch_size=1, *args, **kwargs):
-        # input : dict
-        # output : dict
-
-        # sample from the parent distribution
-        if x is None:
-            if len(self._parents.cond_var) > 0:
-                raise ValueError("You should set inputs.")
-
-            parents_output = self._parents.sample(batch_size=batch_size)
-
-        else:
-            if batch_size == 1:
-                batch_size = list(x.values())[0].shape[0]
-
-            if list(x.values())[0].shape[0] != batch_size:
-                raise ValueError("Invalid batch size")
-
-            if set(list(x.keys())) != set(self.cond_var):
-                raise ValueError("Input's keys are not valid.")
-
-            if len(self._parents.cond_var) > 0:
-                parents_input = get_dict_values(
-                    x, self._parents.cond_var, return_dict=True)
-                parents_output = self._parents.sample(
-                    parents_input, return_all=False)
-            else:
-                parents_output = self._parents.sample(
-                    batch_size=batch_size, return_all=False)
-
-        # sample from the child distribution
-        children_input_inh = get_dict_values(
-            parents_output, self.inh_var, return_dict=True)
-        if x is None:
-            children_input = children_input_inh
-        else:
-            children_cond_exc_inh = list(
-                set(self._children.cond_var)-set(self.inh_var))
-            children_input = get_dict_values(
-                x, children_cond_exc_inh, return_dict=True)
-            children_input.update(children_input_inh)
-
-        output = self._children.sample_mean(children_input)
-        return output
+    def sample_mean(self):
+        NotImplementedError
 
     def log_likelihood(self, x):
         """
@@ -631,7 +563,7 @@ class MultiplyDistribution(Distribution):
         NotImplementedError
 
     def __str__(self):
-        return self.prob_text + " = " + self.prob_factorized_text
+        return "{} = {}".format(self.prob_text, self.prob_factorized_text)
 
 
 def mean_sum_samples(samples):
