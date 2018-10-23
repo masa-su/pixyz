@@ -1,6 +1,4 @@
-from .distributions import (
-    Distribution,
-    CustomLikelihoodDistribution,
+from .exponential_distributions import (
     Normal,
     Bernoulli,
     RelaxedBernoulli,
@@ -8,7 +6,11 @@ from .distributions import (
     Categorical,
     RelaxedCategorical,
 )
-from .operators import (
+from .custom_distributions import (
+    CustomLikelihoodDistribution,
+)
+
+from .distributions import (
     MultiplyDistribution,
 )
 
@@ -24,7 +26,6 @@ from .poe import NormalPoE
 
 
 __all__ = [
-    'Distribution',
     'CustomLikelihoodDistribution',
     'Normal',
     'Bernoulli',

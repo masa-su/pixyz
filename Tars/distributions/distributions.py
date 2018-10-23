@@ -1,16 +1,8 @@
 from __future__ import print_function
 import torch
 from torch import nn
-from torch.distributions import Normal as NormalTorch
-from torch.distributions import Bernoulli as BernoulliTorch
-from torch.distributions import RelaxedBernoulli as RelaxedBernoulliTorch
-from torch.distributions \
-    import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
-from torch.distributions.one_hot_categorical\
-    import OneHotCategorical as CategoricalTorch
 
 from ..utils import get_dict_values
-from .operators import MultiplyDistribution
 
 
 class Distribution(nn.Module):
@@ -390,175 +382,191 @@ class Distribution(nn.Module):
         return self.prob_text
 
 
-class CustomLikelihoodDistribution(Distribution):
+class MultiplyDistribution(Distribution):
+    """
+    p(x,y|z) = p(x|z,y)p(y|z)
 
-    def __init__(self, var=["x"],  likelihood=None,
-                 **kwargs):
-        if likelihood is None:
-            raise ValueError("You should set the likelihood"
-                             " of this distribution.")
-        self.likelihood = likelihood
-        self.params_keys = []
-        self.distribution_name = "Custom Distribution"
-        self.DistributionTorch = None
+    Parameters
+    -------
+    a : Tars.Distribution
+    b : Tars.Distribution
 
-        super().__init__(var=var, cond_var=[], **kwargs)
+    Examples
+    --------
+    >>> p_multi = MultipleDistribution([a, b])
+    >>> p_multi = a * b
 
-    def _set_distribution(self, x={}):
-        pass
+    TODO: MultiplyDistribution should inherit the Distribution class.
+    """
 
-    def _get_log_like(self, x):
-        # input : dict
-        # output : tensor
+    def __init__(self, a, b):
 
-        x_targets = get_dict_values(x, self._var)
-        return torch.log(self.likelihood(x_targets[0]))
-
-    def get_params(self, **kwargs):
-        pass
-
-    def sample(self, **kwargs):
-        pass
-
-
-class Normal(Distribution):
-
-    def __init__(self, **kwargs):
-        self.params_keys = ["loc", "scale"]
-        self.distribution_name = "Normal"
-        self.DistributionTorch = NormalTorch
-
-        super().__init__(**kwargs)
-
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["loc"]
-
-
-class Bernoulli(Distribution):
-
-    def __init__(self, *args, **kwargs):
-        self.params_keys = ["probs"]
-        self.distribution_name = "Bernoulli"
-        self.DistributionTorch = BernoulliTorch
-
-        super().__init__(*args, **kwargs)
-
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["probs"]
-
-
-class RelaxedBernoulli(Distribution):
-
-    def __init__(self, temperature,
-                 *args, **kwargs):
-        self.params_keys = ["probs"]
-        self.distribution_name = "RelaxedBernoulli"
-        self.DistributionTorch = BernoulliTorch
-        # use relaxed version only when sampling
-        self.RelaxedDistributionTorch = RelaxedBernoulliTorch
-        self.temperature = temperature
-
-        super().__init__(*args, **kwargs)
-
-    def _set_distribution(self, x={}, sampling=True, **kwargs):
-        params = self.get_params(x, **kwargs)
-        if sampling is True:
-            self.dist =\
-                self.RelaxedDistributionTorch(temperature=self.temperature,
-                                              **params)
+        """
+        Set parents and children
+        If "inherited variables" are exist (which means p(e|c)p(c|a,b)),
+        then A is a child and B is a parent.
+        Else (which means p(c|a,b)p(e|c) or p(c|a)p(b|a)),
+        then A is a parent and B is a child.
+        """
+        _vars = a.cond_var + b.var
+        _inh_var = [item for item in set(_vars) if _vars.count(item) > 1]
+        if len(_inh_var) > 0:
+            _parents_var = b
+            _children_var = a
         else:
-            self.dist = self.DistributionTorch(**params)
+            _parents_var = a
+            _children_var = b
+
+        # set variables
+        _var = _children_var.var + _parents_var.var
+        _var = sorted(set(_var), key=_var.index)
+
+        # set conditional variables
+        _cond_var = _children_var.cond_var + _parents_var.cond_var
+        _cond_var = sorted(set(_cond_var), key=_cond_var.index)
+
+        # check conflicts in conditional variables
+        _all_var = _var + _cond_var
+        _inh_var = [item for item in set(_all_var) if _all_var.count(item) > 1]
+        _cond_var = [item for item in _cond_var if item not in _inh_var]
+
+        super().__init__(cond_var=_cond_var, var=_var)
+
+        self._inh_var = _inh_var
+        self._parents_var = _parents_var
+        self._children_var = _children_var
+
+    @property
+    def inh_var(self):
+        return self._inh_var
+
+    @property
+    def prob_factorized_text(self):
+        return self._children_var.prob_factorized_text + self._parents_var.prob_text
+
+    def _initialize_constant_params(self, **kwargs):
+        pass
+
+    def get_params(self, params):
+        NotImplementedError
+
+    def sample(self, x=None, batch_size=1, return_all=True, *args, **kwargs):
+        # input : dict
+        # output : dict
+
+        # sample from the parent distribution
+        if x is None:
+            if len(self._parents_var.cond_var) > 0:
+                raise ValueError("You should set inputs.")
+
+            parents_output = self._parents_var.sample(batch_size=batch_size)
+
+        else:
+            if batch_size == 1:
+                batch_size = list(x.values())[0].shape[0]
+
+            if list(x.values())[0].shape[0] != batch_size:
+                raise ValueError("Invalid batch size")
+
+            if set(list(x.keys())) != set(self.cond_var):
+                raise ValueError("Input's keys are not valid.")
+
+            if len(self._parents_var.cond_var) > 0:
+                parents_input = get_dict_values(
+                    x, self._parents_var.cond_var, return_dict=True)
+                parents_output = self._parents_var.sample(
+                    parents_input, return_all=False)
+            else:
+                parents_output = self._parents_var.sample(
+                    batch_size=batch_size, return_all=False)
+
+        # sample from the child distribution
+        children_input_inh = get_dict_values(
+            parents_output, self.inh_var, return_dict=True)
+        if x is None:
+            children_input = children_input_inh
+        else:
+            children_cond_exc_inh = list(
+                set(self._children_var.cond_var)-set(self.inh_var))
+            children_input = get_dict_values(
+                x, children_cond_exc_inh, return_dict=True)
+            children_input.update(children_input_inh)
+
+        children_output = self._children_var.sample(
+            children_input, return_all=False)
+
+        output = parents_output
+        output.update(children_output)
+
+        if return_all and x:
+            output.update(x)
+
+        return output
+
+    def sample_mean(self, x=None, batch_size=1, *args, **kwargs):
+        # input : dict
+        # output : dict
+
+        # sample from the parent distribution
+        if x is None:
+            if len(self._parents_var.cond_var) > 0:
+                raise ValueError("You should set inputs.")
+
+            parents_output = self._parents_var.sample(batch_size=batch_size)
+
+        else:
+            if batch_size == 1:
+                batch_size = list(x.values())[0].shape[0]
+
+            if list(x.values())[0].shape[0] != batch_size:
+                raise ValueError("Invalid batch size")
+
+            if set(list(x.keys())) != set(self.cond_var):
+                raise ValueError("Input's keys are not valid.")
+
+            if len(self._parents_var.cond_var) > 0:
+                parents_input = get_dict_values(
+                    x, self._parents_var.cond_var, return_dict=True)
+                parents_output = self._parents_var.sample(
+                    parents_input, return_all=False)
+            else:
+                parents_output = self._parents_var.sample(
+                    batch_size=batch_size, return_all=False)
+
+        # sample from the child distribution
+        children_input_inh = get_dict_values(
+            parents_output, self.inh_var, return_dict=True)
+        if x is None:
+            children_input = children_input_inh
+        else:
+            children_cond_exc_inh = list(
+                set(self._children_var.cond_var)-set(self.inh_var))
+            children_input = get_dict_values(
+                x, children_cond_exc_inh, return_dict=True)
+            children_input.update(children_input_inh)
+
+        output = self._children_var.sample_mean(children_input)
+        return output
 
     def log_likelihood(self, x):
         # input : dict
         # output : dict
 
-        if not set(list(x.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input's keys are not valid.")
+        parents_x = get_dict_values(
+            x, self._parents_var.cond_var + self._parents_var.var,
+            return_dict=True)
+        children_x = get_dict_values(
+            x, self._children_var.cond_var + self._children_var.var,
+            return_dict=True)
 
-        if len(self._cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self._cond_var, True)
-            self._set_distribution(_x, sampling=False)
+        return self._parents_var.log_likelihood(parents_x) +\
+            self._children_var.log_likelihood(children_x)
 
-        log_like = self._get_log_like(x)
-        return mean_sum_samples(log_like)
+    def forward(self, *args, **kwargs):
+        NotImplementedError
 
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["probs"]
-
-
-class FactorizedBernoulli(Bernoulli):
-    """
-    Generative Models of Visually Grounded Imagination
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def _get_log_like(self, x):
-        log_like = super()._get_log_like(x)
-        [_x] = get_dict_values(x, self._var)
-        log_like[_x == 0] = 0
-        return log_like
-
-
-class Categorical(Distribution):
-
-    def __init__(self, one_hot=True, *args, **kwargs):
-        self.one_hot = one_hot
-        self.params_keys = ["probs"]
-        self.distribution_name = "Categorical"
-        self.DistributionTorch = CategoricalTorch
-
-        super().__init__(*args, **kwargs)
-
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["probs"]
-
-
-class RelaxedCategorical(Distribution):
-
-    def __init__(self, temperature,
-                 *args, **kwargs):
-        self.params_keys = ["probs"]
-        self.distribution_name = "RelaxedCategorical"
-        self.DistributionTorch = CategoricalTorch
-        # use relaxed version only when sampling
-        self.RelaxedDistributionTorch = RelaxedOneHotCategoricalTorch
-        self.temperature = temperature
-
-        super().__init__(*args, **kwargs)
-
-    def _set_distribution(self, x={}, sampling=True, **kwargs):
-        params = self.get_params(x, **kwargs)
-        if sampling is True:
-            self.dist =\
-                self.RelaxedDistributionTorch(temperature=self.temperature,
-                                              **params)
-        else:
-            self.dist = self.DistributionTorch(**params)
-
-    def log_likelihood(self, x):
-        # input : dict
-        # output : dict
-
-        if not set(list(x.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input's keys are not valid.")
-
-        if len(self._cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self._cond_var, True)
-            self._set_distribution(_x, sampling=False)
-
-        log_like = self._get_log_like(x)
-        return mean_sum_samples(log_like)
-
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["probs"]
+    def __str__(self):
+        return self.prob_text + " = " + self.prob_factorized_text
 
 
 def mean_sum_samples(samples):
@@ -573,3 +581,4 @@ def mean_sum_samples(samples):
         return samples
     raise ValueError("The dim of samples must be any of 2, 3, or 4,"
                      "got dim %s." % dim)
+
