@@ -42,10 +42,13 @@ class Distribution(nn.Module):
     def __init__(self, cond_var=[], var=["x"], name="p", dim=1,
                  **kwargs):
         super().__init__()
-        self.cond_var = cond_var
-        self.var = var
+        self._cond_var = cond_var
+        self._var = var
         self.dim = dim
-        self.name = name
+        self._name = name
+
+        self._prob_text = None
+        self._prob_factorized_text = None
 
         # these members are intended to be overrided.
         # self.dist = None
@@ -53,7 +56,44 @@ class Distribution(nn.Module):
         # self.params_keys = None
 
         self._initialize_constant_params(**kwargs)
-        self._update_prob_text()
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if type(name) is str:
+            self._name = name
+            self._update_prob_text()
+            return
+
+        raise ValueError("Name of the distribution class must be set as a string type.")
+
+    @property
+    def var(self):
+        return self._var
+
+    @property
+    def cond_var(self):
+        return self._cond_var
+
+    @property
+    def prob_text(self):
+        _var_text = [','.join(self._var)]
+        if len(self._cond_var) != 0:
+            _var_text += [','.join(self._cond_var)]
+
+        _prob_text = "{}({})".format(
+            self._name,
+            "|".join(_var_text)
+        )
+
+        return _prob_text
+
+    @property
+    def prob_factorized_text(self):
+        return self.prob_text
 
     def _check_input(self, x, var=None):
         """
@@ -82,7 +122,7 @@ class Distribution(nn.Module):
         """
 
         if var is None:
-            var = self.cond_var
+            var = self._cond_var
 
         if type(x) is torch.Tensor:
             checked_x = {var[0]: x}
@@ -129,30 +169,6 @@ class Distribution(nn.Module):
         if len(self.constant_params) == len(self.params_keys):
             self._set_distribution()
 
-    def _update_prob_text(self):
-        """
-        Update `prob_text` from `cond_var`, `var`, and `name`.
-        """
-
-        _prob_text = [','.join(self.var)]
-        if len(self.cond_var) != 0:
-            _prob_text += [','.join(self.cond_var)]
-
-        self.prob_text = "{}({})".format(
-            self.name,
-            "|".join(_prob_text)
-        )
-
-        self._update_prob_factorized_text()
-
-    def _update_prob_factorized_text(self):
-        """
-        Update `prob_factorized_text`.
-        Because this class models a single distribution, this is same as `prob_text`.
-        """
-
-        self.prob_factorized_text = self.prob_text
-
     def _set_distribution(self, x={}, **kwargs):
         params = self.get_params(x, **kwargs)
         self.dist = self.DistributionTorch(**params)
@@ -180,7 +196,7 @@ class Distribution(nn.Module):
                       "for this distribution.")
         else:
             _samples = self.dist.sample(sample_shape=sample_shape)
-        samples_dict = {self.var[0]: _samples}
+        samples_dict = {self._var[0]: _samples}
 
         return samples_dict
 
@@ -196,7 +212,7 @@ class Distribution(nn.Module):
 
         """
 
-        x_targets = get_dict_values(x, self.var)
+        x_targets = get_dict_values(x, self._var)
         log_like = self.dist.log_prob(*x_targets)
 
         return log_like
@@ -232,10 +248,6 @@ class Distribution(nn.Module):
                      if key not in list(self.map_dict.keys())}
 
         return mapped_params, variables
-
-    def set_name(self, name):
-        self.name = name
-        self._update_prob_text()
 
     def get_params(self, params):
         """
@@ -304,7 +316,7 @@ class Distribution(nn.Module):
         """
 
         if x is None:  # unconditioned
-            if len(self.cond_var) != 0:
+            if len(self._cond_var) != 0:
                 raise ValueError("You should set inputs or parameters")
 
             if shape:
@@ -340,11 +352,11 @@ class Distribution(nn.Module):
 
         """
 
-        if not set(list(x.keys())) >= set(self.cond_var + self.var):
+        if not set(list(x.keys())) >= set(self._cond_var + self._var):
             raise ValueError("Input's keys are not valid.")
 
-        if len(self.cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self.cond_var, True)
+        if len(self._cond_var) > 0:  # conditional distribution
+            _x = get_dict_values(x, self._cond_var, True)
             self._set_distribution(_x)
 
         log_like = self._get_log_like(x)
@@ -399,7 +411,7 @@ class CustomLikelihoodDistribution(Distribution):
         # input : dict
         # output : tensor
 
-        x_targets = get_dict_values(x, self.var)
+        x_targets = get_dict_values(x, self._var)
         return torch.log(self.likelihood(x_targets[0]))
 
     def get_params(self, **kwargs):
@@ -463,11 +475,11 @@ class RelaxedBernoulli(Distribution):
         # input : dict
         # output : dict
 
-        if not set(list(x.keys())) >= set(self.cond_var + self.var):
+        if not set(list(x.keys())) >= set(self._cond_var + self._var):
             raise ValueError("Input's keys are not valid.")
 
-        if len(self.cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self.cond_var, True)
+        if len(self._cond_var) > 0:  # conditional distribution
+            _x = get_dict_values(x, self._cond_var, True)
             self._set_distribution(_x, sampling=False)
 
         log_like = self._get_log_like(x)
@@ -488,7 +500,7 @@ class FactorizedBernoulli(Bernoulli):
 
     def _get_log_like(self, x):
         log_like = super()._get_log_like(x)
-        [_x] = get_dict_values(x, self.var)
+        [_x] = get_dict_values(x, self._var)
         log_like[_x == 0] = 0
         return log_like
 
@@ -534,11 +546,11 @@ class RelaxedCategorical(Distribution):
         # input : dict
         # output : dict
 
-        if not set(list(x.keys())) >= set(self.cond_var + self.var):
+        if not set(list(x.keys())) >= set(self._cond_var + self._var):
             raise ValueError("Input's keys are not valid.")
 
-        if len(self.cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self.cond_var, True)
+        if len(self._cond_var) > 0:  # conditional distribution
+            _x = get_dict_values(x, self._cond_var, True)
             self._set_distribution(_x, sampling=False)
 
         log_like = self._get_log_like(x)
