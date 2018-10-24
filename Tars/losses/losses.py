@@ -116,48 +116,48 @@ class LossOperator(Loss):
 
 class AddLoss(LossOperator):
     def __init__(self, a, b):
-        super(AddLoss, self).__init__(a, b)
+        super().__init__(a, b)
         self.loss_text = self.loss_text.format("+")
 
     def estimate(self, x, **kwargs):
         a_loss, b_loss = \
-            super(AddLoss, self).estimate(x, **kwargs)
+            super().estimate(x, **kwargs)
 
         return a_loss + b_loss
 
 
 class SubLoss(LossOperator):
     def __init__(self, a, b):
-        super(SubLoss, self).__init__(a, b)
+        super().__init__(a, b)
         self.loss_text = self.loss_text.format("-")
 
     def estimate(self, x, **kwargs):
         a_loss, b_loss = \
-            super(SubLoss, self).estimate(x, **kwargs)
+            super().estimate(x, **kwargs)
 
         return a_loss - b_loss
 
 
 class MulLoss(LossOperator):
     def __init__(self, a, b):
-        super(MulLoss, self).__init__(a, b)
+        super().__init__(a, b)
         self.loss_text = self.loss_text.format("*")
 
     def estimate(self, x, **kwargs):
         a_loss, b_loss = \
-            super(MulLoss, self).estimate(x, **kwargs)
+            super().estimate(x, **kwargs)
 
         return a_loss * b_loss
 
 
 class DivLoss(LossOperator):
     def __init__(self, a, b):
-        super(DivLoss, self).__init__(a, b)
+        super().__init__(a, b)
         self.loss_text = self.loss_text.format("/")
 
     def estimate(self, x, **kwargs):
         a_loss, b_loss = \
-            super(DivLoss, self).estimate(x, **kwargs)
+            super().estimate(x, **kwargs)
 
         return a_loss / b_loss
 
@@ -182,7 +182,7 @@ class LossSelfOperator(Loss):
 
 class NegLoss(LossSelfOperator):
     def __init__(self, a):
-        super(NegLoss, self).__init__(a)
+        super().__init__(a)
         self.loss_text = "- " + self.loss_text
 
     def estimate(self, x, **kwargs):
@@ -193,7 +193,7 @@ class NegLoss(LossSelfOperator):
 
 class BatchMean(LossSelfOperator):
     def __init__(self, a):
-        super(BatchMean, self).__init__(a)
+        super().__init__(a)
         self.loss_text = a.loss_text  # TODO: fix it
 
     def estimate(self, x, **kwargs):
@@ -203,7 +203,7 @@ class BatchMean(LossSelfOperator):
 
 class BatchSum(LossSelfOperator):
     def __init__(self, a):
-        super(BatchSum, self).__init__(a)
+        super().__init__(a)
         self.loss_text = a.loss_text  # TODO: fix it
 
     def estimate(self, x, **kwargs):

@@ -3,7 +3,7 @@ from .losses import Loss
 
 class StochasticReconstructionLoss(Loss):
     def __init__(self, encoder, decoder, input_var=[]):
-        super(StochasticReconstructionLoss, self).__init__(encoder, input_var=input_var)
+        super().__init__(encoder, input_var=input_var)
         self.encoder = encoder
         self.decoder = decoder
 
@@ -11,7 +11,7 @@ class StochasticReconstructionLoss(Loss):
                                                self.decoder.prob_text)
 
     def estimate(self, x, **kwargs):
-        _x = super(StochasticReconstructionLoss, self).estimate(x)
+        _x = super().estimate(x)
         samples = self.encoder.sample(_x)
         loss = -self.decoder.log_likelihood(samples)
 

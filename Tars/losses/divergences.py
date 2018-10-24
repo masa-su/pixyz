@@ -5,7 +5,7 @@ from .losses import Loss
 
 class KullbackLeibler(Loss):
     def __init__(self, p1, p2, input_var=[]):
-        super(KullbackLeibler, self).__init__(p1, p2, input_var)
+        super().__init__(p1, p2, input_var)
         self.p1 = p1
         self.p2 = p2
 
@@ -15,7 +15,7 @@ class KullbackLeibler(Loss):
         self.loss_text = "KL[{}||{}]".format(p1.prob_text, p2.prob_text)
 
     def estimate(self, x, **kwargs):
-        x = super(KullbackLeibler, self).estimate(x)
+        x = super().estimate(x)
 
         if self.p1_name == "Normal" and self.p2_name == "Normal":
             inputs = get_dict_values(x, self.p1.cond_var, True)
