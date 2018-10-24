@@ -153,6 +153,9 @@ class Distribution(nn.Module):
     def sample_mean(self):
         NotImplementedError
 
+    def replace_var(self, **replace_dict):
+        return ReplaceVarDistribution(self, replace_dict)
+
     def __mul__(self, other):
         return MultiplyDistribution(self, other)
 
@@ -415,9 +418,6 @@ class DistributionBase(Distribution):
     def forward(self, **params):
         return params
 
-    def replace_var(self, **replace_dict):
-        return ReplaceVarDistribution(self, replace_dict)
-
 
 class MultiplyDistribution(Distribution):
     """
@@ -542,14 +542,14 @@ class ReplaceVarDistribution(Distribution):
 
     Attributes
     ----------
-    a : Tars.Distribution
+    a : Tars.Distribution (not Tars.MultiplyDistribution)
 
     replace_dict : dict
     """
 
     def __init__(self, a, replace_dict):
 
-        if isinstance(a, MultiplyDistribution) and not isinstance(a, Distribution):
+        if isinstance(a, MultiplyDistribution) or not isinstance(a, Distribution):
             raise ValueError
 
         _cond_var = deepcopy(a.cond_var)
