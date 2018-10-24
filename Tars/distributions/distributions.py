@@ -133,7 +133,7 @@ class Distribution(nn.Module):
 
         NotImplementedError
 
-    def forward(self, **params):
+    def forward(self, *args, **kwargs):
         """
         When this class is inherited by DNNs, it is also intended that this method is overrided.
 
@@ -150,7 +150,7 @@ class Distribution(nn.Module):
 
         NotImplementedError
 
-    def sample_mean(self):
+    def sample_mean(self, x):
         NotImplementedError
 
     def replace_var(self, **replace_dict):
@@ -571,8 +571,8 @@ class ReplaceVarDistribution(Distribution):
         super().__init__(cond_var=_cond_var, var=_var, name=a.name, dim=a.dim)
         self._a = a
 
-    def forward(self, **kwargs):
-        return self._a.forward(**kwargs)
+    def forward(self, *args, **kwargs):
+        return self._a.forward(*args, **kwargs)
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=True):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
@@ -586,6 +586,10 @@ class ReplaceVarDistribution(Distribution):
         x = replace_dict_keys(x, self._replace_inv_dict)
 
         return self._a.log_likelihood(x)
+
+    def sample_mean(self, x):
+        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
+        return self._a.sample_mean(x)
 
     def __getattr__(self, item):
         try:
