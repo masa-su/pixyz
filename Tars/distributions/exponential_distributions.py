@@ -7,10 +7,10 @@ from torch.distributions.one_hot_categorical\
     import OneHotCategorical as CategoricalTorch
 
 from ..utils import get_dict_values
-from .distributions import Distribution, mean_sum_samples
+from .distributions import DistributionBase, mean_sum_samples
 
 
-class Normal(Distribution):
+class Normal(DistributionBase):
 
     def __init__(self, **kwargs):
         self.params_keys = ["loc", "scale"]
@@ -24,7 +24,7 @@ class Normal(Distribution):
         return params["loc"]
 
 
-class Bernoulli(Distribution):
+class Bernoulli(DistributionBase):
 
     def __init__(self, *args, **kwargs):
         self.params_keys = ["probs"]
@@ -38,7 +38,7 @@ class Bernoulli(Distribution):
         return params["probs"]
 
 
-class RelaxedBernoulli(Distribution):
+class RelaxedBernoulli(DistributionBase):
 
     def __init__(self, temperature,
                  *args, **kwargs):
@@ -94,7 +94,7 @@ class FactorizedBernoulli(Bernoulli):
         return log_like
 
 
-class Categorical(Distribution):
+class Categorical(DistributionBase):
 
     def __init__(self, one_hot=True, *args, **kwargs):
         self.one_hot = one_hot
@@ -109,7 +109,7 @@ class Categorical(Distribution):
         return params["probs"]
 
 
-class RelaxedCategorical(Distribution):
+class RelaxedCategorical(DistributionBase):
 
     def __init__(self, temperature,
                  *args, **kwargs):

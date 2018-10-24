@@ -1,8 +1,10 @@
 from __future__ import print_function
 import torch
+import numbers
 from torch import nn
+from copy import deepcopy
 
-from ..utils import get_dict_values
+from ..utils import get_dict_values, replace_dict_keys
 
 
 class Distribution(nn.Module):
@@ -31,8 +33,7 @@ class Distribution(nn.Module):
         This is set to "p" by default.
     """
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=1,
-                 **kwargs):
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=1):
         super().__init__()
         _vars = cond_var + var
         if len(_vars) != len(set(_vars)):
@@ -45,13 +46,6 @@ class Distribution(nn.Module):
 
         self._prob_text = None
         self._prob_factorized_text = None
-
-        # these members are intended to be overrided.
-        # self.dist = None
-        # self.distribution_name = None
-        # self.params_keys = None
-
-        self._initialize_constant_params(**kwargs)
 
     @property
     def name(self):
@@ -89,6 +83,92 @@ class Distribution(nn.Module):
     @property
     def prob_factorized_text(self):
         return self.prob_text
+
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
+               reparam=True):
+        """
+        Sample variables of this distribution.
+        If `cond_var` is not empty, we should set inputs as a dictionary format.
+
+        Parameters
+        ----------
+        x : torch.Tensor, list, or dict
+            Input variables.
+
+        shape : tuple
+            Shape of samples.
+            If set, `batch_size` and `dim` are ignored.
+
+        batch_size : int
+            Batch size of samples. This is set to 1 by default.
+
+        return_all : bool
+            Choose whether the output contains input variables.
+
+        reparam : bool
+            Choose whether we sample variables with reparameterized trick.
+
+        Returns
+        -------
+        output : dict
+            Samples of this distribution.
+        """
+
+        NotImplementedError
+
+    def log_likelihood(self, x_dict):
+        """
+        Estimate the log likelihood of this distribution from inputs formatted by a dictionary.
+
+        Parameters
+        ----------
+        x_dict : dict
+
+
+        Returns
+        -------
+        log_like : torch.Tensor
+
+        """
+
+        NotImplementedError
+
+    def forward(self, **params):
+        """
+        When this class is inherited by DNNs, it is also intended that this method is overrided.
+
+        Parameters
+        ----------
+        params : dict
+
+
+        Returns
+        -------
+        params : dict
+
+        """
+
+        NotImplementedError
+
+    def sample_mean(self):
+        NotImplementedError
+
+    def __mul__(self, other):
+        return MultiplyDistribution(self, other)
+
+    def __str__(self):
+        if self.prob_factorized_text == self.prob_text:
+            return self.prob_text
+
+        return "{} = {}".format(self.prob_text, self.prob_factorized_text)
+
+
+class DistributionBase(Distribution):
+
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim)
+
+        self._set_constant_params(**kwargs)
 
     def _check_input(self, x, var=None):
         """
@@ -136,36 +216,50 @@ class Distribution(nn.Module):
 
         return checked_x
 
-    def _initialize_constant_params(self, **params):
+    def _set_constant_params(self, **params_dict):
         """
-        Format constant parameters set at initialization of this distribution.
+        Format constant parameters of this distribution.
 
         Parameters
         ----------
-        params : dict
+        params_dict : dict
             Constant parameters of this distribution set at initialization.
             If the values of these dictionaries contain parameters which are named as strings, which means that
             these parameters are set as "variables", the correspondences between these values and the true name of
-            these parameters are stored as a dictionary format (`map_dict`).
+            these parameters are stored as a dictionary format (`replace_params_dict`).
         """
 
-        self.constant_params = {}
-        self.map_dict = {}
+        self.replace_params_dict = {}
+        self.constant_params_dict = {}
 
-        for keys in self.params_keys:
-            if keys in params.keys():
-                if type(params[keys]) is str:
-                    self.map_dict[params[keys]] = keys
+        for key in params_dict.keys():
+            if type(params_dict[key]) is str:
+                if params_dict[key] in self._cond_var:
+                    self.replace_params_dict[params_dict[key]] = key
                 else:
-                    self.constant_params[keys] = params[keys]
+                    raise ValueError
+            elif isinstance(params_dict[key], numbers.Number) or isinstance(params_dict[key], torch.Tensor):
+                self.constant_params_dict[key] = params_dict[key]
+            else:
+                raise ValueError
 
-        # Set a distribution if all parameters are constant and
-        # set at initialization.
-        if len(self.constant_params) == len(self.params_keys):
-            self._set_distribution()
+    def _set_distribution(self, x={}):
+        """
+        Require self.params_keys and self.DistributionTorch
 
-    def _set_distribution(self, x={}, **kwargs):
-        params = self.get_params(x, **kwargs)
+        Parameters
+        ----------
+        x : dict
+
+        Returns
+        -------
+
+        """
+
+        params = self.get_params(x)
+        if set(self.params_keys) != set(params.keys()):
+            raise ValueError
+
         self.dist = self.DistributionTorch(**params)
 
     def _get_sample(self, reparam=True,
@@ -212,50 +306,52 @@ class Distribution(nn.Module):
 
         return log_like
 
-    def _map_variables_to_params(self, **variables):
+    def _replace_vars_to_params(self, vars_dict, replace_dict):
         """
         Replace variables in keys of a input dictionary to parameters of this distribution according to
         these correspondences which is formatted in a dictionary and set in `_initialize_constant_params`.
 
         Parameters
         ----------
-        variables : dict
+        vars_dict : dict
+
+        replace_dict : dict
 
         Returns
         -------
-        mapped_params : dict
+        params_dict : dict
 
-        variables : dict
+        vars_dict : dict
 
         Examples
         --------
-        >> distribution.map_dict
+        >> replace_dict
         >> > {"a": "loc"}
-        >> x = {"a": 0}
-        >> distribution._map_variables_to_params(x)
-        >> > {"loc": 0}, {}
+        >> x = {"a": 0, "b": 1}
+        >> distribution._replace_vars_to_params(x, replace_dict)
+        >> > {"loc": 0}, {"b": 1}
         """
 
-        mapped_params = {self.map_dict[key]: value for key, value in variables.items()
-                         if key in list(self.map_dict.keys())}
+        params_dict = {replace_dict[key]: value for key, value in vars_dict.items()
+                       if key in list(replace_dict.keys())}
 
-        variables = {key: value for key, value in variables.items()
-                     if key not in list(self.map_dict.keys())}
+        vars_dict = {key: value for key, value in vars_dict.items()
+                     if key not in list(replace_dict.keys())}
 
-        return mapped_params, variables
+        return params_dict, vars_dict
 
-    def get_params(self, params):
+    def get_params(self, params_dict):
         """
         This method aims to get parameters of this distributions from constant parameters set in
         initialization and outputs of DNNs.
 
         Parameters
         ----------
-        params : dict
+        params_dict : dict
 
         Returns
         -------
-        output : dict
+        output_dict : dict
 
         Examples
         --------
@@ -269,46 +365,17 @@ class Distribution(nn.Module):
         >> > {"loc": 0, "scale": 1}
         """
 
-        params, variables = self._map_variables_to_params(**params)
-        output = self.forward(**variables)
+        params_dict, vars_dict = self._replace_vars_to_params(params_dict, self.replace_params_dict)
+        output_dict = self.forward(**vars_dict)
 
         # append constant_params to dict
-        output.update(params)
-        output.update(self.constant_params)
+        output_dict.update(params_dict)
+        output_dict.update(self.constant_params_dict)
 
-        return output
+        return output_dict
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=True, **kwargs):
-        """
-        Sample variables of this distribution.
-        If `cond_var` is not empty, we should set inputs as a dictionary format.
-
-        Parameters
-        ----------
-        x : torch.Tensor, list, or dict
-            Input variables.
-
-        shape : tuple
-            Shape of samples.
-            If set, `batch_size` and `dim` are ignored.
-
-        batch_size : int
-            Batch size of samples. This is set to 1 by default.
-
-        return_all : bool
-            Choose whether the output contains input variables.
-
-        reparam : bool
-            Choose whether we sample variables with reparameterized trick.
-
-        kwargs : dict
-
-        Returns
-        -------
-        output : dict
-            Samples of this distribution.
-        """
+               reparam=True):
 
         if len(x) == 0:  # unconditioned
             if len(self._cond_var) != 0:
@@ -319,70 +386,37 @@ class Distribution(nn.Module):
             else:
                 sample_shape = (batch_size, self.dim)
 
-            output = self._get_sample(reparam=reparam,
-                                      sample_shape=sample_shape)
+            self._set_distribution()
+            output_dict = self._get_sample(reparam=reparam,
+                                           sample_shape=sample_shape)
 
         else:  # conditioned
-            x = self._check_input(x)
-            self._set_distribution(x, **kwargs)
-            output = self._get_sample(reparam=reparam)
+            x_dict = self._check_input(x)
+            self._set_distribution(x_dict)
+            output_dict = self._get_sample(reparam=reparam)
 
             if return_all:
-                output.update(x)
+                output_dict.update(x_dict)
 
-        return output
+        return output_dict
 
-    def log_likelihood(self, x):
-        """
-        Estimate the log likelihood of this distribution from inputs formatted by a dictionary.
+    def log_likelihood(self, x_dict):
 
-        Parameters
-        ----------
-        x : dict
-
-
-        Returns
-        -------
-        log_like : torch.Tensor
-
-        """
-
-        if not set(list(x.keys())) >= set(self._cond_var + self._var):
+        if not set(list(x_dict.keys())) >= set(self._cond_var + self._var):
             raise ValueError("Input's keys are not valid.")
 
-        if len(self._cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self._cond_var, True)
-            self._set_distribution(_x)
+        _x_dict = get_dict_values(x_dict, self._cond_var, True)
+        self._set_distribution(_x_dict)
 
-        log_like = self._get_log_like(x)
+        log_like = self._get_log_like(x_dict)
         log_like = mean_sum_samples(log_like)
         return log_like
 
     def forward(self, **params):
-        """
-        When this class is inherited by DNNs, it is also intended that this method is overrided.
-
-        Parameters
-        ----------
-        params : dict
-
-
-        Returns
-        -------
-        params : dict
-
-        """
-
         return params
 
-    def sample_mean(self):
-        NotImplementedError
-
-    def __mul__(self, other):
-        return MultiplyDistribution(self, other)
-
-    def __str__(self):
-        return self.prob_text
+    def replace_var(self, **replace_dict):
+        return ReplaceVarDistribution(self, replace_dict)
 
 
 class MultiplyDistribution(Distribution):
@@ -468,43 +502,8 @@ class MultiplyDistribution(Distribution):
     def prob_factorized_text(self):
         return self._child.prob_factorized_text + self._parent.prob_text
 
-    def _initialize_constant_params(self, **kwargs):
-        pass
-
-    def get_params(self, params):
-        raise AttributeError
-
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=True, **kwargs):
-        """
-        Sample variables of this distribution.
-        If `cond_var` is not empty, we should set inputs as a dictionary format.
-
-        Parameters
-        ----------
-        x : torch.Tensor, list, or dict
-            Input variables.
-
-        shape : tuple
-            Shape of samples.
-            If set, `batch_size` and `dim` are ignored.
-
-        batch_size : int
-            Batch size of samples. This is set to 1 by default.
-
-        return_all : bool
-            Choose whether the output contains input variables.
-
-        reparam : bool
-            Choose whether we sample variables with reparameterized trick.
-
-        kwargs : dict
-
-        Returns
-        -------
-        output : dict
-            Samples of this distribution.
-        """
+               reparam=True):
 
         x = get_dict_values(x, self._cond_var, return_dict=True)
 
@@ -528,23 +527,7 @@ class MultiplyDistribution(Distribution):
 
         return output
 
-    def sample_mean(self):
-        NotImplementedError
-
     def log_likelihood(self, x):
-        """
-        Estimate the log likelihood of this distribution from inputs formatted by a dictionary.
-
-        Parameters
-        ----------
-        x : dict
-
-
-        Returns
-        -------
-        log_like : torch.Tensor
-
-        """
 
         parents_x = get_dict_values(x, self._parent.cond_var + self._parent.var, return_dict=True)
         children_x = get_dict_values(x, self._child.cond_var + self._child.var, return_dict=True)
@@ -552,11 +535,63 @@ class MultiplyDistribution(Distribution):
 
         return log_like
 
-    def forward(self, *args, **kwargs):
-        NotImplementedError
 
-    def __str__(self):
-        return "{} = {}".format(self.prob_text, self.prob_factorized_text)
+class ReplaceVarDistribution(Distribution):
+    """
+    Replace names of variables in Distribution.
+
+    Attributes
+    ----------
+    a : Tars.Distribution
+
+    replace_dict : dict
+    """
+
+    def __init__(self, a, replace_dict):
+
+        if isinstance(a, MultiplyDistribution) and not isinstance(a, Distribution):
+            raise ValueError
+
+        _cond_var = deepcopy(a.cond_var)
+        _var = deepcopy(a.var)
+        all_vars = _cond_var + _var
+
+        if not (set(replace_dict.keys()) <= set(all_vars)):
+            raise ValueError
+
+        _replace_inv_cond_var_dict = {replace_dict[var]: var for var in _cond_var if var in replace_dict.keys()}
+        _replace_inv_dict = {value: key for key, value in replace_dict.items()}
+
+        self._replace_inv_cond_var_dict = _replace_inv_cond_var_dict
+        self._replace_inv_dict = _replace_inv_dict
+        self._replace_dict = replace_dict
+
+        _cond_var = [replace_dict[var] if var in replace_dict.keys() else var for var in _cond_var]
+        _var = [replace_dict[var] if var in replace_dict.keys() else var for var in _var]
+        super().__init__(cond_var=_cond_var, var=_var, name=a.name, dim=a.dim)
+        self._a = a
+
+    def forward(self, **kwargs):
+        return self._a.forward(**kwargs)
+
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=True):
+        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
+
+        output_dict = self._a.sample(x, shape, batch_size, return_all, reparam)
+        output_dict = replace_dict_keys(output_dict, self._replace_dict)
+
+        return output_dict
+
+    def log_likelihood(self, x):
+        x = replace_dict_keys(x, self._replace_inv_dict)
+
+        return self._a.log_likelihood(x)
+
+    def __getattr__(self, item):
+        try:
+            return super().__getattr__(item)
+        except AttributeError:
+            return self._a.__getattribute__(item)
 
 
 def mean_sum_samples(samples):
