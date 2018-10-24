@@ -61,7 +61,6 @@ class Distribution(nn.Module):
     def name(self, name):
         if type(name) is str:
             self._name = name
-            self._update_prob_text()
             return
 
         raise ValueError("Name of the distribution class must be set as a string type.")
@@ -422,34 +421,34 @@ class MultiplyDistribution(Distribution):
         _inh_var_b_a = [var for var in set(_vars_b_a) if _vars_b_a.count(var) > 1]
 
         if len(_inh_var_a_b) > 0:
-            _children = a
-            _parents = b
+            _child = a
+            _parent = b
             _inh_var = _inh_var_a_b
 
         elif len(_inh_var_b_a) > 0:
-            _children = b
-            _parents = a
+            _child = b
+            _parent = a
             _inh_var = _inh_var_b_a
 
         else:
-            _children = a
-            _parents = b
+            _child = a
+            _parent = b
             _inh_var = []
 
         # Check if variables of two distributions are "recursive" (e.g. p(x|z)p(z|x)).
-        _check_recursive_vars = _children.var + _parents.cond_var
+        _check_recursive_vars = _child.var + _parent.cond_var
         if len(_check_recursive_vars) != len(set(_check_recursive_vars)):
-            raise ValueError("Variables of two distributions, {} and {}, are recursive.".format(_children.prob_text,
-                                                                                                _parents.prob_text))
+            raise ValueError("Variables of two distributions, {} and {}, are recursive.".format(_child.prob_text,
+                                                                                                _parent.prob_text))
 
         # Set variables.
-        _var = _children.var + _parents.var
+        _var = _child.var + _parent.var
         if len(_var) != len(set(_var)):  # e.g. p(x|z)p(x|y)
-            raise ValueError("Variables of two distributions, {} and {}, are conflicted.".format(_children.prob_text,
-                                                                                                 _parents.prob_text))
+            raise ValueError("Variables of two distributions, {} and {}, are conflicted.".format(_child.prob_text,
+                                                                                                 _parent.prob_text))
 
         # Set conditional variables.
-        _cond_var = _children.cond_var + _parents.cond_var
+        _cond_var = _child.cond_var + _parent.cond_var
         _cond_var = sorted(set(_cond_var), key=_cond_var.index)
 
         # Delete inh_var in conditional variables.
@@ -458,8 +457,8 @@ class MultiplyDistribution(Distribution):
         super().__init__(cond_var=_cond_var, var=_var)
 
         self._inh_var = _inh_var
-        self._parents = _parents
-        self._children = _children
+        self._parent = _parent
+        self._child = _child
 
     @property
     def inh_var(self):
@@ -467,7 +466,7 @@ class MultiplyDistribution(Distribution):
 
     @property
     def prob_factorized_text(self):
-        return self._children.prob_factorized_text + self._parents.prob_text
+        return self._child.prob_factorized_text + self._parent.prob_text
 
     def _initialize_constant_params(self, **kwargs):
         pass
@@ -510,16 +509,16 @@ class MultiplyDistribution(Distribution):
         x = get_dict_values(x, self._cond_var, return_dict=True)
 
         # sample from the parent distribution
-        parents_input = get_dict_values(x, self._parents.cond_var, return_dict=True)
-        parents_output = self._parents.sample(parents_input, shape, batch_size, False, reparam)
+        parents_input = get_dict_values(x, self._parent.cond_var, return_dict=True)
+        parents_output = self._parent.sample(parents_input, shape, batch_size, False, reparam)
 
         # sample from the child distribution
         children_inh_input = get_dict_values(parents_output, self.inh_var, return_dict=True)
-        children_cond_exc_inh_var = list(set(self._children.cond_var)-set(self.inh_var))
+        children_cond_exc_inh_var = list(set(self._child.cond_var)-set(self.inh_var))
         children_input = get_dict_values(x, children_cond_exc_inh_var, return_dict=True)
         children_input.update(children_inh_input)
 
-        children_output = self._children.sample(children_input, shape, batch_size, False, reparam)
+        children_output = self._child.sample(children_input, shape, batch_size, False, reparam)
 
         output = parents_output
         output.update(children_output)
@@ -547,15 +546,9 @@ class MultiplyDistribution(Distribution):
 
         """
 
-        parents_x = get_dict_values(
-            x, self._parents.cond_var + self._parents.var,
-            return_dict=True)
-        children_x = get_dict_values(
-            x, self._children.cond_var + self._children.var,
-            return_dict=True)
-
-        log_like = self._parents.log_likelihood(parents_x) +\
-            self._children.log_likelihood(children_x)
+        parents_x = get_dict_values(x, self._parent.cond_var + self._parent.var, return_dict=True)
+        children_x = get_dict_values(x, self._child.cond_var + self._child.var, return_dict=True)
+        log_like = self._parent.log_likelihood(parents_x) + self._child.log_likelihood(children_x)
 
         return log_like
 
