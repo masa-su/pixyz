@@ -23,6 +23,13 @@ def get_dict_values(dicts, keys, return_dict=False):
     return new_dicts
 
 
+def replace_keys(dicts, replace_list_dict):
+    replaced_dicts = dict({(replace_list_dict[key], value) if key in list(replace_list_dict.keys())
+                           else (key, value) for key, value in dicts.items()})
+
+    return replaced_dicts
+
+
 def tolist(a):
     if type(a) is list:
         return a
