@@ -259,7 +259,7 @@ class DistributionBase(Distribution):
 
         """
 
-        params = self.get_params(x)
+        params = self._get_params(x)
         if set(self.params_keys) != set(params.keys()):
             raise ValueError
 
@@ -343,7 +343,7 @@ class DistributionBase(Distribution):
 
         return params_dict, vars_dict
 
-    def get_params(self, params_dict):
+    def _get_params(self, params_dict):
         """
         This method aims to get parameters of this distributions from constant parameters set in
         initialization and outputs of DNNs.
@@ -360,11 +360,11 @@ class DistributionBase(Distribution):
         --------
         >> print(dist_1.prob_text, dist_1.distribution_name)
         >> > p(x) Normal
-        >> dist_1.get_params()
+        >> dist_1._get_params()
         >> > {"loc": 0, "scale": 1}
         >> print(dist_2.prob_text, dist_2.distribution_name)
         >> > p(x|z) Normal
-        >> dist_1.get_params({"z": 1})
+        >> dist_1._get_params({"z": 1})
         >> > {"loc": 0, "scale": 1}
         """
 
