@@ -1,5 +1,7 @@
-from ..utils import get_dict_values
 import numbers
+from copy import deepcopy
+
+from ..utils import get_dict_values
 
 
 class Loss(object):
@@ -7,9 +9,9 @@ class Loss(object):
         if len(input_var) > 0:
             self.input_var = input_var
         else:
-            _input_var = p.cond_var
+            _input_var = deepcopy(p.cond_var)
             if q is not None:
-                _input_var += q.cond_var
+                _input_var += deepcopy(q.cond_var)
                 _input_var = sorted(set(_input_var), key=_input_var.index)
                 self.loss_text = "loss({},{})".format(p.prob_text, q.prob_text)
             self.input_var = _input_var
@@ -73,7 +75,7 @@ class LossOperator(Loss):
 
         if not isinstance(a, type(None)):
             if isinstance(a, Loss):
-                _input_var += a.input_var
+                _input_var += deepcopy(a.input_var)
             elif isinstance(a, numbers.Number):
                 a = ValueLoss(a)
             else:
@@ -82,7 +84,7 @@ class LossOperator(Loss):
 
         if not isinstance(b, type(None)):
             if isinstance(b, Loss):
-                _input_var += b.input_var
+                _input_var += deepcopy(b.input_var)
             elif isinstance(b, numbers.Number):
                 b = ValueLoss(b)
             else:
@@ -168,7 +170,7 @@ class LossSelfOperator(Loss):
 
         if not isinstance(a, type(None)):
             if isinstance(a, Loss):
-                _input_var = a.input_var
+                _input_var = deepcopy(a.input_var)
             elif isinstance(a, numbers.Number):
                 a = ValueLoss(a)
             else:
