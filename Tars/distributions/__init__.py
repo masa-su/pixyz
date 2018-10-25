@@ -1,15 +1,16 @@
-from .distributions import (
-    Distribution,
-    CustomLikelihoodDistribution,
+from .exponential_distributions import (
     Normal,
-    NormalPoE,
     Bernoulli,
     RelaxedBernoulli,
     FactorizedBernoulli,
     Categorical,
     RelaxedCategorical,
 )
-from .operators import (
+from .custom_distributions import (
+    CustomLikelihoodDistribution,
+)
+
+from .distributions import (
     MultiplyDistribution,
 )
 
@@ -21,12 +22,12 @@ from .real_nvp import (
     RealNVP,
 )
 
+from .poe import NormalPoE
+
 
 __all__ = [
-    'Distribution',
     'CustomLikelihoodDistribution',
     'Normal',
-    'NormalPoE',
     'Bernoulli',
     'RelaxedBernoulli',
     'FactorizedBernoulli',
@@ -35,4 +36,5 @@ __all__ = [
     'MultiplyDistribution',
     'PlanarFlow',
     'RealNVP',
+    'NormalPoE',
 ]

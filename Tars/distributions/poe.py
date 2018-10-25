@@ -4,7 +4,7 @@ from torch import nn
 from torch.distributions import Normal as NormalTorch
 
 from ..utils import tolist, get_dict_values
-from .operators import MultiplyDistribution
+from .distributions import MultiplyDistribution
 
 
 class NormalPoE(nn.Module):

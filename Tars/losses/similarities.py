@@ -11,7 +11,7 @@ class SimilarityLoss(Loss):
     for Speech and Images (Leidai et. al.)
     """
     def __init__(self, p1, p2, input_var=[], var=["z"], margin=0):
-        super(SimilarityLoss, self).__init__(p1, p2, input_var)
+        super().__init__(p1, p2, input_var)
         self.p1 = p1
         self.p2 = p2
         self.var = var
@@ -21,7 +21,7 @@ class SimilarityLoss(Loss):
         return torch.sum(x1*x2, dim=1)
 
     def estimate(self, x):
-        x = super(SimilarityLoss, self).estimate(x)
+        x = super().estimate(x)
 
         inputs = get_dict_values(x, self.p1.cond_var, True)
         sample1 = get_dict_values(self.p1.sample(inputs), self.var)[0]
@@ -51,7 +51,7 @@ class MultiModalContrastivenessLoss(Loss):
     A Representation Learning Framework for Multimodal Sensory Data
     """
     def __init__(self, p1, p2, input_var=[], margin=0.5):
-        super(MultiModalContrastivenessLoss, self).__init__(p1, p2, input_var)
+        super().__init__(p1, p2, input_var)
         self.p1 = p1
         self.p2 = p2
         self.loss = nn.MarginRankingLoss(margin=margin)
@@ -60,7 +60,7 @@ class MultiModalContrastivenessLoss(Loss):
         return torch.exp(-torch.norm(x1-x2, 2, dim=1) / 2)
 
     def estimate(self, x):
-        x = super(MultiModalContrastivenessLoss, self).estimate(x)
+        x = super().estimate(x)
 
         inputs = get_dict_values(x, self.p1.cond_var, True)
         sample1 = self.p1.sample_mean(inputs)

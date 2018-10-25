@@ -1,5 +1,7 @@
-from ..utils import get_dict_values
 import numbers
+from copy import deepcopy
+
+from ..utils import get_dict_values
 
 
 class Loss(object):
@@ -7,13 +9,12 @@ class Loss(object):
         if len(input_var) > 0:
             self.input_var = input_var
         else:
-            _input_var = p.cond_var
+            _input_var = deepcopy(p.cond_var)
             if q is not None:
-                _input_var += q.cond_var
+                _input_var += deepcopy(q.cond_var)
                 _input_var = sorted(set(_input_var), key=_input_var.index)
+                self.loss_text = "loss({},{})".format(p.prob_text, q.prob_text)
             self.input_var = _input_var
-
-        self.loss_text = "loss({},{})".format(p, q)
 
     def __str__(self):
         return self.loss_text
@@ -57,103 +58,134 @@ class Loss(object):
         return get_dict_values(x, self.input_var, True)
 
 
+class ValueLoss(Loss):
+    def __init__(self, a):
+        self.a = a
+        self.input_var = []
+        self.loss_text = str(a)
+
+    def estimate(self, x, **kwargs):
+        return self.a
+
+
 class LossOperator(Loss):
     def __init__(self, a, b):
         _input_var = []
-        if hasattr(a, "input_var"):
-            _input_var += a.input_var
+        _loss_text = []
 
-        if hasattr(b, "input_var"):
-            _input_var += b.input_var
+        if not isinstance(a, type(None)):
+            if isinstance(a, Loss):
+                _input_var += deepcopy(a.input_var)
+            elif isinstance(a, numbers.Number):
+                a = ValueLoss(a)
+            else:
+                raise ValueError
+            _loss_text.append(a.loss_text)
+
+        if not isinstance(b, type(None)):
+            if isinstance(b, Loss):
+                _input_var += deepcopy(b.input_var)
+            elif isinstance(b, numbers.Number):
+                b = ValueLoss(b)
+            else:
+                raise ValueError
+            _loss_text.append(b.loss_text)
 
         _input_var = sorted(set(_input_var), key=_input_var.index)
-        self.input_var = _input_var
 
+        self.input_var = _input_var
         self.a = a
         self.b = b
 
+        if len(_loss_text) != 0:
+            self.loss_text = ' {} '.join(_loss_text)
+        else:
+            raise ValueError
+
     def estimate(self, x, **kwargs):
-        if hasattr(self.a, "estimate"):
+        if not isinstance(self.a, type(None)):
             a_loss = self.a.estimate(x, **kwargs)
         else:
-            if isinstance(self.a, numbers.Number):
-                a_loss = self.a  # just a value
-            elif isinstance(self.a, type(None)):
-                a_loss = 0
-            else:
-                raise ValueError
+            a_loss = 0
 
-        if hasattr(self.b, "estimate"):
+        if not isinstance(self.b, type(None)):
             b_loss = self.b.estimate(x, **kwargs)
         else:
-            if isinstance(self.b, numbers.Number):
-                b_loss = self.b  # just a value
-            elif isinstance(self.b, type(None)):
-                b_loss = 0
-            else:
-                raise ValueError
+            b_loss = 0
 
         return a_loss, b_loss
 
 
 class AddLoss(LossOperator):
     def __init__(self, a, b):
-        super(AddLoss, self).__init__(a, b)
-        self.loss_text = "{} + {}".format(str(a), str(b))
+        super().__init__(a, b)
+        self.loss_text = self.loss_text.format("+")
 
     def estimate(self, x, **kwargs):
         a_loss, b_loss = \
-            super(AddLoss, self).estimate(x, **kwargs)
+            super().estimate(x, **kwargs)
 
         return a_loss + b_loss
 
 
 class SubLoss(LossOperator):
     def __init__(self, a, b):
-        super(SubLoss, self).__init__(a, b)
-        self.loss_text = "{} - {}".format(str(a), str(b))
+        super().__init__(a, b)
+        self.loss_text = self.loss_text.format("-")
 
     def estimate(self, x, **kwargs):
         a_loss, b_loss = \
-            super(SubLoss, self).estimate(x, **kwargs)
+            super().estimate(x, **kwargs)
 
         return a_loss - b_loss
 
 
 class MulLoss(LossOperator):
     def __init__(self, a, b):
-        super(MulLoss, self).__init__(a, b)
-        self.loss_text = "{} * {}".format(str(a), str(b))
+        super().__init__(a, b)
+        self.loss_text = self.loss_text.format("*")
 
     def estimate(self, x, **kwargs):
         a_loss, b_loss = \
-            super(MulLoss, self).estimate(x, **kwargs)
+            super().estimate(x, **kwargs)
 
         return a_loss * b_loss
 
 
 class DivLoss(LossOperator):
     def __init__(self, a, b):
-        super(DivLoss, self).__init__(a, b)
-        self.loss_text = "{} / {}".format(str(a), str(b))
+        super().__init__(a, b)
+        self.loss_text = self.loss_text.format("/")
 
     def estimate(self, x, **kwargs):
         a_loss, b_loss = \
-            super(DivLoss, self).estimate(x, **kwargs)
+            super().estimate(x, **kwargs)
 
         return a_loss / b_loss
 
 
 class LossSelfOperator(Loss):
     def __init__(self, a):
-        self.input_var = a.input_var
+        _loss_text = ""
+
+        if not isinstance(a, type(None)):
+            if isinstance(a, Loss):
+                _input_var = deepcopy(a.input_var)
+            elif isinstance(a, numbers.Number):
+                a = ValueLoss(a)
+            else:
+                raise ValueError
+            _loss_text += a.loss_text
+
+        self.input_var = _input_var
         self.a = a
+        self.loss_text = _loss_text
 
 
 class NegLoss(LossSelfOperator):
     def __init__(self, a):
-        super(NegLoss, self).__init__(a)
-        self.loss_text = "- {}".format(str(a))
+        super().__init__(a)
+        self.loss_text = "- " + self.loss_text
 
     def estimate(self, x, **kwargs):
         loss = self.a.estimate(x, **kwargs)
@@ -163,8 +195,8 @@ class NegLoss(LossSelfOperator):
 
 class BatchMean(LossSelfOperator):
     def __init__(self, a):
-        super(BatchMean, self).__init__(a)
-        self.loss_text = str(a)  # TODO: fix it
+        super().__init__(a)
+        self.loss_text = a.loss_text  # TODO: fix it
 
     def estimate(self, x, **kwargs):
         loss = self.a.estimate(x, **kwargs)
@@ -173,8 +205,8 @@ class BatchMean(LossSelfOperator):
 
 class BatchSum(LossSelfOperator):
     def __init__(self, a):
-        super(BatchSum, self).__init__(a)
-        self.loss_text = str(a)  # TODO: fix it
+        super().__init__(a)
+        self.loss_text = a.loss_text  # TODO: fix it
 
     def estimate(self, x, **kwargs):
         loss = self.a.estimate(x, **kwargs)
