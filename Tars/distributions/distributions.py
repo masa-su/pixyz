@@ -84,6 +84,33 @@ class Distribution(nn.Module):
     def prob_factorized_text(self):
         return self.prob_text
 
+    def get_params(self, params_dict):
+        """
+        This method aims to get parameters of this distributions from constant parameters set in
+        initialization and outputs of DNNs.
+
+        Parameters
+        ----------
+        params_dict : dict
+
+        Returns
+        -------
+        output_dict : dict
+
+        Examples
+        --------
+        >> print(dist_1.prob_text, dist_1.distribution_name)
+        >> > p(x) Normal
+        >> dist_1.get_params()
+        >> > {"loc": 0, "scale": 1}
+        >> print(dist_2.prob_text, dist_2.distribution_name)
+        >> > p(x|z) Normal
+        >> dist_1.get_params({"z": 1})
+        >> > {"loc": 0, "scale": 1}
+        """
+
+        NotImplementedError
+
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=True):
         """
@@ -259,7 +286,7 @@ class DistributionBase(Distribution):
 
         """
 
-        params = self._get_params(x)
+        params = self.get_params(x)
         if set(self.params_keys) != set(params.keys()):
             raise ValueError
 
@@ -343,31 +370,7 @@ class DistributionBase(Distribution):
 
         return params_dict, vars_dict
 
-    def _get_params(self, params_dict):
-        """
-        This method aims to get parameters of this distributions from constant parameters set in
-        initialization and outputs of DNNs.
-
-        Parameters
-        ----------
-        params_dict : dict
-
-        Returns
-        -------
-        output_dict : dict
-
-        Examples
-        --------
-        >> print(dist_1.prob_text, dist_1.distribution_name)
-        >> > p(x) Normal
-        >> dist_1._get_params()
-        >> > {"loc": 0, "scale": 1}
-        >> print(dist_2.prob_text, dist_2.distribution_name)
-        >> > p(x|z) Normal
-        >> dist_1._get_params({"z": 1})
-        >> > {"loc": 0, "scale": 1}
-        """
-
+    def get_params(self, params_dict):
         params_dict, vars_dict = self._replace_vars_to_params(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
 
@@ -573,6 +576,10 @@ class ReplaceVarDistribution(Distribution):
 
     def forward(self, *args, **kwargs):
         return self._a.forward(*args, **kwargs)
+
+    def get_params(self, params_dict):
+        params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
+        return self._a.get_params(params_dict)
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=True):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
