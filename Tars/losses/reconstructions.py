@@ -12,7 +12,7 @@ class StochasticReconstructionLoss(Loss):
 
     def estimate(self, x, **kwargs):
         _x = super().estimate(x)
-        samples = self.encoder.sample(_x)
+        samples = self.encoder.sample(_x, reparam=True)
         loss = -self.decoder.log_likelihood(samples)
 
         return loss
