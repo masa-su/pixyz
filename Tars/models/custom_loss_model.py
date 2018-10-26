@@ -10,9 +10,9 @@ class CustomLossModel(Model):
                  distributions=[],
                  optimizer=optim.Adam,
                  optimizer_params={}):
-        super().__init__()
 
-        self.distributions = nn.ModuleList(tolist(distributions))
+        distributions = nn.ModuleList(tolist(distributions))
+        super().__init__(distributions)
 
         # set losses
         self.loss_cls = None
@@ -20,7 +20,7 @@ class CustomLossModel(Model):
         self.set_loss(loss, test_loss)
 
         # set params and optim
-        params = list(self.distributions.parameters())
+        params = self.distributions.parameters()
         self.optimizer = optimizer(params, **optimizer_params)
 
     def set_loss(self, loss, test_loss=None):
@@ -31,12 +31,8 @@ class CustomLossModel(Model):
             self.test_loss_cls = loss
 
     def train(self, train_x, **kwargs):
-        self.distributions.train()
-
         return super().train(train_x, **kwargs)
 
     def test(self, test_x, **kwargs):
-        self.distributions.eval()
-
         return super().test(test_x, **kwargs)
 
