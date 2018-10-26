@@ -15,7 +15,7 @@ class ELBO(Loss):
 
     def estimate(self, x, **kwargs):
         _x = super().estimate(x)
-        samples = self.q.sample(_x)
+        samples = self.q.sample(_x, reparam=True)
         lower_bound = self.p.log_likelihood(samples) -\
             self.q.log_likelihood(samples)
 
