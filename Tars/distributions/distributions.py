@@ -112,7 +112,7 @@ class Distribution(nn.Module):
         NotImplementedError
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=True):
+               reparam=False):
         """
         Sample variables of this distribution.
         If `cond_var` is not empty, we should set inputs as a dictionary format.
@@ -296,7 +296,7 @@ class DistributionBase(Distribution):
 
         self.dist = self.DistributionTorch(**params)
 
-    def _get_sample(self, reparam=True,
+    def _get_sample(self, reparam=False,
                     sample_shape=torch.Size()):
         """
         Parameters
@@ -385,7 +385,7 @@ class DistributionBase(Distribution):
         return output_dict
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=True):
+               reparam=False):
 
         if len(x) == 0:  # unconditioned
             if len(self._cond_var) != 0:
@@ -510,7 +510,7 @@ class MultiplyDistribution(Distribution):
         return self._child.prob_factorized_text + self._parent.prob_text
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=True):
+               reparam=False):
 
         x = get_dict_values(x, self._cond_var, return_dict=True)
 
@@ -588,7 +588,7 @@ class ReplaceVarDistribution(Distribution):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
         return self._a.get_params(params_dict)
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=True):
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
 
         output_dict = self._a.sample(x, shape, batch_size, return_all, reparam)
@@ -649,7 +649,7 @@ class MarginalizeVarDistribution(Distribution):
     def get_params(self, params_dict):
         return self._a.get_params(params_dict)
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=True):
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
         output_dict = self._a.sample(x, shape, batch_size, False, reparam)
         output_dict = delete_dict_values(output_dict, self._marginalize_list)
 
