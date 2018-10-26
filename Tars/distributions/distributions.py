@@ -4,7 +4,7 @@ import numbers
 from torch import nn
 from copy import deepcopy
 
-from ..utils import get_dict_values, replace_dict_keys
+from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist
 
 
 class Distribution(nn.Module):
@@ -112,7 +112,7 @@ class Distribution(nn.Module):
         NotImplementedError
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=True):
+               reparam=False):
         """
         Sample variables of this distribution.
         If `cond_var` is not empty, we should set inputs as a dictionary format.
@@ -182,6 +182,10 @@ class Distribution(nn.Module):
 
     def replace_var(self, **replace_dict):
         return ReplaceVarDistribution(self, replace_dict)
+
+    def marginalize_var(self, marginalize_list):
+        marginalize_list = tolist(marginalize_list)
+        return MarginalizeVarDistribution(self, marginalize_list)
 
     def __mul__(self, other):
         return MultiplyDistribution(self, other)
@@ -292,7 +296,7 @@ class DistributionBase(Distribution):
 
         self.dist = self.DistributionTorch(**params)
 
-    def _get_sample(self, reparam=True,
+    def _get_sample(self, reparam=False,
                     sample_shape=torch.Size()):
         """
         Parameters
@@ -311,7 +315,7 @@ class DistributionBase(Distribution):
             try:
                 _samples = self.dist.rsample(sample_shape=sample_shape)
             except NotImplementedError:
-                print("We can not use the reparameterization trick"
+                print("We can not use the reparameterization trick "
                       "for this distribution.")
         else:
             _samples = self.dist.sample(sample_shape=sample_shape)
@@ -381,7 +385,7 @@ class DistributionBase(Distribution):
         return output_dict
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=True):
+               reparam=False):
 
         if len(x) == 0:  # unconditioned
             if len(self._cond_var) != 0:
@@ -506,7 +510,7 @@ class MultiplyDistribution(Distribution):
         return self._child.prob_factorized_text + self._parent.prob_text
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=True):
+               reparam=False):
 
         x = get_dict_values(x, self._cond_var, return_dict=True)
 
@@ -552,8 +556,11 @@ class ReplaceVarDistribution(Distribution):
 
     def __init__(self, a, replace_dict):
 
-        if isinstance(a, MultiplyDistribution) or not isinstance(a, Distribution):
-            raise ValueError
+        if not isinstance(a, Distribution):
+            raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
+
+        if isinstance(a, MultiplyDistribution):
+            raise ValueError("`Tars.MultiplyDistribution` is not supported to replace its variables for now.")
 
         _cond_var = deepcopy(a.cond_var)
         _var = deepcopy(a.var)
@@ -581,7 +588,7 @@ class ReplaceVarDistribution(Distribution):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
         return self._a.get_params(params_dict)
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=True):
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
 
         output_dict = self._a.sample(x, shape, batch_size, return_all, reparam)
@@ -596,6 +603,62 @@ class ReplaceVarDistribution(Distribution):
 
     def sample_mean(self, x):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
+        return self._a.sample_mean(x)
+
+    def __getattr__(self, item):
+        try:
+            return super().__getattr__(item)
+        except AttributeError:
+            return self._a.__getattribute__(item)
+
+
+class MarginalizeVarDistribution(Distribution):
+    """
+    Marginalize variables in Distribution.
+
+    Attributes
+    ----------
+    a : Tars.Distribution (not Tars.DistributionBase)
+
+    marginalize_list : list
+    """
+
+    def __init__(self, a, marginalize_list):
+
+        if not isinstance(a, Distribution):
+            raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
+
+        if isinstance(a, DistributionBase):
+            raise ValueError("`Tars.DistributionBase` cannot marginalize variables for now.")
+
+        _var = deepcopy(a.var)
+        _cond_var = deepcopy(a.cond_var)
+
+        if not((set(marginalize_list)) < set(_var)):
+            raise ValueError()
+
+        _var = [var for var in _var if var not in marginalize_list]
+
+        super().__init__(cond_var=_cond_var, var=_var, name=a.name, dim=a.dim)
+        self._a = a
+        self._marginalize_list = marginalize_list
+
+    def forward(self, *args, **kwargs):
+        return self._a.forward(*args, **kwargs)
+
+    def get_params(self, params_dict):
+        return self._a.get_params(params_dict)
+
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
+        output_dict = self._a.sample(x, shape, batch_size, False, reparam)
+        output_dict = delete_dict_values(output_dict, self._marginalize_list)
+
+        return output_dict
+
+    def log_likelihood(self, x):
+        NotImplementedError
+
+    def sample_mean(self, x):
         return self._a.sample_mean(x)
 
     def __getattr__(self, item):
