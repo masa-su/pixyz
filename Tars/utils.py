@@ -23,6 +23,14 @@ def get_dict_values(dicts, keys, return_dict=False):
     return new_dicts
 
 
+def delete_dict_values(dicts, keys):
+    # Exp.
+    # get_dict_values({"a":1,"b":2,"c":3}, ["b","d"])
+    # >> {'a': 1, 'c': 3}
+    new_dicts = dict((key, value) for key, value in dicts.items() if key not in keys)
+    return new_dicts
+
+
 def replace_dict_keys(dicts, replace_list_dict):
     replaced_dicts = dict({(replace_list_dict[key], value) if key in list(replace_list_dict.keys())
                            else (key, value) for key, value in dicts.items()})
