@@ -49,6 +49,10 @@ class Distribution(nn.Module):
         self._prob_factorized_text = None
 
     @property
+    def distribution_name(self):
+        return None
+
+    @property
     def name(self):
         return self._name
 
@@ -627,6 +631,10 @@ class ReplaceVarDistribution(Distribution):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
         return self._a.sample_mean(x)
 
+    @property
+    def distribution_name(self):
+        return self._a.distribution_name
+
     def __repr__(self):
         return self._a.__repr__()
 
@@ -640,6 +648,7 @@ class ReplaceVarDistribution(Distribution):
 class MarginalizeVarDistribution(Distribution):
     """
     Marginalize variables in Distribution.
+    p(x) = ∫p(x,z)dz
 
     Attributes
     ----------
@@ -654,13 +663,16 @@ class MarginalizeVarDistribution(Distribution):
             raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
 
         if isinstance(a, DistributionBase):
-            raise ValueError("`Tars.DistributionBase` cannot marginalize variables for now.")
+            raise ValueError("`Tars.DistributionBase` cannot marginalize its variables for now.")
 
         _var = deepcopy(a.var)
         _cond_var = deepcopy(a.cond_var)
 
         if not((set(marginalize_list)) < set(_var)):
             raise ValueError()
+
+        if len(marginalize_list) == 0:
+            raise ValueError("Length of `marginalize_list` should be more than zero.")
 
         _var = [var for var in _var if var not in marginalize_list]
 
@@ -685,6 +697,18 @@ class MarginalizeVarDistribution(Distribution):
 
     def sample_mean(self, x):
         return self._a.sample_mean(x)
+
+    @property
+    def distribution_name(self):
+        return self._a.distribution_name
+
+    @property
+    def prob_factorized_text(self):
+        integral_symbol = len(self._marginalize_list) * "∫"
+        integral_variables = ["d"+str(var) for var in self._marginalize_list]
+        integral_variables = "".join(integral_variables)
+
+        return "{}{}{}".format(integral_symbol, self._a.prob_factorized_text, integral_variables)
 
     def __repr__(self):
         return self._a.__repr__()

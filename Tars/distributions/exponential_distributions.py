@@ -14,10 +14,13 @@ class Normal(DistributionBase):
 
     def __init__(self, **kwargs):
         self.params_keys = ["loc", "scale"]
-        self.distribution_name = "Normal"
         self.DistributionTorch = NormalTorch
 
         super().__init__(**kwargs)
+
+    @property
+    def distribution_name(self):
+        return "Normal"
 
     def sample_mean(self, x):
         params = self.forward(**x)
@@ -28,10 +31,13 @@ class Bernoulli(DistributionBase):
 
     def __init__(self, *args, **kwargs):
         self.params_keys = ["probs"]
-        self.distribution_name = "Bernoulli"
         self.DistributionTorch = BernoulliTorch
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "Bernoulli"
 
     def sample_mean(self, x):
         params = self.forward(**x)
@@ -43,13 +49,16 @@ class RelaxedBernoulli(DistributionBase):
     def __init__(self, temperature,
                  *args, **kwargs):
         self.params_keys = ["probs"]
-        self.distribution_name = "RelaxedBernoulli"
         self.DistributionTorch = BernoulliTorch
         # use relaxed version only when sampling
         self.RelaxedDistributionTorch = RelaxedBernoulliTorch
         self.temperature = temperature
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "RelaxedBernoulli"
 
     def _set_distribution(self, x={}, sampling=True, **kwargs):
         params = self.get_params(x, **kwargs)
@@ -87,6 +96,10 @@ class FactorizedBernoulli(Bernoulli):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @property
+    def distribution_name(self):
+        return "FactorizedBernoulli"
+
     def _get_log_like(self, x):
         log_like = super()._get_log_like(x)
         [_x] = get_dict_values(x, self._var)
@@ -99,10 +112,13 @@ class Categorical(DistributionBase):
     def __init__(self, one_hot=True, *args, **kwargs):
         self.one_hot = one_hot
         self.params_keys = ["probs"]
-        self.distribution_name = "Categorical"
         self.DistributionTorch = CategoricalTorch
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "Categorical"
 
     def sample_mean(self, x):
         params = self.forward(**x)
@@ -114,13 +130,16 @@ class RelaxedCategorical(DistributionBase):
     def __init__(self, temperature,
                  *args, **kwargs):
         self.params_keys = ["probs"]
-        self.distribution_name = "RelaxedCategorical"
         self.DistributionTorch = CategoricalTorch
         # use relaxed version only when sampling
         self.RelaxedDistributionTorch = RelaxedOneHotCategoricalTorch
         self.temperature = temperature
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "RelaxedCategorical"
 
     def _set_distribution(self, x={}, sampling=True, **kwargs):
         params = self.get_params(x, **kwargs)
