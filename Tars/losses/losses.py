@@ -5,16 +5,27 @@ from ..utils import get_dict_values
 
 
 class Loss(object):
-    def __init__(self, p, q=None, input_var=[]):
+    def __init__(self, p1, p2=None, input_var=[]):
+        self._p1 = p1
+        self._p2 = p2
+        self._loss_text = None
+
         if len(input_var) > 0:
-            self.input_var = input_var
+            self._input_var = input_var
         else:
-            _input_var = deepcopy(p.cond_var)
-            if q is not None:
-                _input_var += deepcopy(q.cond_var)
+            _input_var = deepcopy(p1.cond_var)  # TODO: fix to input_var
+            if p2 is not None:
+                _input_var += deepcopy(p2.cond_var)
                 _input_var = sorted(set(_input_var), key=_input_var.index)
-                self.loss_text = "loss({},{})".format(p.prob_text, q.prob_text)
-            self.input_var = _input_var
+            self._input_var = _input_var
+
+    @property
+    def input_var(self):
+        return self._input_var
+
+    @property
+    def loss_text(self):
+        return "loss({},{})".format(self._p1.prob_text, self._p2.prob_text)
 
     def __str__(self):
         return self.loss_text
@@ -52,162 +63,165 @@ class Loss(object):
     def sum(self):
         return BatchSum(self)
 
-    def estimate(self, x):
-        # if not set(list(x.keys())) == set(self.input_var):
-        #     raise ValueError("Input's keys are not valid.")
-        return get_dict_values(x, self.input_var, True)
+    def estimate(self, x={}):
+        if set(list(x.keys())) < set(self._input_var):
+            raise ValueError("Input's keys are not valid.")
+        return get_dict_values(x, self._input_var, True)
 
 
 class ValueLoss(Loss):
-    def __init__(self, a):
-        self.a = a
-        self.input_var = []
-        self.loss_text = str(a)
+    def __init__(self, loss1):
+        self._loss1 = loss1
+        self._input_var = []
 
-    def estimate(self, x, **kwargs):
-        return self.a
+    def estimate(self, x={}):
+        return self._loss1
+
+    @property
+    def loss_text(self):
+        return str(self._loss1)
 
 
 class LossOperator(Loss):
-    def __init__(self, a, b):
+    def __init__(self, loss1, loss2):
         _input_var = []
-        _loss_text = []
 
-        if not isinstance(a, type(None)):
-            if isinstance(a, Loss):
-                _input_var += deepcopy(a.input_var)
-            elif isinstance(a, numbers.Number):
-                a = ValueLoss(a)
-            else:
-                raise ValueError
-            _loss_text.append(a.loss_text)
+        if isinstance(loss1, Loss):
+            _input_var += deepcopy(loss1.input_var)
+        elif isinstance(loss1, numbers.Number):
+            loss1 = ValueLoss(loss1)
+        elif isinstance(loss2, type(None)):
+            pass
+        else:
+            raise ValueError("{} cannot be operated with {}.".format(type(loss1), type(loss2)))
 
-        if not isinstance(b, type(None)):
-            if isinstance(b, Loss):
-                _input_var += deepcopy(b.input_var)
-            elif isinstance(b, numbers.Number):
-                b = ValueLoss(b)
-            else:
-                raise ValueError
-            _loss_text.append(b.loss_text)
+        if isinstance(loss2, Loss):
+            _input_var += deepcopy(loss2.input_var)
+        elif isinstance(loss2, numbers.Number):
+            loss2 = ValueLoss(loss2)
+        elif isinstance(loss2, type(None)):
+            pass
+        else:
+            raise ValueError("{} cannot be operated with {}.".format(type(loss2), type(loss1)))
 
         _input_var = sorted(set(_input_var), key=_input_var.index)
 
-        self.input_var = _input_var
-        self.a = a
-        self.b = b
+        self._input_var = _input_var
+        self._loss1 = loss1
+        self._loss2 = loss2
 
-        if len(_loss_text) != 0:
-            self.loss_text = ' {} '.join(_loss_text)
+    @property
+    def _loss_text_list(self):
+        loss_text_list = []
+        if not isinstance(self._loss1, type(None)):
+            loss_text_list.append(self._loss1.loss_text)
+
+        if not isinstance(self._loss2, type(None)):
+            loss_text_list.append(self._loss2.loss_text)
+
+        return loss_text_list
+
+    @property
+    def loss_text(self):
+        NotImplementedError
+
+    def estimate(self, x={}):
+        if not isinstance(self._loss1, type(None)):
+            loss1 = self._loss1.estimate(x)
         else:
-            raise ValueError
+            loss1 = 0
 
-    def estimate(self, x, **kwargs):
-        if not isinstance(self.a, type(None)):
-            a_loss = self.a.estimate(x, **kwargs)
+        if not isinstance(self._loss2, type(None)):
+            loss2 = self._loss2.estimate(x)
         else:
-            a_loss = 0
+            loss2 = 0
 
-        if not isinstance(self.b, type(None)):
-            b_loss = self.b.estimate(x, **kwargs)
-        else:
-            b_loss = 0
-
-        return a_loss, b_loss
+        return loss1, loss2
 
 
 class AddLoss(LossOperator):
-    def __init__(self, a, b):
-        super().__init__(a, b)
-        self.loss_text = self.loss_text.format("+")
+    @property
+    def loss_text(self):
+        return " + ".join(self._loss_text_list)
 
-    def estimate(self, x, **kwargs):
-        a_loss, b_loss = \
-            super().estimate(x, **kwargs)
-
-        return a_loss + b_loss
+    def estimate(self, x={}):
+        loss1, loss2 = super().estimate(x)
+        return loss1 + loss2
 
 
 class SubLoss(LossOperator):
-    def __init__(self, a, b):
-        super().__init__(a, b)
-        self.loss_text = self.loss_text.format("-")
+    @property
+    def loss_text(self):
+        return " - ".join(self._loss_text_list)
 
-    def estimate(self, x, **kwargs):
-        a_loss, b_loss = \
-            super().estimate(x, **kwargs)
-
-        return a_loss - b_loss
+    def estimate(self, x={}):
+        loss1, loss2 = super().estimate(x)
+        return loss1 - loss2
 
 
 class MulLoss(LossOperator):
-    def __init__(self, a, b):
-        super().__init__(a, b)
-        self.loss_text = self.loss_text.format("*")
+    @property
+    def loss_text(self):
+        return " * ".join(self._loss_text_list)
 
-    def estimate(self, x, **kwargs):
-        a_loss, b_loss = \
-            super().estimate(x, **kwargs)
-
-        return a_loss * b_loss
+    def estimate(self, x={}):
+        loss1, loss2 = super().estimate(x)
+        return loss1 * loss2
 
 
 class DivLoss(LossOperator):
-    def __init__(self, a, b):
-        super().__init__(a, b)
-        self.loss_text = self.loss_text.format("/")
+    @property
+    def loss_text(self):
+        return " / ".join(self._loss_text_list)
 
-    def estimate(self, x, **kwargs):
-        a_loss, b_loss = \
-            super().estimate(x, **kwargs)
-
-        return a_loss / b_loss
+    def estimate(self, x={}):
+        loss1, loss2 = super().estimate(x)
+        return loss1 / loss2
 
 
 class LossSelfOperator(Loss):
-    def __init__(self, a):
-        _loss_text = ""
+    def __init__(self, loss1):
+        _input_var = []
 
-        if not isinstance(a, type(None)):
-            if isinstance(a, Loss):
-                _input_var = deepcopy(a.input_var)
-            elif isinstance(a, numbers.Number):
-                a = ValueLoss(a)
-            else:
-                raise ValueError
-            _loss_text += a.loss_text
+        if isinstance(loss1, type(None)):
+            raise ValueError
 
-        self.input_var = _input_var
-        self.a = a
-        self.loss_text = _loss_text
+        if isinstance(loss1, Loss):
+            _input_var = deepcopy(loss1.input_var)
+        elif isinstance(loss1, numbers.Number):
+            loss1 = ValueLoss(loss1)
+        else:
+            raise ValueError
+
+        self._input_var = _input_var
+        self._loss1 = loss1
 
 
 class NegLoss(LossSelfOperator):
-    def __init__(self, a):
-        super().__init__(a)
-        self.loss_text = "- " + self.loss_text
+    @property
+    def loss_text(self):
+        return "-({})".format(self._loss1.loss_text)
 
-    def estimate(self, x, **kwargs):
-        loss = self.a.estimate(x, **kwargs)
-
+    def estimate(self, x={}):
+        loss = self._loss1.estimate(x)
         return -loss
 
 
 class BatchMean(LossSelfOperator):
-    def __init__(self, a):
-        super().__init__(a)
-        self.loss_text = a.loss_text  # TODO: fix it
+    @property
+    def loss_text(self):
+        return "mean({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def estimate(self, x, **kwargs):
-        loss = self.a.estimate(x, **kwargs)
+    def estimate(self, x={}):
+        loss = self._loss1.estimate(x)
         return loss.mean()
 
 
 class BatchSum(LossSelfOperator):
-    def __init__(self, a):
-        super().__init__(a)
-        self.loss_text = a.loss_text  # TODO: fix it
+    @property
+    def loss_text(self):
+        return "sum({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def estimate(self, x, **kwargs):
-        loss = self.a.estimate(x, **kwargs)
+    def estimate(self, x={}):
+        loss = self._loss1.estimate(x)
         return loss.sum()

@@ -4,11 +4,13 @@ from .losses import Loss
 class NLL(Loss):
     def __init__(self, p, input_var=[]):
         super().__init__(p, input_var=input_var)
-        self.p = p
-        self.loss_text = "log {}".format(self.p.prob_text)
 
-    def estimate(self, x, **kwargs):
+    @property
+    def loss_text(self):
+        return "log {}".format(self._p1.prob_text)
+
+    def estimate(self, x={}):
         _x = super().estimate(x)
-        nll = -self.p.log_likelihood(x)
+        nll = -self._p1.log_likelihood(x)
 
         return nll
