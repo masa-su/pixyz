@@ -1,6 +1,7 @@
 from __future__ import print_function
 import torch
 import numbers
+import re
 from torch import nn
 from copy import deepcopy
 
@@ -46,6 +47,10 @@ class Distribution(nn.Module):
 
         self._prob_text = None
         self._prob_factorized_text = None
+
+    @property
+    def distribution_name(self):
+        return None
 
     @property
     def name(self):
@@ -191,10 +196,18 @@ class Distribution(nn.Module):
         return MultiplyDistribution(self, other)
 
     def __str__(self):
+        # Distribution
         if self.prob_factorized_text == self.prob_text:
-            return self.prob_text
+            prob_text = "{} ({})".format(self.prob_text, self.distribution_name)
+        else:
+            prob_text = "{} = {}".format(self.prob_text, self.prob_factorized_text)
+        text = "Distribution:\n  {}\n".format(prob_text)
 
-        return "{} = {}".format(self.prob_text, self.prob_factorized_text)
+        # Network architecture (`repr`)
+        network_text = self.__repr__()
+        network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
+        text += "Network architecture:\n{}".format(network_text)
+        return text
 
 
 class DistributionBase(Distribution):
@@ -507,7 +520,7 @@ class MultiplyDistribution(Distribution):
 
     @property
     def prob_factorized_text(self):
-        return self._child.prob_factorized_text + self._parent.prob_text
+        return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
@@ -542,6 +555,19 @@ class MultiplyDistribution(Distribution):
 
         return log_like
 
+    def __repr__(self):
+        if isinstance(self._parent, MultiplyDistribution):
+            text = self._parent.__repr__()
+        else:
+            text = "{} ({}): {}".format(self._parent.prob_text, self._parent.distribution_name, self._parent.__repr__())
+        text += "\n"
+
+        if isinstance(self._child, MultiplyDistribution):
+            text += self._child.__repr__()
+        else:
+            text += "{} ({}): {}".format(self._child.prob_text, self._child.distribution_name, self._child.__repr__())
+        return text
+
 
 class ReplaceVarDistribution(Distribution):
     """
@@ -561,6 +587,9 @@ class ReplaceVarDistribution(Distribution):
 
         if isinstance(a, MultiplyDistribution):
             raise ValueError("`Tars.MultiplyDistribution` is not supported to replace its variables for now.")
+
+        if isinstance(a, MarginalizeVarDistribution):
+            raise ValueError("`Tars.MarginalizeVarDistribution` is not supported to replace its variables for now.")
 
         _cond_var = deepcopy(a.cond_var)
         _var = deepcopy(a.var)
@@ -605,6 +634,13 @@ class ReplaceVarDistribution(Distribution):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
         return self._a.sample_mean(x)
 
+    @property
+    def distribution_name(self):
+        return self._a.distribution_name
+
+    def __repr__(self):
+        return self._a.__repr__()
+
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)
@@ -615,6 +651,7 @@ class ReplaceVarDistribution(Distribution):
 class MarginalizeVarDistribution(Distribution):
     """
     Marginalize variables in Distribution.
+    p(x) = ∫p(x,z)dz
 
     Attributes
     ----------
@@ -629,13 +666,16 @@ class MarginalizeVarDistribution(Distribution):
             raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
 
         if isinstance(a, DistributionBase):
-            raise ValueError("`Tars.DistributionBase` cannot marginalize variables for now.")
+            raise ValueError("`Tars.DistributionBase` cannot marginalize its variables for now.")
 
         _var = deepcopy(a.var)
         _cond_var = deepcopy(a.cond_var)
 
         if not((set(marginalize_list)) < set(_var)):
             raise ValueError()
+
+        if len(marginalize_list) == 0:
+            raise ValueError("Length of `marginalize_list` should be more than zero.")
 
         _var = [var for var in _var if var not in marginalize_list]
 
@@ -660,6 +700,21 @@ class MarginalizeVarDistribution(Distribution):
 
     def sample_mean(self, x):
         return self._a.sample_mean(x)
+
+    @property
+    def distribution_name(self):
+        return self._a.distribution_name
+
+    @property
+    def prob_factorized_text(self):
+        integral_symbol = len(self._marginalize_list) * "∫"
+        integral_variables = ["d"+str(var) for var in self._marginalize_list]
+        integral_variables = "".join(integral_variables)
+
+        return "{}{}{}".format(integral_symbol, self._a.prob_factorized_text, integral_variables)
+
+    def __repr__(self):
+        return self._a.__repr__()
 
     def __getattr__(self, item):
         try:

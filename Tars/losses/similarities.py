@@ -12,8 +12,6 @@ class SimilarityLoss(Loss):
     """
     def __init__(self, p1, p2, input_var=[], var=["z"], margin=0):
         super().__init__(p1, p2, input_var)
-        self.p1 = p1
-        self.p2 = p2
         self.var = var
         self.loss = nn.MarginRankingLoss(margin=margin, reduce=False)
 
@@ -23,11 +21,11 @@ class SimilarityLoss(Loss):
     def estimate(self, x):
         x = super().estimate(x)
 
-        inputs = get_dict_values(x, self.p1.cond_var, True)
-        sample1 = get_dict_values(self.p1.sample(inputs), self.var)[0]
+        inputs = get_dict_values(x, self._p1.cond_var, True)
+        sample1 = get_dict_values(self._p1.sample(inputs), self.var)[0]
 
-        inputs = get_dict_values(x, self.p2.cond_var, True)
-        sample2 = get_dict_values(self.p2.sample(inputs), self.var)[0]
+        inputs = get_dict_values(x, self._p2.cond_var, True)
+        sample2 = get_dict_values(self._p2.sample(inputs), self.var)[0]
 
         batch_size = sample1.shape[0]
         shuffle_id = torch.randperm(batch_size)
@@ -52,8 +50,6 @@ class MultiModalContrastivenessLoss(Loss):
     """
     def __init__(self, p1, p2, input_var=[], margin=0.5):
         super().__init__(p1, p2, input_var)
-        self.p1 = p1
-        self.p2 = p2
         self.loss = nn.MarginRankingLoss(margin=margin)
 
     def _sim(self, x1, x2):
@@ -62,11 +58,11 @@ class MultiModalContrastivenessLoss(Loss):
     def estimate(self, x):
         x = super().estimate(x)
 
-        inputs = get_dict_values(x, self.p1.cond_var, True)
-        sample1 = self.p1.sample_mean(inputs)
+        inputs = get_dict_values(x, self._p1.cond_var, True)
+        sample1 = self._p1.sample_mean(inputs)
 
-        inputs = get_dict_values(x, self.p2.cond_var, True)
-        sample2 = self.p2.sample_mean(inputs)
+        inputs = get_dict_values(x, self._p2.cond_var, True)
+        sample2 = self._p2.sample_mean(inputs)
 
         batch_size = sample1.shape[0]
         shuffle_id = torch.randperm(batch_size)
