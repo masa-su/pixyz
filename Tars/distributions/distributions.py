@@ -1,6 +1,7 @@
 from __future__ import print_function
 import torch
 import numbers
+import re
 from torch import nn
 from copy import deepcopy
 
@@ -191,10 +192,18 @@ class Distribution(nn.Module):
         return MultiplyDistribution(self, other)
 
     def __str__(self):
+        # Distribution
         if self.prob_factorized_text == self.prob_text:
-            return self.prob_text
+            prob_text = self.prob_text
+        else:
+            prob_text = "{} = {}".format(self.prob_text, self.prob_factorized_text)
+        text = "Distribution:\n  {} ()\n".format(prob_text)
 
-        return "{} = {}".format(self.prob_text, self.prob_factorized_text)
+        # Network architecture (`repr`)
+        network_text = self.__repr__()
+        network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
+        text += "Network architecture:\n{}".format(network_text)
+        return text
 
 
 class DistributionBase(Distribution):
@@ -542,6 +551,19 @@ class MultiplyDistribution(Distribution):
 
         return log_like
 
+    def __repr__(self):
+        if isinstance(self._parent, MultiplyDistribution):
+            text = self._parent.__repr__()
+        else:
+            text = "{}: {}".format(self._parent.prob_text, self._parent.__repr__())
+        text += "\n"
+
+        if isinstance(self._child, MultiplyDistribution):
+            text += self._child.__repr__()
+        else:
+            text += "{}: {}".format(self._child.prob_text, self._child.__repr__())
+        return text
+
 
 class ReplaceVarDistribution(Distribution):
     """
@@ -605,6 +627,9 @@ class ReplaceVarDistribution(Distribution):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
         return self._a.sample_mean(x)
 
+    def __repr__(self):
+        return self._a.__repr__()
+
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)
@@ -660,6 +685,9 @@ class MarginalizeVarDistribution(Distribution):
 
     def sample_mean(self, x):
         return self._a.sample_mean(x)
+
+    def __repr__(self):
+        return self._a.__repr__()
 
     def __getattr__(self, item):
         try:
