@@ -520,7 +520,7 @@ class MultiplyDistribution(Distribution):
 
     @property
     def prob_factorized_text(self):
-        return self._child.prob_factorized_text + self._parent.prob_text
+        return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
@@ -587,6 +587,9 @@ class ReplaceVarDistribution(Distribution):
 
         if isinstance(a, MultiplyDistribution):
             raise ValueError("`Tars.MultiplyDistribution` is not supported to replace its variables for now.")
+
+        if isinstance(a, MarginalizeVarDistribution):
+            raise ValueError("`Tars.MarginalizeVarDistribution` is not supported to replace its variables for now.")
 
         _cond_var = deepcopy(a.cond_var)
         _var = deepcopy(a.var)
