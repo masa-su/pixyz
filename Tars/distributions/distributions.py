@@ -194,10 +194,10 @@ class Distribution(nn.Module):
     def __str__(self):
         # Distribution
         if self.prob_factorized_text == self.prob_text:
-            prob_text = self.prob_text
+            prob_text = "{} ({})".format(self.prob_text, self.distribution_name)
         else:
             prob_text = "{} = {}".format(self.prob_text, self.prob_factorized_text)
-        text = "Distribution:\n  {} ()\n".format(prob_text)
+        text = "Distribution:\n  {}\n".format(prob_text)
 
         # Network architecture (`repr`)
         network_text = self.__repr__()
@@ -555,13 +555,13 @@ class MultiplyDistribution(Distribution):
         if isinstance(self._parent, MultiplyDistribution):
             text = self._parent.__repr__()
         else:
-            text = "{}: {}".format(self._parent.prob_text, self._parent.__repr__())
+            text = "{} ({}): {}".format(self._parent.prob_text, self._parent.distribution_name, self._parent.__repr__())
         text += "\n"
 
         if isinstance(self._child, MultiplyDistribution):
             text += self._child.__repr__()
         else:
-            text += "{}: {}".format(self._child.prob_text, self._child.__repr__())
+            text += "{} ({}): {}".format(self._child.prob_text, self._child.distribution_name, self._child.__repr__())
         return text
 
 
