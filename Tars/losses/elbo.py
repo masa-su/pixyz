@@ -7,7 +7,7 @@ class ELBO(Loss):
     """
     def __init__(self, p, approximate_dist, input_var=[]):
         if len(input_var) == 0:
-            input_var = approximate_dist.cond_var  # TODO: fix to input_var
+            input_var = approximate_dist.input_var
 
         super().__init__(p, approximate_dist, input_var=input_var)
 

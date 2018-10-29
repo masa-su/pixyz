@@ -15,10 +15,10 @@ class KullbackLeibler(Loss):
         x = super().estimate(x)
 
         if self._p1.distribution_name == "Normal" and self._p2.distribution_name == "Normal":
-            inputs = get_dict_values(x, self._p1.cond_var, True)
+            inputs = get_dict_values(x, self._p1.input_var, True)
             params1 = self._p1.get_params(inputs, **kwargs)
 
-            inputs = get_dict_values(x, self._p2.cond_var, True)
+            inputs = get_dict_values(x, self._p2.input_var, True)
             params2 = self._p2.get_params(inputs, **kwargs)
 
             return gauss_gauss_kl(params1["loc"], params1["scale"],

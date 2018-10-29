@@ -12,6 +12,13 @@ class Model(object):
 
         self.distributions = distributions
 
+    def __str__(self):
+        prob_text = [prob.prob_text for prob in self.distributions._modules.values()]
+
+        text = "Distributions (for training): \n  {} \n".format(", ".join(prob_text))
+        text += "Loss function: \n  {}".format(str(self.loss_cls))
+        return text
+
     def train(self, train_x, **kwargs):
         self.distributions.train()
 
