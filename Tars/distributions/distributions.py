@@ -73,6 +73,14 @@ class Distribution(nn.Module):
         return self._cond_var
 
     @property
+    def input_var(self):
+        """
+        Normally, `input_var` has same values as `cond_var`.
+        """
+
+        return self.cond_var
+
+    @property
     def prob_text(self):
         _var_text = [','.join(self._var)]
         if len(self._cond_var) != 0:
@@ -529,7 +537,10 @@ class MultiplyDistribution(Distribution):
 
         # sample from the parent distribution
         parents_input = get_dict_values(x, self._parent.cond_var, return_dict=True)
-        parents_output = self._parent.sample(parents_input, shape, batch_size, False, reparam)
+        parents_output = self._parent.sample(x=parents_input,
+                                             shape=shape,
+                                             batch_size=batch_size,
+                                             return_all=False, reparam=reparam)
 
         # sample from the child distribution
         children_inh_input = get_dict_values(parents_output, self.inh_var, return_dict=True)
@@ -537,7 +548,10 @@ class MultiplyDistribution(Distribution):
         children_input = get_dict_values(x, children_cond_exc_inh_var, return_dict=True)
         children_input.update(children_inh_input)
 
-        children_output = self._child.sample(children_input, shape, batch_size, False, reparam)
+        children_output = self._child.sample(x=children_input,
+                                             shape=shape,
+                                             batch_size=batch_size,
+                                             return_all=False, reparam=reparam)
 
         output = parents_output
         output.update(children_output)
