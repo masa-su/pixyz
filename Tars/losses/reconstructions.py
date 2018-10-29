@@ -4,7 +4,7 @@ from .losses import Loss
 class StochasticReconstructionLoss(Loss):
     def __init__(self, encoder, decoder, input_var=[]):
         if len(input_var) == 0:
-            input_var = encoder.cond_var  # TODO: fix to input_var
+            input_var = encoder.input_var
         super().__init__(encoder, decoder, input_var=input_var)
 
     @property

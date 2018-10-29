@@ -13,9 +13,9 @@ class Loss(object):
         if len(input_var) > 0:
             self._input_var = input_var
         else:
-            _input_var = deepcopy(p1.cond_var)  # TODO: fix to input_var
+            _input_var = deepcopy(p1.input_var)
             if p2 is not None:
-                _input_var += deepcopy(p2.cond_var)
+                _input_var += deepcopy(p2.input_var)
                 _input_var = sorted(set(_input_var), key=_input_var.index)
             self._input_var = _input_var
 
