@@ -97,6 +97,52 @@ class Distribution(nn.Module):
     def prob_factorized_text(self):
         return self.prob_text
 
+    def _check_input(self, x, var=None):
+        """
+        Check the type of a given input.
+        If this type is a dictionary, we check whether this key and `var` are same.
+        In case that this is list or tensor, we return a output formatted in a dictionary.
+
+        Parameters
+        ----------
+        x : torch.Tensor, list, or dict
+            Input variables
+
+        var : list or None
+            Variables to check if `x` has them.
+            This is set to None by default.
+
+        Returns
+        -------
+        checked_x : dict
+            Variables which are checked in this method.
+
+        Raises
+        ------
+        ValueError
+            Raises ValueError if the type of `x` is neither tensor, list, nor dictionary.
+        """
+
+        if var is None:
+            var = self.input_var
+
+        if type(x) is torch.Tensor:
+            checked_x = {var[0]: x}
+
+        elif type(x) is list:
+            checked_x = dict(zip(var, x))
+
+        elif type(x) is dict:
+            if not set(list(x.keys())) == set(var):
+                raise ValueError("Input's keys are not valid.")
+            checked_x = x
+
+        else:
+            raise ValueError("The type of input is not valid, got %s."
+                             % type(x))
+
+        return checked_x
+
     def get_params(self, params_dict):
         """
         This method aims to get parameters of this distributions from constant parameters set in
@@ -224,52 +270,6 @@ class DistributionBase(Distribution):
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim)
 
         self._set_constant_params(**kwargs)
-
-    def _check_input(self, x, var=None):
-        """
-        Check the type of a given input.
-        If this type is a dictionary, we check whether this key and `var` are same.
-        In case that this is list or tensor, we return a output formatted in a dictionary.
-
-        Parameters
-        ----------
-        x : torch.Tensor, list, or dict
-            Input variables
-
-        var : list or None
-            Variables to check if `x` has them.
-            This is set to None by default.
-
-        Returns
-        -------
-        checked_x : dict
-            Variables which are checked in this method.
-
-        Raises
-        ------
-        ValueError
-            Raises ValueError if the type of `x` is neither tensor, list, nor dictionary.
-        """
-
-        if var is None:
-            var = self._cond_var
-
-        if type(x) is torch.Tensor:
-            checked_x = {var[0]: x}
-
-        elif type(x) is list:
-            checked_x = dict(zip(var, x))
-
-        elif type(x) is dict:
-            if not set(list(x.keys())) == set(var):
-                raise ValueError("Input's keys are not valid.")
-            checked_x = x
-
-        else:
-            raise ValueError("The type of input is not valid, got %s."
-                             % type(x))
-
-        return checked_x
 
     def _set_constant_params(self, **params_dict):
         """

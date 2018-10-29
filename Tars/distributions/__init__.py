@@ -10,6 +10,11 @@ from .custom_distributions import (
     CustomLikelihoodDistribution,
 )
 
+from .special_distributions import (
+    Deterministic,
+    DataDistribution
+)
+
 from .distributions import (
     MultiplyDistribution,
 )
@@ -27,6 +32,8 @@ from .poe import NormalPoE
 
 __all__ = [
     'CustomLikelihoodDistribution',
+    'Deterministic',
+    'DataDistribution',
     'Normal',
     'Bernoulli',
     'RelaxedBernoulli',
