@@ -9,7 +9,7 @@ class StochasticReconstructionLoss(Loss):
 
     @property
     def loss_text(self):
-        return "E_{}[log {}]".format(self._p1.prob_text, self._p2.prob_text)
+        return "-E_{}[log {}]".format(self._p1.prob_text, self._p2.prob_text)
 
     def estimate(self, x={}):
         _x = super().estimate(x)

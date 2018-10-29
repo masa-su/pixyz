@@ -16,7 +16,7 @@ class ML(Model):
         super().__init__(distributions)
 
         # set losses
-        self.nll = NLL(self.p)
+        self.nll = NLL(p)
         self.other_losses = other_losses
         loss_cls = (self.nll + self.other_losses).mean()
         self.loss_cls = loss_cls
@@ -24,7 +24,7 @@ class ML(Model):
         self.loss_text = str(loss_cls)
 
         # set params and optim
-        params = self.distributions.params
+        params = self.distributions.parameters()
         self.optimizer = optimizer(params, **optimizer_params)
 
     def train(self, train_x, **kwargs):
