@@ -1,4 +1,4 @@
-from torch import optim
+from torch import optim, nn
 import torch
 from .losses import Loss
 from ..utils import get_dict_values
@@ -18,6 +18,8 @@ class GANLoss(Loss):
         params = discriminator.parameters()
         self.d_optimizer = optimizer(params, **optimizer_params)
 
+        self.bce_loss = nn.BCELoss()
+
     @property
     def loss_text(self):
         return "GANLoss[{}||{}]".format(self._p1.prob_text,
@@ -25,27 +27,36 @@ class GANLoss(Loss):
 
     def estimate(self, x={}, discriminator=False):
         _x = super().estimate(x)
-        x_data = get_dict_values(_x, self._p1.input_var)[0]
+
+        # sample x from p1 (p_data)
+        x_data_dict = get_dict_values(_x, self._p1.input_var, True)
+        # x_data = self._p1.sample(x_data)
+        x_data = x_data_dict[self._p1.var[0]]
         batch_size = x_data.shape[0]
 
-        sample_dict = (self.d * self._p2).sample(batch_size=batch_size)
-        sample = get_dict_values(sample_dict, self.d.var)[0]
+        # sample x from p2 (p)
+        x_dict = self._p2.sample(batch_size=batch_size)
+
+        # set labels
+        t_data = torch.ones(batch_size, 1).to(x_data.device)
+        t = torch.zeros(batch_size, 1).to(x_data.device)
 
         if discriminator:
-            x_data_dict = get_dict_values(_x, self._p1.input_var, True)
-            sample_data_dict = self.d.sample(x_data_dict)
-            sample_data = get_dict_values(sample_data_dict, self.d.var)[0]
-            return self.d_criterion(sample_data, sample)  # TODO: detach
+            # sample y from x_data
+            y_data_dict = self.d.sample(x_data_dict)
+            y_data = get_dict_values(y_data_dict, self.d.var)[0]
 
-        return self.g_criterion(sample)
+            # sample y from x
+            y_dict = self.d.sample(x_dict)  # TODO: detach x_dict
+            y = get_dict_values(y_dict, self.d.var)[0]
 
-    @staticmethod
-    def d_criterion(sample_data, sample):
-        return - torch.log(sample_data) - torch.log(1 - sample)
+            return self.bce_loss(y_data, t_data) + self.bce_loss(y, t)
 
-    @staticmethod
-    def g_criterion(sample):
-        return - torch.log(sample)
+        # sample y from x
+        y_dict = self.d.sample(x_dict)
+        y = get_dict_values(y_dict, self.d.var)[0]
+
+        return self.bce_loss(y, t_data)
 
     def train(self, train_x, **kwargs):
         self.d.train()

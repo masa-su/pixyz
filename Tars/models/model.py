@@ -43,6 +43,7 @@ class Model(object):
 
         with torch.no_grad():
             loss = self.test_loss_cls.estimate(test_x, **kwargs)
+            # test the adversarial loss function (only for adversarial training)
             if adversarial_loss:
                 d_loss = self.loss_cls.test(test_x, **kwargs)
                 return loss, d_loss
