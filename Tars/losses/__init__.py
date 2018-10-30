@@ -18,6 +18,10 @@ from .nll import (
     NLL,
 )
 
+from .gan_loss import (
+    GANLoss
+)
+
 
 __all__ = [
     'StochasticReconstructionLoss',
@@ -26,4 +30,5 @@ __all__ = [
     'ELBO',
     'SimilarityLoss',
     'MultiModalContrastivenessLoss',
+    'GANLoss',
 ]

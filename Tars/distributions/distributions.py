@@ -600,10 +600,10 @@ class ReplaceVarDistribution(Distribution):
             raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
 
         if isinstance(a, MultiplyDistribution):
-            raise ValueError("`Tars.MultiplyDistribution` is not supported to replace its variables for now.")
+            raise ValueError("`Tars.MultiplyDistribution` is not supported for now.")
 
         if isinstance(a, MarginalizeVarDistribution):
-            raise ValueError("`Tars.MarginalizeVarDistribution` is not supported to replace its variables for now.")
+            raise ValueError("`Tars.MarginalizeVarDistribution` is not supported for now.")
 
         _cond_var = deepcopy(a.cond_var)
         _var = deepcopy(a.var)

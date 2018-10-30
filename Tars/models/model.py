@@ -19,7 +19,7 @@ class Model(object):
         text += "Loss function: \n  {}".format(str(self.loss_cls))
         return text
 
-    def train(self, train_x, **kwargs):
+    def train(self, train_x, adversarial_loss=False, **kwargs):
         self.distributions.train()
 
         self.optimizer.zero_grad()
@@ -31,12 +31,20 @@ class Model(object):
         # update params
         self.optimizer.step()
 
+        # train the adversarial loss function (only for adversarial training)
+        if adversarial_loss:
+            d_loss = self.loss_cls.train(train_x, **kwargs)
+            return loss, d_loss
+
         return loss
 
-    def test(self, test_x, **kwargs):
+    def test(self, test_x, adversarial_loss=False, **kwargs):
         self.distributions.eval()
 
         with torch.no_grad():
             loss = self.test_loss_cls.estimate(test_x, **kwargs)
+            if adversarial_loss:
+                d_loss = self.loss_cls.test(test_x, **kwargs)
+                return loss, d_loss
 
         return loss

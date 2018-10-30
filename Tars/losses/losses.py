@@ -63,10 +63,22 @@ class Loss(object):
     def sum(self):
         return BatchSum(self)
 
-    def estimate(self, x={}):
+    def estimate(self, x={}, **kwargs):
         if set(list(x.keys())) < set(self._input_var):
             raise ValueError("Input's keys are not valid.")
         return get_dict_values(x, self._input_var, True)
+
+    def train(self, x={}, **kwargs):
+        """
+        Train the implicit (adversarial) loss function.
+        """
+        return 0
+
+    def test(self, x={}, **kwargs):
+        """
+        Train the implicit (adversarial) loss function.
+        """
+        return 0
 
 
 class ValueLoss(Loss):
@@ -74,7 +86,7 @@ class ValueLoss(Loss):
         self._loss1 = loss1
         self._input_var = []
 
-    def estimate(self, x={}):
+    def estimate(self, x={}, **kwargs):
         return self._loss1
 
     @property
@@ -125,18 +137,36 @@ class LossOperator(Loss):
     def loss_text(self):
         NotImplementedError
 
-    def estimate(self, x={}):
+    def estimate(self, x={}, **kwargs):
         if not isinstance(self._loss1, type(None)):
-            loss1 = self._loss1.estimate(x)
+            loss1 = self._loss1.estimate(x, **kwargs)
         else:
             loss1 = 0
 
         if not isinstance(self._loss2, type(None)):
-            loss2 = self._loss2.estimate(x)
+            loss2 = self._loss2.estimate(x, **kwargs)
         else:
             loss2 = 0
 
         return loss1, loss2
+
+    def train(self, x, **kwargs):
+        """
+        TODO: Fix
+        """
+        loss1 = self._loss1.train(x, **kwargs)
+        loss2 = self._loss2.train(x, **kwargs)
+
+        return loss1 + loss2
+
+    def test(self, x, **kwargs):
+        """
+        TODO: Fix
+        """
+        loss1 = self._loss1.test(x, **kwargs)
+        loss2 = self._loss2.test(x, **kwargs)
+
+        return loss1 + loss2
 
 
 class AddLoss(LossOperator):
@@ -144,8 +174,8 @@ class AddLoss(LossOperator):
     def loss_text(self):
         return " + ".join(self._loss_text_list)
 
-    def estimate(self, x={}):
-        loss1, loss2 = super().estimate(x)
+    def estimate(self, x={}, **kwargs):
+        loss1, loss2 = super().estimate(x, **kwargs)
         return loss1 + loss2
 
 
@@ -154,8 +184,8 @@ class SubLoss(LossOperator):
     def loss_text(self):
         return " - ".join(self._loss_text_list)
 
-    def estimate(self, x={}):
-        loss1, loss2 = super().estimate(x)
+    def estimate(self, x={}, **kwargs):
+        loss1, loss2 = super().estimate(x, **kwargs)
         return loss1 - loss2
 
 
@@ -164,8 +194,8 @@ class MulLoss(LossOperator):
     def loss_text(self):
         return " * ".join(self._loss_text_list)
 
-    def estimate(self, x={}):
-        loss1, loss2 = super().estimate(x)
+    def estimate(self, x={}, **kwargs):
+        loss1, loss2 = super().estimate(x, **kwargs)
         return loss1 * loss2
 
 
@@ -174,8 +204,8 @@ class DivLoss(LossOperator):
     def loss_text(self):
         return " / ".join(self._loss_text_list)
 
-    def estimate(self, x={}):
-        loss1, loss2 = super().estimate(x)
+    def estimate(self, x={}, **kwargs):
+        loss1, loss2 = super().estimate(x, **kwargs)
         return loss1 / loss2
 
 
@@ -196,14 +226,20 @@ class LossSelfOperator(Loss):
         self._input_var = _input_var
         self._loss1 = loss1
 
+    def train(self, x={}, **kwargs):
+        return self._loss1.train(x, **kwargs)
+
+    def test(self, x={}, **kwargs):
+        return self._loss1.test(x, **kwargs)
+
 
 class NegLoss(LossSelfOperator):
     @property
     def loss_text(self):
         return "-({})".format(self._loss1.loss_text)
 
-    def estimate(self, x={}):
-        loss = self._loss1.estimate(x)
+    def estimate(self, x={}, **kwargs):
+        loss = self._loss1.estimate(x, **kwargs)
         return -loss
 
 
@@ -212,8 +248,8 @@ class BatchMean(LossSelfOperator):
     def loss_text(self):
         return "mean({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def estimate(self, x={}):
-        loss = self._loss1.estimate(x)
+    def estimate(self, x={}, **kwargs):
+        loss = self._loss1.estimate(x, **kwargs)
         return loss.mean()
 
 
@@ -222,6 +258,6 @@ class BatchSum(LossSelfOperator):
     def loss_text(self):
         return "sum({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def estimate(self, x={}):
-        loss = self._loss1.estimate(x)
+    def estimate(self, x={}, **kwargs):
+        loss = self._loss1.estimate(x, **kwargs)
         return loss.sum()
