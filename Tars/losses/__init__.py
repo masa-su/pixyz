@@ -18,8 +18,9 @@ from .nll import (
     NLL,
 )
 
-from .gan_loss import (
-    GANLoss
+from .adversarial_loss import (
+    AdversarialJSLoss,
+    AdversarialWassersteinLoss
 )
 
 
@@ -30,5 +31,6 @@ __all__ = [
     'ELBO',
     'SimilarityLoss',
     'MultiModalContrastivenessLoss',
-    'GANLoss',
+    'AdversarialJSLoss',
+    'AdversarialWassersteinLoss',
 ]
