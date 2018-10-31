@@ -1,5 +1,6 @@
 from abc import ABCMeta
 import torch
+import re
 
 
 class Model(object):
@@ -16,7 +17,9 @@ class Model(object):
         prob_text = [prob.prob_text for prob in self.distributions._modules.values()]
 
         text = "Distributions (for training): \n  {} \n".format(", ".join(prob_text))
-        text += "Loss function: \n  {}".format(str(self.loss_cls))
+        text += "Loss function: \n  {} \n".format(str(self.loss_cls))
+        optimizer_text = re.sub('^', ' ' * 2, str(self.optimizer), flags=re.MULTILINE)
+        text += "Optimizer: \n{}".format(optimizer_text)
         return text
 
     def train(self, train_x, **kwargs):

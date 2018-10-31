@@ -114,7 +114,7 @@ class AdversarialWassersteinLoss(AdversarialJSLoss):
                                                                  self._p2.prob_text)
 
     def d_loss(self, y1, y2, *args, **kwargs):
-        return -torch.mean(y1) + torch.mean(y2)
+        return - (torch.mean(y1) - torch.mean(y2))
 
     def g_loss(self, y1, y2, *args, **kwargs):
         if self._p1_no_params:
