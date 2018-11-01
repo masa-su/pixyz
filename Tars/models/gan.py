@@ -1,7 +1,7 @@
 from torch import optim, nn
 
 from ..models.model import Model
-from ..losses import AdversarialJSLoss
+from ..losses import AdversarialJSDivergence
 
 
 class GAN(Model):
@@ -18,8 +18,8 @@ class GAN(Model):
         super().__init__(distributions)
 
         # set losses
-        loss_cls = AdversarialJSLoss(p_data, p, discriminator,
-                                     optimizer=d_optimizer, optimizer_params=d_optimizer_params).mean()
+        loss_cls = AdversarialJSDivergence(p_data, p, discriminator,
+                                           optimizer=d_optimizer, optimizer_params=d_optimizer_params).mean()
         self.loss_cls = loss_cls
         self.test_loss_cls = loss_cls
         self.loss_text = str(loss_cls)

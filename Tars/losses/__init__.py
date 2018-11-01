@@ -19,8 +19,8 @@ from .nll import (
 )
 
 from .adversarial_loss import (
-    AdversarialJSLoss,
-    AdversarialWassersteinLoss
+    AdversarialJSDivergence,
+    AdversarialWassersteinDistance
 )
 
 
@@ -31,6 +31,6 @@ __all__ = [
     'ELBO',
     'SimilarityLoss',
     'MultiModalContrastivenessLoss',
-    'AdversarialJSLoss',
-    'AdversarialWassersteinLoss',
+    'AdversarialJSDivergence',
+    'AdversarialWassersteinDistance',
 ]

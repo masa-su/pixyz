@@ -4,7 +4,7 @@ from .losses import Loss
 from ..utils import get_dict_values, detach_dict
 
 
-class AdversarialJSLoss(Loss):
+class AdversarialJSDivergence(Loss):
     """
     Adversarial loss (Jensen-Shannon divergence).
     """
@@ -24,8 +24,8 @@ class AdversarialJSLoss(Loss):
 
     @property
     def loss_text(self):
-        return "mean(AdversarialJSLoss[{}||{}])".format(self._p1.prob_text,
-                                                        self._p2.prob_text)
+        return "mean(AdversarialJSDivergence[{}||{}])".format(self._p1.prob_text,
+                                                              self._p2.prob_text)
 
     def estimate(self, x={}, discriminator=False):
         _x = super().estimate(x)
@@ -76,7 +76,7 @@ class AdversarialJSLoss(Loss):
         t1 = torch.ones(batch_size, 1).to(y1.device)
         t2 = torch.zeros(batch_size, 1).to(y1.device)
         if self._p1_no_params:
-            return self.bce_loss(y2, t1)
+            return self.bce_loss(y1, t2).detach() + self.bce_loss(y2, t1)
         return self.bce_loss(y1, t2) + self.bce_loss(y2, t1)
 
     def train(self, train_x, **kwargs):
@@ -102,7 +102,7 @@ class AdversarialJSLoss(Loss):
         return loss
 
 
-class AdversarialWassersteinLoss(AdversarialJSLoss):
+class AdversarialWassersteinDistance(AdversarialJSDivergence):
     def __init__(self, p_data, p, discriminator,
                  clip_value=0.01, **kwargs):
         super().__init__(p_data, p, discriminator, **kwargs)
@@ -110,15 +110,15 @@ class AdversarialWassersteinLoss(AdversarialJSLoss):
 
     @property
     def loss_text(self):
-        return "mean(AdversarialWassersteinLoss[{}||{}])".format(self._p1.prob_text,
-                                                                 self._p2.prob_text)
+        return "mean(AdversarialWassersteinDistance[{}||{}])".format(self._p1.prob_text,
+                                                                     self._p2.prob_text)
 
     def d_loss(self, y1, y2, *args, **kwargs):
         return - (torch.mean(y1) - torch.mean(y2))
 
     def g_loss(self, y1, y2, *args, **kwargs):
         if self._p1_no_params:
-            return -torch.mean(y2)
+            return torch.mean(y1).detach() - torch.mean(y2)
         return torch.mean(y1) - torch.mean(y2)
 
     def train(self, train_x, **kwargs):
