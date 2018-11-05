@@ -34,6 +34,7 @@ class Deterministic(Distribution):
 class DataDistribution(Distribution):
     """
     Data distribution.
+    TODO: Fix this behavior if multiplied with other distributions
     """
 
     def __init__(self, var, name="p_data"):

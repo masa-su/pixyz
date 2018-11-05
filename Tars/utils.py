@@ -31,6 +31,10 @@ def delete_dict_values(dicts, keys):
     return new_dicts
 
 
+def detach_dict(dicts):
+    return {k: v.detach() for k, v in dicts.items()}
+
+
 def replace_dict_keys(dicts, replace_list_dict):
     replaced_dicts = dict({(replace_list_dict[key], value) if key in list(replace_list_dict.keys())
                            else (key, value) for key, value in dicts.items()})

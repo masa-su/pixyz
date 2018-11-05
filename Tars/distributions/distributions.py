@@ -77,8 +77,7 @@ class Distribution(nn.Module):
         """
         Normally, `input_var` has same values as `cond_var`.
         """
-
-        return self.cond_var
+        return self._cond_var
 
     @property
     def prob_text(self):
@@ -409,7 +408,7 @@ class DistributionBase(Distribution):
                reparam=False):
 
         if len(x) == 0:  # unconditioned
-            if len(self._cond_var) != 0:
+            if len(self.input_var) != 0:
                 raise ValueError("You should set inputs or parameters")
 
             if shape:
@@ -522,9 +521,18 @@ class MultiplyDistribution(Distribution):
         self._parent = _parent
         self._child = _child
 
+        # Set input_var (it might be different from cond_var if either a and b contain data distributions.)
+        _input_var = [var for var in self._child.input_var if var not in _inh_var]
+        _input_var += self._parent.input_var
+        self._input_var = sorted(set(_input_var), key=_input_var.index)
+
     @property
     def inh_var(self):
         return self._inh_var
+
+    @property
+    def input_var(self):
+        return self._input_var
 
     @property
     def prob_factorized_text(self):
@@ -533,10 +541,10 @@ class MultiplyDistribution(Distribution):
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
 
-        x = get_dict_values(x, self._cond_var, return_dict=True)
+        x = get_dict_values(x, self._input_var, return_dict=True)
 
         # sample from the parent distribution
-        parents_input = get_dict_values(x, self._parent.cond_var, return_dict=True)
+        parents_input = get_dict_values(x, self._parent.input_var, return_dict=True)
         parents_output = self._parent.sample(x=parents_input,
                                              shape=shape,
                                              batch_size=batch_size,
@@ -544,8 +552,8 @@ class MultiplyDistribution(Distribution):
 
         # sample from the child distribution
         children_inh_input = get_dict_values(parents_output, self.inh_var, return_dict=True)
-        children_cond_exc_inh_var = list(set(self._child.cond_var)-set(self.inh_var))
-        children_input = get_dict_values(x, children_cond_exc_inh_var, return_dict=True)
+        children_input_exc_inh_var = list(set(self._child.input_var)-set(self.inh_var))
+        children_input = get_dict_values(x, children_input_exc_inh_var, return_dict=True)
         children_input.update(children_inh_input)
 
         children_output = self._child.sample(x=children_input,
@@ -562,7 +570,6 @@ class MultiplyDistribution(Distribution):
         return output
 
     def log_likelihood(self, x):
-
         parents_x = get_dict_values(x, self._parent.cond_var + self._parent.var, return_dict=True)
         children_x = get_dict_values(x, self._child.cond_var + self._child.var, return_dict=True)
         log_like = self._parent.log_likelihood(parents_x) + self._child.log_likelihood(children_x)
@@ -600,10 +607,10 @@ class ReplaceVarDistribution(Distribution):
             raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
 
         if isinstance(a, MultiplyDistribution):
-            raise ValueError("`Tars.MultiplyDistribution` is not supported to replace its variables for now.")
+            raise ValueError("`Tars.MultiplyDistribution` is not supported for now.")
 
         if isinstance(a, MarginalizeVarDistribution):
-            raise ValueError("`Tars.MarginalizeVarDistribution` is not supported to replace its variables for now.")
+            raise ValueError("`Tars.MarginalizeVarDistribution` is not supported for now.")
 
         _cond_var = deepcopy(a.cond_var)
         _var = deepcopy(a.var)
@@ -622,7 +629,10 @@ class ReplaceVarDistribution(Distribution):
         _cond_var = [replace_dict[var] if var in replace_dict.keys() else var for var in _cond_var]
         _var = [replace_dict[var] if var in replace_dict.keys() else var for var in _var]
         super().__init__(cond_var=_cond_var, var=_var, name=a.name, dim=a.dim)
+
         self._a = a
+        _input_var = [replace_dict[var] if var in replace_dict.keys() else var for var in a.input_var]
+        self._input_var = _input_var
 
     def forward(self, *args, **kwargs):
         return self._a.forward(*args, **kwargs)
@@ -647,6 +657,10 @@ class ReplaceVarDistribution(Distribution):
     def sample_mean(self, x):
         x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
         return self._a.sample_mean(x)
+
+    @property
+    def input_var(self):
+        return self._input_var
 
     @property
     def distribution_name(self):
@@ -676,6 +690,8 @@ class MarginalizeVarDistribution(Distribution):
 
     def __init__(self, a, marginalize_list):
 
+        marginalize_list = tolist(marginalize_list)
+
         if not isinstance(a, Distribution):
             raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
 
@@ -686,6 +702,9 @@ class MarginalizeVarDistribution(Distribution):
         _cond_var = deepcopy(a.cond_var)
 
         if not((set(marginalize_list)) < set(_var)):
+            raise ValueError()
+
+        if not((set(marginalize_list)).isdisjoint(set(a.input_var))):
             raise ValueError()
 
         if len(marginalize_list) == 0:
@@ -714,6 +733,10 @@ class MarginalizeVarDistribution(Distribution):
 
     def sample_mean(self, x):
         return self._a.sample_mean(x)
+
+    @property
+    def input_var(self):
+        return self._a.input_var
 
     @property
     def distribution_name(self):
