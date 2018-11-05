@@ -1,7 +1,7 @@
 import torch
 
 from ..utils import get_dict_values
-from .distributions import Distribution
+from .distributions import Distribution, mean_sum_samples
 
 
 class CustomLikelihoodDistribution(Distribution):
@@ -12,24 +12,28 @@ class CustomLikelihoodDistribution(Distribution):
             raise ValueError("You should set the likelihood"
                              " of this distribution.")
         self.likelihood = likelihood
-        self.params_keys = []
-        self.distribution_name = "Custom Distribution"
         self.DistributionTorch = None
 
         super().__init__(var=var, cond_var=[], **kwargs)
 
-    def _set_distribution(self, x={}):
-        pass
+    @property
+    def input_var(self):
+        """
+        In CustomLikelihoodDistribution, `input_var` is same as `var`.
+        """
 
-    def _get_log_like(self, x):
-        # input : dict
-        # output : tensor
+        return self.var
 
-        x_targets = get_dict_values(x, self._var)
-        return torch.log(self.likelihood(x_targets[0]))
+    @property
+    def distribution_name(self):
+        return "Custom Distribution"
 
-    def get_params(self, **kwargs):
-        pass
+    def log_likelihood(self, x_dict):
 
-    def sample(self, **kwargs):
-        pass
+        if not set(list(x_dict.keys())) >= set(self._var):
+            raise ValueError("Input's keys are not valid.")
+
+        _x_dict = get_dict_values(x_dict, self._var)
+        log_like = torch.log(self.likelihood(_x_dict[0]))
+        log_like = mean_sum_samples(log_like)
+        return log_like
