@@ -1,6 +1,7 @@
 # Pixyz: a library for developing deep generative models
+[![logo](https://github.com/masa-su/pixyz/blob/master/logo.pdf)
 
-[![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
+[![Python Version](https://github.com/masa-su/pixyz/blob/master/logo.pdf)
 
 ## Installation
 ```
