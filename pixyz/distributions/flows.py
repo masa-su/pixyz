@@ -53,16 +53,19 @@ class Flow(Distribution):
 
         return output
 
-    def sample(self, x={}, only_flow=False, **kwargs):
+    def sample(self, x={}, only_flow=False, return_all=True, **kwargs):
         if only_flow:
             _samples = get_dict_values(x, self.var)
         else:
-            samples = self.prior.sample(x, **kwargs)
-            _samples = get_dict_values(samples, self.prior.var)
+            samples_dict = self.prior.sample(x, **kwargs)
+            _samples = get_dict_values(samples_dict, self.prior.var)
         output = self.forward(_samples[0], jacobian=False)
+        output_dict = {self.var[0]: output}
 
-        samples[self.var[0]] = output
-        return samples
+        if return_all:
+            output_dict.update(samples_dict)
+
+        return output_dict
 
     def log_likelihood(self, x):
         log_dist = self.prior.log_likelihood(x)
