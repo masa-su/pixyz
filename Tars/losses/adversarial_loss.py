@@ -8,7 +8,8 @@ class AdversarialJSDivergence(Loss):
     """
     Adversarial loss (Jensen-Shannon divergence).
     """
-    def __init__(self, p_data, p, discriminator, input_var=[], optimizer=optim.Adam, optimizer_params={}):
+    def __init__(self, p_data, p, discriminator, input_var=[], optimizer=optim.Adam, optimizer_params={},
+                 inverse_g_loss=True):
         super().__init__(p_data, p, input_var=input_var)
         self.loss_optimizer = optimizer
         self.loss_optimizer_params = optimizer_params
@@ -21,6 +22,7 @@ class AdversarialJSDivergence(Loss):
             self._p1_no_params = True
 
         self.bce_loss = nn.BCELoss()
+        self._inverse_g_loss = inverse_g_loss
 
     @property
     def loss_text(self):
@@ -75,9 +77,18 @@ class AdversarialJSDivergence(Loss):
         # set labels
         t1 = torch.ones(batch_size, 1).to(y1.device)
         t2 = torch.zeros(batch_size, 1).to(y1.device)
+
+        if self._inverse_g_loss:
+            y1_loss = self.bce_loss(y1, t2)
+            y2_loss = self.bce_loss(y2, t1)
+        else:
+            y1_loss = -self.bce_loss(y1, t1)
+            y2_loss = -self.bce_loss(y2, t2)
+
         if self._p1_no_params:
-            return self.bce_loss(y1, t2).detach() + self.bce_loss(y2, t1)
-        return self.bce_loss(y1, t2) + self.bce_loss(y2, t1)
+            y1_loss = y1_loss.detach()
+
+        return y1_loss + y2_loss
 
     def train(self, train_x, **kwargs):
         self.d.train()
@@ -118,7 +129,7 @@ class AdversarialWassersteinDistance(AdversarialJSDivergence):
 
     def g_loss(self, y1, y2, *args, **kwargs):
         if self._p1_no_params:
-            return torch.mean(y1).detach() - torch.mean(y2)
+            y1 = y1.detach()
         return torch.mean(y1) - torch.mean(y2)
 
     def train(self, train_x, **kwargs):
