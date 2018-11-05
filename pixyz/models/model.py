@@ -22,7 +22,7 @@ class Model(object):
         text += "Optimizer: \n{}".format(optimizer_text)
         return text
 
-    def train(self, train_x, **kwargs):
+    def train(self, train_x={}, **kwargs):
         self.distributions.train()
 
         self.optimizer.zero_grad()
@@ -36,7 +36,7 @@ class Model(object):
 
         return loss
 
-    def test(self, test_x, **kwargs):
+    def test(self, test_x={}, **kwargs):
         self.distributions.eval()
 
         with torch.no_grad():

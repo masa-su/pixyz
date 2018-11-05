@@ -8,7 +8,7 @@ class AdversarialJSDivergence(Loss):
     """
     Adversarial loss (Jensen-Shannon divergence).
     """
-    def __init__(self, p_data, p, discriminator, input_var=[], optimizer=optim.Adam, optimizer_params={},
+    def __init__(self, p_data, p, discriminator, input_var=None, optimizer=optim.Adam, optimizer_params={},
                  inverse_g_loss=True):
         super().__init__(p_data, p, input_var=input_var)
         self.loss_optimizer = optimizer

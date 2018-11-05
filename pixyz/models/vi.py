@@ -27,8 +27,8 @@ class VI(Model):
         params = self.distributions.parameters()
         self.optimizer = optimizer(params, **optimizer_params)
 
-    def train(self, train_x, **kwargs):
+    def train(self, train_x={}, **kwargs):
         return super().train(train_x, **kwargs)
 
-    def test(self, test_x, **kwargs):
+    def test(self, test_x={}, **kwargs):
         return super().test(test_x, **kwargs)

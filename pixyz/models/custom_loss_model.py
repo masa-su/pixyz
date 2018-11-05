@@ -30,9 +30,9 @@ class CustomLossModel(Model):
         else:
             self.test_loss_cls = loss
 
-    def train(self, train_x, **kwargs):
+    def train(self, train_x={}, **kwargs):
         return super().train(train_x, **kwargs)
 
-    def test(self, test_x, **kwargs):
+    def test(self, test_x={}, **kwargs):
         return super().test(test_x, **kwargs)
 

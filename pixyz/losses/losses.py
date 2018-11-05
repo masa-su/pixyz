@@ -5,12 +5,12 @@ from ..utils import get_dict_values
 
 
 class Loss(object):
-    def __init__(self, p1, p2=None, input_var=[]):
+    def __init__(self, p1, p2=None, input_var=None):
         self._p1 = p1
         self._p2 = p2
         self._loss_text = None
 
-        if len(input_var) > 0:
+        if input_var is not None:
             self._input_var = input_var
         else:
             _input_var = deepcopy(p1.input_var)
@@ -64,9 +64,9 @@ class Loss(object):
         return BatchSum(self)
 
     def estimate(self, x={}, **kwargs):
-        if set(list(x.keys())) < set(self._input_var):
-            raise ValueError("Input's keys are not valid.")
-        return get_dict_values(x, self._input_var, True)
+        if set(list(x.keys())) >= set(self._input_var):
+            return get_dict_values(x, self._input_var, True)
+        raise ValueError("Input's keys are not valid.")
 
     def train(self, x={}, **kwargs):
         """

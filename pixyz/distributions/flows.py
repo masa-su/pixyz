@@ -6,70 +6,81 @@ from torch import nn
 import torch.nn.functional as F
 
 from ..utils import get_dict_values, epsilon
+from .distributions import Distribution
 
 
-class Flow(nn.Module):
-    def __init__(self, dist, in_features, num_layers=1, var=[],
-                 flow_layer=None, flow_name=None):
-        super(Flow, self).__init__()
-        self.dist = dist
-        self.var = var
-        self.cond_var = self.dist.cond_var
-        self.var_dist = self.dist.var
-        self.flows = nn.ModuleList([flow_layer(in_features)
+class Flow(Distribution):
+    def __init__(self, prior, dim, num_layers=1, var=[],
+                 flow_layer=None, flow_name=None, name="p"):
+        super().__init__(cond_var=prior.cond_var, var=var,
+                         name=name, dim=dim)
+        self.prior = prior
+        self.flows = nn.ModuleList([flow_layer(dim)
                                     for _ in range(num_layers)])
-        self.flow_name = flow_name
+        self._flow_name = flow_name
 
-        self.prob_text = "{}({} ; {})".format(
-            flow_name,
-            ','.join(var),
-            dist.prob_text
+
+
+    @property
+    def prob_text(self):
+        _var_text = []
+        _text = "{}={}({})".format(','.join(self._var),
+                                   self._flow_name,
+                                   ','.join(self.prior.var))
+        _var_text += [_text]
+        if len(self._cond_var) != 0:
+            _var_text += [','.join(self._cond_var)]
+
+        _prob_text = "{}({})".format(
+            self._name,
+            "|".join(_var_text)
         )
-        self.prob_factorized_text = self.prob_text
+
+        return _prob_text
 
     def forward(self, x, jacobian=False):
         if jacobian is False:
-            for i, flow in enumerate(self.flows):
+            for flow in self.flows:
                 x = flow(x)
             output = x
 
         else:
             logdet_jacobian = 0
-            for i, flow in enumerate(self.flows):
+            for flow in self.flows:
                 x, _logdet_jacobian = flow(x, jacobian)
                 logdet_jacobian += _logdet_jacobian
             output = logdet_jacobian
 
         return output
 
-    def sample(self, x=None, only_flow=False, **kwargs):
+    def sample(self, x={}, only_flow=False, **kwargs):
         if only_flow:
             _samples = get_dict_values(x, self.var)
         else:
-            samples = self.dist.sample(x, **kwargs)
-            _samples = get_dict_values(samples, self.var_dist)
+            samples = self.prior.sample(x, **kwargs)
+            _samples = get_dict_values(samples, self.prior.var)
         output = self.forward(_samples[0], jacobian=False)
 
         samples[self.var[0]] = output
         return samples
 
     def log_likelihood(self, x):
-        log_dist = self.dist.log_likelihood(x)
+        log_dist = self.prior.log_likelihood(x)
 
-        x_values = get_dict_values(x, self.var_dist)
+        x_values = get_dict_values(x, self.prior.var)
         logdet_jacobian = self.forward(x_values[0], jacobian=True)
 
         return log_dist - logdet_jacobian
 
 
 class PlanarFlow(Flow):
-    def __init__(self, dist, in_features, num_layers=1,
-                 var=[]):
-        super(PlanarFlow, self).__init__(dist, in_features,
+    def __init__(self, prior, dim, num_layers=1,
+                 var=[], **kwargs):
+        super(PlanarFlow, self).__init__(prior, dim,
                                          num_layers=num_layers,
                                          var=var,
                                          flow_layer=PlanarFlowLayer,
-                                         flow_name="PlanarFlow")
+                                         flow_name="PlanarFlow", **kwargs)
 
 
 class PlanarFlowLayer(nn.Module):
@@ -104,6 +115,3 @@ class PlanarFlowLayer(nn.Module):
             return output, logdet_jacobian
 
         return output
-
-    def extra_repr(self):
-        return 'in_features={}'.format(self.in_features)

@@ -10,7 +10,7 @@ class SimilarityLoss(Loss):
     Learning Modality-Invariant Representations
     for Speech and Images (Leidai et. al.)
     """
-    def __init__(self, p1, p2, input_var=[], var=["z"], margin=0):
+    def __init__(self, p1, p2, input_var=None, var=["z"], margin=0):
         super().__init__(p1, p2, input_var)
         self.var = var
         self.loss = nn.MarginRankingLoss(margin=margin, reduce=False)
@@ -48,7 +48,7 @@ class MultiModalContrastivenessLoss(Loss):
     Disentangling by Partitioning:
     A Representation Learning Framework for Multimodal Sensory Data
     """
-    def __init__(self, p1, p2, input_var=[], margin=0.5):
+    def __init__(self, p1, p2, input_var=None, margin=0.5):
         super().__init__(p1, p2, input_var)
         self.loss = nn.MarginRankingLoss(margin=margin)
 

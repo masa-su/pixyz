@@ -4,7 +4,7 @@ from .losses import Loss
 
 
 class KullbackLeibler(Loss):
-    def __init__(self, p1, p2, input_var=[]):
+    def __init__(self, p1, p2, input_var=None):
         super().__init__(p1, p2, input_var)
 
     @property
