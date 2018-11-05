@@ -22,16 +22,13 @@ def find_version(*file_paths):
 
 
 setup(
-    name='Tars',
-    version=find_version("Tars", "__init__.py"),
+    name='pixyz',
+    version=find_version("pixyz", "__init__.py"),
     description='Deep generative model library',
     author='Masahiro Suzuki',
     install_requires=[
         'torch',
         'torchvision',
-        'tqdm',
-        'tensorflow',
-        'tensorboardX',
-        'tensorboard',
+        'tqdm'
     ]
 )

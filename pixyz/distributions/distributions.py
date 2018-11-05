@@ -10,7 +10,7 @@ from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, toli
 
 class Distribution(nn.Module):
     """
-    Distribution class. In Tars, all distributions are required to inherit this class.
+    Distribution class. In pixyz, all distributions are required to inherit this class.
 
     Attributes
     ----------
@@ -459,9 +459,9 @@ class MultiplyDistribution(Distribution):
 
     Parameters
     -------
-    a : Tars.Distribution
+    a : pixyz.Distribution
 
-    b : Tars.Distribution
+    b : pixyz.Distribution
 
     Examples
     --------
@@ -471,7 +471,7 @@ class MultiplyDistribution(Distribution):
 
     def __init__(self, a, b):
         if not (isinstance(a, Distribution) and isinstance(b, Distribution)):
-            raise ValueError("Given inputs should be `Tars.Distribution`, got {} and {}.".format(type(a), type(b)))
+            raise ValueError("Given inputs should be `pixyz.Distribution`, got {} and {}.".format(type(a), type(b)))
 
         # Check parent-child relationship between two distributions.
         # If inherited variables (`_inh_var`) are exist (e.g. c in p(e|c)p(c|a,b)),
@@ -596,7 +596,7 @@ class ReplaceVarDistribution(Distribution):
 
     Attributes
     ----------
-    a : Tars.Distribution (not Tars.MultiplyDistribution)
+    a : pixyz.Distribution (not pixyz.MultiplyDistribution)
 
     replace_dict : dict
     """
@@ -604,13 +604,13 @@ class ReplaceVarDistribution(Distribution):
     def __init__(self, a, replace_dict):
 
         if not isinstance(a, Distribution):
-            raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
+            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(a)))
 
         if isinstance(a, MultiplyDistribution):
-            raise ValueError("`Tars.MultiplyDistribution` is not supported for now.")
+            raise ValueError("`pixyz.MultiplyDistribution` is not supported for now.")
 
         if isinstance(a, MarginalizeVarDistribution):
-            raise ValueError("`Tars.MarginalizeVarDistribution` is not supported for now.")
+            raise ValueError("`pixyz.MarginalizeVarDistribution` is not supported for now.")
 
         _cond_var = deepcopy(a.cond_var)
         _var = deepcopy(a.var)
@@ -683,7 +683,7 @@ class MarginalizeVarDistribution(Distribution):
 
     Attributes
     ----------
-    a : Tars.Distribution (not Tars.DistributionBase)
+    a : pixyz.Distribution (not pixyz.DistributionBase)
 
     marginalize_list : list
     """
@@ -693,10 +693,10 @@ class MarginalizeVarDistribution(Distribution):
         marginalize_list = tolist(marginalize_list)
 
         if not isinstance(a, Distribution):
-            raise ValueError("Given input should be `Tars.Distribution`, got {}.".format(type(a)))
+            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(a)))
 
         if isinstance(a, DistributionBase):
-            raise ValueError("`Tars.DistributionBase` cannot marginalize its variables for now.")
+            raise ValueError("`pixyz.DistributionBase` cannot marginalize its variables for now.")
 
         _var = deepcopy(a.var)
         _cond_var = deepcopy(a.cond_var)
