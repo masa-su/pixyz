@@ -1,4 +1,4 @@
-# Pixyz
+# Pixyz: a library for developing deep generative models
 
 [![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/Tars_pytorch)
 
