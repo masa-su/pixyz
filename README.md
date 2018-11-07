@@ -108,7 +108,7 @@ print(p_joint)
 >>    (fc3): Linear(in_features=512, out_features=784, bias=True)
 >>  )
 ```
-This distribution can also perform sampling and likelihood estimation. Thanks to this API, we can easily implement even more complicated probabilistic models.
+This distribution can also perform sampling and likelihood estimation in the same way. Thanks to this API, we can easily implement even more complicated probabilistic models.
 
 ### 2. Set objective function and train the model
 After defining distributions, we should set the objective fuction of the model and train (optimize) it. In Pixyz, there are three ways to do this.
@@ -120,8 +120,14 @@ After defining distributions, we should set the objective fuction of the model a
 We can choose either of these three ways, but upper one is for beginners and lower is for developers/researchers.
 
 #### 2.1. Model API
-Using Model API is the simplest way to create trainable models. Specifically, you can choose models which you want to develop from `pixyz.models.*`. Our goal in this example is to implement the VAE, so we choose `pixyz.models.VI` (which is for variational inference) and set distributions defined above and the optimizer.
-
+The simplest way to create trainable models is to use Model API. Specifically, you can choose models which you want to develop from `pixyz.models.*`. Our goal in this example is to implement the VAE, so we choose `pixyz.models.VI` (which is for variational inference) and set distributions defined above and the optimizer.
+```python
+model = VI(p_joint, q, optimizer=optim.Adam, optimizer_params={"lr":1e-3})
+```
+Mission complete! To train this model, simply run the `train` method with data as input.
+```python
+loss = model.train({"x": x_tensor}) # x_tensor is torch.Tensor
+```
 
 #### 2.2. Loss API
 
