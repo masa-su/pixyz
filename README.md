@@ -33,7 +33,7 @@ So now, let's create a deep generative model with Pixyz! Here, we consider to im
 In Pixyz, you first need to define the distributions of the model by **Distribution API**.
 
 ### 1, Define the distributions
-In VAE, you should define the three distributions, q(z|x), p(x|z) and p(z), by DNNs. We can accomplish them like PyTorch by inheriting `pixyz.Distribution` class which itself inherits `torch.nn.Module`.
+In VAE, you should define the three distributions, q(z|x), p(x|z) and p(z), by DNNs. We can accomplish them like PyTorch by inheriting `pixyz.distributions.*` class which itself inherits `torch.nn.Module`.
 
 For example, p(x|z) (Bernoulli) and q(z|x) (Normal) can be defined as follows.
 
@@ -69,22 +69,21 @@ class Generator(Bernoulli):
         h = F.relu(self.fc2(h))
         return {"probs": F.sigmoid(self.fc3(h))}
 ```
-Once defined, we can create instances of distributions. 
+Once defined, we can create instances from these classes. 
 ```python
 p = Generator()
 q = Inference()
 ```
 
-If you want to use distributions which don't need to be defined with DNNs (simple distribution), you just create new instance from `pixyz.Distribution`.
+If you want to use distributions which don't need to be defined with DNNs, you just create new instance from `pixyz.distributions.*`. In VAE, p(z) is defined as the standard normal distribution.
 
 ```python
 loc = torch.tensor(0.)
 scale = torch.tensor(1.)
 prior = Normal(loc=loc, scale=scale, var=["z"], dim=64, name="p_prior")
 ```
+To check the type of distribution defined by each instance, just `print` them!
 
-
-You can check by printing the type of distribution defined by each instance.
 ```python
 print(p)
 >> Distribution:
