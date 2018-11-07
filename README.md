@@ -30,10 +30,8 @@ So now, let's create a deep generative model with Pixyz! Here, we consider to im
 
 <img src="https://latex.codecogs.com/gif.latex?E_{q_\phi(z|x)}[\log&space;\frac{p_\theta(x,z)}{q_\phi(z|x)}]&space;\leq&space;\log&space;p(x)" />
 
-In Pixyz, you first need to define the distributions of the model by **Distribution API**.
-
 ### 1, Define the distributions
-In VAE, you should define the three distributions, q(z|x), p(x|z) and p(z), by DNNs. We can accomplish them like PyTorch by inheriting `pixyz.distributions.*` class which itself inherits `torch.nn.Module`.
+First, we need to define two distributions, q(z|x), p(x|z), with DNNs. In Pixyz, you can do this by implementing DNN architectures just as you do with PyTorch. The main difference is that we should write a class which inherits the `pixyz.distributions.*` class (**Distribution API**), not the `torch.nn.Module` class.
 
 For example, p(x|z) (Bernoulli) and q(z|x) (Normal) can be defined as follows.
 
@@ -69,22 +67,20 @@ class Generator(Bernoulli):
         h = F.relu(self.fc2(h))
         return {"probs": F.sigmoid(self.fc3(h))}
 ```
-Once defined, we can create instances from these classes. 
+Once defined, we can create these instances from them. 
 ```python
 p = Generator()
 q = Inference()
 ```
 
-If you want to use distributions which don't need to be defined with DNNs, you just create new instance from `pixyz.distributions.*`. In VAE, p(z) is defined as the standard normal distribution.
-
+If you want to use distributions which don't need to be defined with DNNs, you just create new instance from `pixyz.distributions.*`. In VAE, p(z) is usually defined as the standard normal distribution.
 ```python
 loc = torch.tensor(0.)
 scale = torch.tensor(1.)
 prior = Normal(loc=loc, scale=scale, var=["z"], dim=64, name="p_prior")
 ```
 
-If you want to see what type of distribution and architecture each instance defines, just `print` them!
-
+If you want to see what kind of distribution and architecture each instance defines, just `print` them!
 ```python
 print(p)
 >> Distribution:
@@ -96,20 +92,36 @@ print(p)
 >>     (fc3): Linear(in_features=512, out_features=784, bias=True)
 >> )
 ```
+Conveniently, each instance (distribution) can **perform sampling** and **estimate (log-)likelihood** given samples regardless of the form of the internal DNN architecture. It will be explained later (see section 2.3).
 
-Conveniently, we can **sample** some variables and **estimate the (log-)likelihood** of each instance, which will be explained in later (see sec. 2.3).
-
+Moreover, in VAE, we should define the joint distribution p(x,z)=p(x|z)p(z) as the generative model. In **Distribution API**, you can directly calculate the product of different distributions!
+```python
+p_joint = p * prior
+print(p_joint)
+>> Distribution:
+>>   p(x,z) = p(x|z)p_prior(z)
+>> Network architecture:
+>>   p_prior(z) (Normal): Normal()
+>>   p(x|z) (Bernoulli): Generator(
+>>    (fc1): Linear(in_features=64, out_features=512, bias=True)
+>>    (fc2): Linear(in_features=512, out_features=512, bias=True)
+>>    (fc3): Linear(in_features=512, out_features=784, bias=True)
+>>  )
+```
+This distribution can also perform sampling and likelihood estimation. Thanks to this API, we can easily implement even more complicated probabilistic models.
 
 ### 2. Set objective function and train the model
-There are three ways to implement and train/test this model.
+After defining distributions, we should set the objective fuction of the model and train (optimize) it. In Pixyz, there are three ways to do this.
 
 1. Model API
 2. Loss API
 3. using only Distribution API
 
-Upper one is for beginners and lower is for developers/researchers.
+We can choose either of these three ways, but upper one is for beginners and lower is for developers/researchers.
 
 #### 2.1. Model API
+Using Model API is the simplest way to create trainable models. Specifically, you can choose models which you want to develop from `pixyz.models.*`. Our goal in this example is to implement the VAE, so we choose `pixyz.models.VI` (which is for variational inference) and set distributions defined above and the optimizer.
+
 
 #### 2.2. Loss API
 
