@@ -26,4 +26,23 @@ $ pip install -e pixyz --process-dependency-links
 
 ## Quick Start
 
-So now, let's create a deep generative model with Pixyz! Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model ($p(z|x)$) and a generative model ($p(x,z)=p(x|z)p(z)$), and this objective function is as follows.
+So now, let's create a deep generative model with Pixyz! Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model (q(z|x)) and a generative model (p(x,z)=p(x|z)p(z)), which are defined by DNNs, and this objective function is as follows.
+
+<img src="https://latex.codecogs.com/gif.latex?E_{q_\phi(z|x)}[\log&space;\frac{p_\theta(x,z)}{q_\phi(z|x)}]&space;\leq&space;\log&space;p(x)" />
+
+In Pixyz, you first need to define the distributions of the model by **Distribution API**.
+
+### Define the distributions
+In VAE, you should define the three distributions, q(z|x), p(x|z) and p(z), by DNNs. We can accomplish them like PyTorch by inheriting `pixyz.Distribution` class which also inherits `torch.nn.Module`.
+
+
+### Set objective function and train the model.
+There are three ways to implement and train/test this model.
+
+1. Model API
+2. Loss API
+3. using only Distribution API
+
+Upper one is for beginners and lower is for developers/researchers. But whatever you choose, you first need to define the distributions of the model by **Distribution API**.
+
+
