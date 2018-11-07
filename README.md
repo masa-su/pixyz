@@ -26,7 +26,7 @@ $ pip install -e pixyz --process-dependency-links
 
 ## Quick Start
 
-So now, let's create a deep generative model with Pixyz! Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model (q(z|x)) and a generative model (p(x,z)=p(x|z)p(z)), which are defined by DNNs, and this objective function is as follows.
+So now, let's create a deep generative model with Pixyz! Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model q(z|x) and a generative model p(x,z)=p(x|z)p(z), which are defined by DNNs, and this objective function is as follows.
 
 <img src="https://latex.codecogs.com/gif.latex?E_{q_\phi(z|x)}[\log&space;\frac{p_\theta(x,z)}{q_\phi(z|x)}]&space;\leq&space;\log&space;p(x)" />
 
@@ -82,7 +82,8 @@ loc = torch.tensor(0.)
 scale = torch.tensor(1.)
 prior = Normal(loc=loc, scale=scale, var=["z"], dim=64, name="p_prior")
 ```
-To check the type of distribution defined by each instance, just `print` them!
+
+If you want to see what type of distribution and architecture each instance defines, just `print` them!
 
 ```python
 print(p)
