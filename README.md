@@ -97,7 +97,7 @@ print(p)
 >> )
 ```
 
-Convinentlly, we can **sample** some variables and **estimate the (log-)likelihood** of each instance, which will be explained in later (see sec. 2.3).
+Conveniently, we can **sample** some variables and **estimate the (log-)likelihood** of each instance, which will be explained in later (see sec. 2.3).
 
 
 ### 2. Set objective function and train the model
