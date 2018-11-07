@@ -33,7 +33,7 @@ So now, let's create a deep generative model with Pixyz! Here, we consider to im
 In Pixyz, you first need to define the distributions of the model by **Distribution API**.
 
 ### Define the distributions
-In VAE, you should define the three distributions, q(z|x), p(x|z) and p(z), by DNNs. We can accomplish them like PyTorch by inheriting `pixyz.Distribution` class which also inherits `torch.nn.Module`.
+In VAE, you should define the three distributions, q(z|x), p(x|z) and p(z), by DNNs. We can accomplish them like PyTorch by inheriting `pixyz.Distribution` class which itself inherits `torch.nn.Module`.
 
 
 ### Set objective function and train the model.
