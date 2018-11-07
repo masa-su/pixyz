@@ -32,17 +32,88 @@ So now, let's create a deep generative model with Pixyz! Here, we consider to im
 
 In Pixyz, you first need to define the distributions of the model by **Distribution API**.
 
-### Define the distributions
+### 1, Define the distributions
 In VAE, you should define the three distributions, q(z|x), p(x|z) and p(z), by DNNs. We can accomplish them like PyTorch by inheriting `pixyz.Distribution` class which itself inherits `torch.nn.Module`.
 
+For example, p(x|z) (Bernoulli) and q(z|x) (Normal) can be defined as follows.
 
-### Set objective function and train the model.
+```python
+from pixyz.distributions import Bernoulli, Normal
+# inference model q(z|x)
+class Inference(Normal):
+    def __init__(self):
+        super(Inference, self).__init__(cond_var=["x"], var=["z"], name="q")        
+
+        self.fc1 = nn.Linear(784, 512)
+        self.fc2 = nn.Linear(512, 512)
+        self.fc31 = nn.Linear(512, 64)
+        self.fc32 = nn.Linear(512, 64)
+
+    def forward(self, x):
+        h = F.relu(self.fc1(x))
+        h = F.relu(self.fc2(h))
+        return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
+
+    
+# generative model p(x|z)    
+class Generator(Bernoulli):
+    def __init__(self):
+        super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+
+        self.fc1 = nn.Linear(64, 512)
+        self.fc2 = nn.Linear(512, 512)
+        self.fc3 = nn.Linear(512, 128)
+
+    def forward(self, z):
+        h = F.relu(self.fc1(z))
+        h = F.relu(self.fc2(h))
+        return {"probs": F.sigmoid(self.fc3(h))}
+```
+Once defined, we can create instances of distributions. 
+```python
+p = Generator()
+q = Inference()
+```
+
+If you want to use distributions which don't need to be defined with DNNs (simple distribution), you just create new instance from `pixyz.Distribution`.
+
+```python
+loc = torch.tensor(0.)
+scale = torch.tensor(1.)
+prior = Normal(loc=loc, scale=scale, var=["z"], dim=64, name="p_prior")
+```
+
+
+You can check by printing the type of distribution defined by each instance.
+```python
+print(p)
+>> Distribution:
+>>   p(x|z) (Bernoulli)
+>> Network architecture:
+>>   Generator(
+>>     (fc1): Linear(in_features=64, out_features=512, bias=True)
+>>     (fc2): Linear(in_features=512, out_features=512, bias=True)
+>>     (fc3): Linear(in_features=512, out_features=784, bias=True)
+>> )
+```
+
+Convinentlly, we can **sample** some variables and **estimate the (log-)likelihood** of each instance, which will be explained in later (see sec. 2.3).
+
+
+### 2. Set objective function and train the model
 There are three ways to implement and train/test this model.
 
 1. Model API
 2. Loss API
 3. using only Distribution API
 
-Upper one is for beginners and lower is for developers/researchers. But whatever you choose, you first need to define the distributions of the model by **Distribution API**.
+Upper one is for beginners and lower is for developers/researchers.
+
+#### 2.1. Model API
+
+#### 2.2. Loss API
+
+#### 2.3. using only Distribution API
+
 
 
