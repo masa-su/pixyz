@@ -115,13 +115,14 @@ After defining distributions, we should set the objective fuction of the model a
 
 1. Model API
 2. Loss API
-3. using only Distribution API
+3. Using only Distribution API
 
 We can choose either of these three ways, but upper one is for beginners and lower is for developers/researchers.
 
 #### 2.1. Model API
-The simplest way to create trainable models is to use Model API. Specifically, you can choose models which you want to develop from `pixyz.models.*`. Our goal in this example is to implement the VAE, so we choose `pixyz.models.VI` (which is for variational inference) and set distributions defined above and the optimizer.
+The simplest way to create trainable models is to use Model API (`pixyz.models.*`). Our goal in this tutorial is to implement the VAE, so we choose `pixyz.models.VI` (which is for variational inference) and set distributions defined above and the optimizer.
 ```python
+from pixyz.models import VI
 model = VI(p_joint, q, optimizer=optim.Adam, optimizer_params={"lr":1e-3})
 ```
 Mission complete! To train this model, simply run the `train` method with data as input.
@@ -129,9 +130,39 @@ Mission complete! To train this model, simply run the `train` method with data a
 loss = model.train({"x": x_tensor}) # x_tensor is torch.Tensor
 ```
 
-#### 2.2. Loss API
+In addition to VI, we prepared various models for Model API such as GAN, VAE (negative reconstruction error + KL), ML etc.
 
-#### 2.3. using only Distribution API
+#### 2.2. Loss API
+In general case, we simply use Model API. But how about this case?
+
+<img src="https://latex.codecogs.com/gif.latex?\sum_{x,y&space;\sim&space;p_{data}(x,&space;y)}&space;\left[E_{q(z|x,y)}\left[\log&space;\frac{p(x,z|y)}{q(z|x,y)}\right]&space;&plus;&space;\alpha&space;\log&space;q(y|x)\right]&space;&plus;&space;\sum_{x_u&space;\sim&space;p_{data}(x_u)}\left[E_{q(z|x_u,y)q(y|x_u)}\left[\log&space;\frac{p(x_u,z|y)}{q(z|x_u,y)q(y|x_u)}\right]\right]" /> (2)
+
+This is the loss function of semi-supervised VAE [Kingma+ ]. It seems that it is too complicated to implement by Model API. 
+
+**Loss API** enables us to implement such complicated models as if just writing mathmatic formulas. If we have already define distributions which appear in Eq.(2) by Distribution API, we can easily convert Eq.(2) to the code style with `pixyz.losses.*` as follows.
+```python
+from pixyz.losses import ELBO, NLL
+# The defined distributions are p_joint_u, q_u, p_joint, q, f.
+elbo_u = ELBO(p_joint_u, q_u)
+elbo = ELBO(p_joint, q)
+nll = NLL(f)
+
+loss_cls = -elbo_u.sum() - (elbo - (0.1 * nll)).sum()
+```
+We can check what formal this loss is just by printing!
+```python
+print(loss_cls)
+>> -(sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])) - sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)
+```
+When you want to estimate this loss function given data, you can use `estimate` method.
+```python
+loss_tensor = loss_cls.estimate({"x": x_tensor, "y": y_tensor, "x_u": x_u_tensor})
+print(loss_tensor)
+>> tensor(1.00000e+05 *
+          1.2587, device='cuda:0')
+```
+
+#### 2.3. Using only Distribution API
 
 
 
