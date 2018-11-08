@@ -154,13 +154,14 @@ We can check what formal this loss is just by printing!
 print(loss_cls)
 >> -(sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])) - sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)
 ```
-When you want to estimate this loss function given data, you can use `estimate` method.
+When you want to estimate a value of the loss function given data, you can use `estimate` method.
 ```python
 loss_tensor = loss_cls.estimate({"x": x_tensor, "y": y_tensor, "x_u": x_u_tensor})
 print(loss_tensor)
 >> tensor(1.00000e+05 *
           1.2587, device='cuda:0')
 ```
+This value is a
 
 #### 2.3. Using only Distribution API
 
