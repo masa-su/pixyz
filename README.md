@@ -187,7 +187,7 @@ model.train({"x":x, "y":y, "x_u":x_u})
 ```
 
 #### 2.3. Use Distribution API only
-Distribution API itself can perform sampling. The type of its argument and return value is in dictionary format.
+Distribution API itself can perform sampling. The type of arguments and return values in the `sample` method is dictionary format.
 ```python
 # p: p(x|z)
 # prior: p(z)
