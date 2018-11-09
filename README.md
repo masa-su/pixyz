@@ -96,7 +96,7 @@ print(p)
 >>     (fc3): Linear(in_features=512, out_features=784, bias=True)
 >> )
 ```
-Conveniently, each instance (distribution) can **perform sampling** and **estimate (log-)likelihood** given samples regardless of the form of the internal DNN architecture. It will be explained later (see section 2.3).
+Conveniently, each instance (distribution) can **perform sampling** and **estimate (log-)likelihood** over given samples regardless of the form of the internal DNN architecture. It will be explained later (see section 2.3).
 
 Moreover, in VAE, we should define the joint distribution p(x,z)=p(x|z)p(z) as the generative model. In **Distribution API**, you can directly calculate the product of different distributions! See [some examples](https://github.com/masa-su/pixyz/blob/master/examples/distributions.ipynb) for details.
 ```python
@@ -131,7 +131,7 @@ model = VI(p_joint, q, optimizer=optim.Adam, optimizer_params={"lr":1e-3})
 ```
 Mission complete! To train this model, simply run the `train` method with data as input.
 ```python
-loss = model.train({"x": x_tensor}) # x_tensor is torch.Tensor
+loss = model.train({"x": x_tensor}) # x_tensor is the input data (torch.Tensor)
 ```
 
 In addition to VI, we prepared various models for Model API such as GAN, VAE (negative reconstruction error + KL), ML etc.
@@ -141,7 +141,7 @@ In general case, we simply use Model API. But how about this case?
 
 <img src="https://latex.codecogs.com/gif.latex?\sum_{x,y&space;\sim&space;p_{data}(x,&space;y)}&space;\left[E_{q(z|x,y)}\left[\log&space;\frac{p(x,z|y)}{q(z|x,y)}\right]&space;&plus;&space;\alpha&space;\log&space;q(y|x)\right]&space;&plus;&space;\sum_{x_u&space;\sim&space;p_{data}(x_u)}\left[E_{q(z|x_u,y)q(y|x_u)}\left[\log&space;\frac{p(x_u,z|y)}{q(z|x_u,y)q(y|x_u)}\right]\right]" /> (2)
 
-This is the loss function of semi-supervised VAE [Kingma+ 2015] (note that this loss function is slightly different from what is described in the original paper). It seems that it is too complicated to implement by Model API. 
+This is the (negative) loss function of semi-supervised VAE [Kingma+ 2015] (note that this loss function is slightly different from what is described in the original paper). It seems that it is too complicated to implement by Model API. 
 
 **Loss API** enables us to implement such complicated models as if just writing mathmatic formulas. If we have already define distributions which appear in Eq.(2) by Distribution API, we can easily convert Eq.(2) to the code style with `pixyz.losses.*` as follows.
 ```python
@@ -201,13 +201,13 @@ print(p_joint.sample())
 >> {'x': tensor([[ 0.,  1.,...]], device='cuda:0', 'z': tensor([[1.2795,  0.7561,...]], device='cuda:0')}
 ```
 
-Moreover, estimating log-likelihood is also available.
+Moreover, estimating log-likelihood is also possible (using the `log_likelihood` method).
 ```python
 # p: p(x|z)
 # data: {"x": x_tensor, "z": z_tensor}
 loglike = p.log_likelihood(data)
 print(loglike)
->> tensor([[-540.9977, -541.6169, -542.1608,...], device='cuda:0')
+>> tensor([[-540.9977, -541.6169, -542.1608,...]], device='cuda:0')
 ```
 
 By using these functions in Distribution API, ELBO (Eq.(1)) under given data (x_tensor) can also be calculated as follows.
