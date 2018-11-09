@@ -201,7 +201,7 @@ print(p_joint.sample())
 >> {'x': tensor([[ 0.,  1.,...]], device='cuda:0', 'z': tensor([[1.2795,  0.7561,...]], device='cuda:0')}
 ```
 
-Moreover, estimating log-likelihood is also available.
+Moreover, estimating log-likelihood is also possible (using the `log_likelihood` method).
 ```python
 # p: p(x|z)
 # data: {"x": x_tensor, "z": z_tensor}
