@@ -141,7 +141,7 @@ In general case, we simply use Model API. But how about this case?
 
 <img src="https://latex.codecogs.com/gif.latex?\sum_{x,y&space;\sim&space;p_{data}(x,&space;y)}&space;\left[E_{q(z|x,y)}\left[\log&space;\frac{p(x,z|y)}{q(z|x,y)}\right]&space;&plus;&space;\alpha&space;\log&space;q(y|x)\right]&space;&plus;&space;\sum_{x_u&space;\sim&space;p_{data}(x_u)}\left[E_{q(z|x_u,y)q(y|x_u)}\left[\log&space;\frac{p(x_u,z|y)}{q(z|x_u,y)q(y|x_u)}\right]\right]" /> (2)
 
-This is the loss function of semi-supervised VAE [Kingma+ 2015] (note that this loss function is slightly different from what is described in the original paper). It seems that it is too complicated to implement by Model API. 
+This is the (negative) loss function of semi-supervised VAE [Kingma+ 2015] (note that this loss function is slightly different from what is described in the original paper). It seems that it is too complicated to implement by Model API. 
 
 **Loss API** enables us to implement such complicated models as if just writing mathmatic formulas. If we have already define distributions which appear in Eq.(2) by Distribution API, we can easily convert Eq.(2) to the code style with `pixyz.losses.*` as follows.
 ```python
