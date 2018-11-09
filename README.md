@@ -115,7 +115,7 @@ After defining distributions, we should set the objective fuction of the model a
 
 1. Model API
 2. Loss API
-3. Using only Distribution API
+3. Use Distribution API only
 
 We can choose either of these three ways, but upper one is for beginners and lower is for developers/researchers.
 
@@ -182,27 +182,41 @@ model = CustumLossModel(loss_tensor, distributions=[p, q, f], optimizer=optim.Ad
 model.train({"x":x, "y":y, "x_u":x_u})
 ```
 
-#### 2.3. Using only Distribution API
+#### 2.3. Use Distribution API only
 Distribution API itself can perform sampling. The type of its argument and return value is in dictionary format.
 ```python
 # p: p(x|z)
 # prior: p(z)
-samples_prior = prior.sample()
-print(samples_prior)
+samples_dict = prior.sample()
+print(samples_dict)
 >> {'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
-print(p.sample(samples_prior))
+print(p.sample(samples_dict))
 >> {'x': tensor([[ 0.,  0.,...]], device='cuda:0', 'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
-p_joint = p * p_prior
+p_joint = p * p_prior  # p(x,z)
 print(p_joint.sample())
 >> {'x': tensor([[ 0.,  1.,...]], device='cuda:0', 'z': tensor([[1.2795,  0.7561,...]], device='cuda:0')}
 ```
 
 Moreover, estimating log-likelihood is also available.
 ```python
-# f: p(y|x)
-# data: {"x": x_tensor, "y": y_tensor}
-loglike = f.log_likelihood(data)
+# p: p(x|z)
+# data: {"x": x_tensor, "z": z_tensor}
+loglike = p.log_likelihood(data)
 print(loglike)
->> tensor([-2.1087, -2.2455, -2.1882,...], device='cuda:0')
+>> tensor([[-540.9977, -541.6169, -542.1608,...], device='cuda:0')
 ```
 
+By using these functions in Distribution API, ELBO (Eq.(1)) given data (x_tensor) can also be calculated as follows.
+```python
+# p: p(x|z)
+# q: q(z|x)
+# prior: p(z)
+samples_dict = q.sample({"x": x_tensor})  # z~q(z|x)
+
+p_joint = p * prior  # p(x, z)
+elbo = p_joint.log_likelihood(samples_dict) -q.log_likelihood(samples_dict) # log p(x,z)-log q(z|x)
+```
+
+## More information
+For more detailed usage, please check our [sample codes](https://github.com/masa-su/pixyz/tree/master/examples).
+If you encounter some problems in using Pixyz, please let us know.
