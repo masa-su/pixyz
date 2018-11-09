@@ -28,7 +28,7 @@ $ pip install -e pixyz --process-dependency-links
 
 So now, let's create a deep generative model with Pixyz! Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model q(z|x) and a generative model p(x,z)=p(x|z)p(z), which are defined by DNNs, and this objective function is as follows.
 
-<img src="https://latex.codecogs.com/gif.latex?E_{q_\phi(z|x)}[\log&space;\frac{p_\theta(x,z)}{q_\phi(z|x)}]&space;\leq&space;\log&space;p(x)" />
+<img src="https://latex.codecogs.com/gif.latex?E_{q_\phi(z|x)}[\log&space;\frac{p_\theta(x,z)}{q_\phi(z|x)}]&space;\leq&space;\log&space;p(x)" /> (1)
 
 ### 1, Define the distributions
 First, we need to define two distributions, q(z|x), p(x|z), with DNNs. In Pixyz, you can do this by implementing DNN architectures just as you do with PyTorch. The main difference is that we should write a class which inherits the `pixyz.distributions.*` class (**Distribution API**), not the `torch.nn.Module` class.
@@ -137,22 +137,27 @@ In general case, we simply use Model API. But how about this case?
 
 <img src="https://latex.codecogs.com/gif.latex?\sum_{x,y&space;\sim&space;p_{data}(x,&space;y)}&space;\left[E_{q(z|x,y)}\left[\log&space;\frac{p(x,z|y)}{q(z|x,y)}\right]&space;&plus;&space;\alpha&space;\log&space;q(y|x)\right]&space;&plus;&space;\sum_{x_u&space;\sim&space;p_{data}(x_u)}\left[E_{q(z|x_u,y)q(y|x_u)}\left[\log&space;\frac{p(x_u,z|y)}{q(z|x_u,y)q(y|x_u)}\right]\right]" /> (2)
 
-This is the loss function of semi-supervised VAE [Kingma+ ]. It seems that it is too complicated to implement by Model API. 
+This is the loss function of semi-supervised VAE [Kingma+ ] (note that this loss function is slightly different from what is described in the original paper). It seems that it is too complicated to implement by Model API. 
 
 **Loss API** enables us to implement such complicated models as if just writing mathmatic formulas. If we have already define distributions which appear in Eq.(2) by Distribution API, we can easily convert Eq.(2) to the code style with `pixyz.losses.*` as follows.
 ```python
 from pixyz.losses import ELBO, NLL
 # The defined distributions are p_joint_u, q_u, p_joint, q, f.
+#  p_joint: p(x,z|y) = p(x|z,y)prior(z)
+#  p_joint_u: p(x_u,z|y_u) = p(x_u|z,y_u)prior(z)
+#  q: p(z,y|x) = q(z|x,y)p(y|x)
+#  q_u: p(z,y_u|x_u) = q(z|x_u,y_u)p(y_u|x_u)
+#  f: p(y|x)
 elbo_u = ELBO(p_joint_u, q_u)
 elbo = ELBO(p_joint, q)
 nll = NLL(f)
 
-loss_cls = -elbo_u.sum() - (elbo - (0.1 * nll)).sum()
+loss_cls = -(elbo - (0.1 * nll)).sum() - elbo_u.sum() 
 ```
 We can check what formal this loss is just by printing!
 ```python
 print(loss_cls)
->> -(sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])) - sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)
+>> -(sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)) - sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])
 ```
 When you want to estimate a value of the loss function given data, you can use `estimate` method.
 ```python
@@ -161,9 +166,43 @@ print(loss_tensor)
 >> tensor(1.00000e+05 *
           1.2587, device='cuda:0')
 ```
-This value is a
+Since the type of this value is just `torch.Tensor`, You can train it just like normal way in PyTorch, 
+```python
+optimizer = optim.Adam(list(q.parameters())+list(p.parameters())+list(f.parameters()), lr=1e-3)
+
+optimizer.zero_grad()
+loss_tensor.backward()
+optimizer.step()
+```
+
+Alternatively, you can set it as the loss function of `pixyz.Model` class to train (using `pixyz.models.CustumLossModel`).
+```python
+from pixyz.models import CustumLossModel
+model = CustumLossModel(loss_tensor, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
+model.train({"x":x, "y":y, "x_u":x_u})
+```
 
 #### 2.3. Using only Distribution API
+Distribution API itself can perform sampling. The type of its argument and return value is in dictionary format.
+```python
+# p: p(x|z)
+# prior: p(z)
+samples_prior = prior.sample()
+print(samples_prior)
+>> {'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
+print(p.sample(samples_prior))
+>> {'x': tensor([[ 0.,  0.,...]], device='cuda:0', 'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
+p_joint = p * p_prior
+print(p_joint.sample())
+>> {'x': tensor([[ 0.,  1.,...]], device='cuda:0', 'z': tensor([[1.2795,  0.7561,...]], device='cuda:0')}
+```
 
-
+Moreover, estimating log-likelihood is also available.
+```python
+# f: p(y|x)
+# data: {"x": x_tensor, "y": y_tensor}
+loglike = f.log_likelihood(data)
+print(loglike)
+>> tensor([-2.1087, -2.2455, -2.1882,...], device='cuda:0')
+```
 
