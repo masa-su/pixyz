@@ -5,34 +5,44 @@ from torch import nn
 import torch.nn.functional as F
 
 from ..utils import get_dict_values, epsilon
+from .distributions import Distribution
 
 
-class RealNVP(nn.Module):
-    def __init__(self, dist, in_features,
+class RealNVP(Distribution):
+    def __init__(self, prior, dim,
                  num_multiscale_layers=2,
-                 var=[], image=False,
+                 var=[], image=False, name="p",
                  **kwargs):
-        super(RealNVP, self).__init__()
-        self.dist = dist
+        super(RealNVP, self).__init__(cond_var=prior.cond_var, var=var, name=name, dim=dim)
+        self.prior = prior
         self.var = var  # x
         self.cond_var = self.dist.cond_var
         self.var_dist = self.dist.var  # z
 
-        flow_list = [MultiScaleLayer1D(in_features,
-                                       layer_id=layer_id, **kwargs)
+        flow_list = [MultiScaleLayer1D(dim, layer_id=layer_id, **kwargs)
                      for layer_id in range(num_multiscale_layers)]
 
         self.image = image
 
         self.flows = nn.ModuleList(flow_list)
-        self.flow_name = "RealNVP"
+        self._flow_name = "RealNVP"
 
-        self.prob_text = "{}({} ; {})".format(
-            self.flow_name,
-            ','.join(var),
-            dist.prob_text
+    @property
+    def prob_text(self):
+        _var_text = []
+        _text = "{}={}({})".format(','.join(self._var),
+                                   self._flow_name,
+                                   ','.join(self.prior.var))
+        _var_text += [_text]
+        if len(self._cond_var) != 0:
+            _var_text += [','.join(self._cond_var)]
+
+        _prob_text = "{}({})".format(
+            self._name,
+            "|".join(_var_text)
         )
-        self.prob_factorized_text = self.prob_text
+
+        return _prob_text
 
     def forward(self, x, inverse=False, jacobian=False):
         logdet_jacobian = 0

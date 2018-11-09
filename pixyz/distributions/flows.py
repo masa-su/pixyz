@@ -19,8 +19,6 @@ class Flow(Distribution):
                                     for _ in range(num_layers)])
         self._flow_name = flow_name
 
-
-
     @property
     def prob_text(self):
         _var_text = []
