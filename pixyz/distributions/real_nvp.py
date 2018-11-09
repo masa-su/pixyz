@@ -15,15 +15,10 @@ class RealNVP(Distribution):
                  **kwargs):
         super(RealNVP, self).__init__(cond_var=prior.cond_var, var=var, name=name, dim=dim)
         self.prior = prior
-        self.var = var  # x
-        self.cond_var = self.dist.cond_var
-        self.var_dist = self.dist.var  # z
-
         flow_list = [MultiScaleLayer1D(dim, layer_id=layer_id, **kwargs)
                      for layer_id in range(num_multiscale_layers)]
 
         self.image = image
-
         self.flows = nn.ModuleList(flow_list)
         self._flow_name = "RealNVP"
 
@@ -100,27 +95,33 @@ class RealNVP(Distribution):
         else:
             return x, logdet_jacobian
 
-    def sample(self, x=None, only_flow=False, **kwargs):
+    def sample(self, x={}, only_flow=False, return_all=True, **kwargs):
         # x~p()
         if only_flow:
-            samples = x
+            samples_dict = x
         else:
-            samples = self.dist.sample(x, **kwargs)
-        _samples = get_dict_values(samples, self.var_dist)
+            samples_dict = self.prior.sample(x, **kwargs)
+        _samples = get_dict_values(samples_dict, self.prior.var)
         output = self.forward(_samples[0],
                               inverse=True, jacobian=False)
+        output_dict = {self.var[0]: output}
 
-        samples[self.var[0]] = output
-        return samples
+        if return_all:
+            output_dict.update(samples_dict)
 
-    def sample_inv(self, x, **kwargs):
+        return output_dict
+
+    def sample_inv(self, x, return_all=True, **kwargs):
         # z~p(x)
-        samples = x
+        samples_dict = x
         _samples = get_dict_values(x, self.var)
         output = self.forward(_samples[0], jacobian=False)
+        output_dict = {self.prior.var[0]: output}
 
-        samples[self.var_dist[0]] = output
-        return samples
+        if return_all:
+            output_dict.update(samples_dict)
+
+        return output_dict
 
     def log_likelihood(self, x):
         # use a bijection function
@@ -129,7 +130,7 @@ class RealNVP(Distribution):
         z, logdet_jacobian = self.forward(_x[0], jacobian=True)
 
         # log p(z)
-        log_dist = self.dist.log_likelihood({self.var_dist[0]: z})
+        log_dist = self.prior.log_likelihood({self.prior.var[0]: z})
 
         output = log_dist + logdet_jacobian
 
