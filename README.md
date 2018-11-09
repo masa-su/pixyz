@@ -98,7 +98,7 @@ print(p)
 ```
 Conveniently, each instance (distribution) can **perform sampling** and **estimate (log-)likelihood** given samples regardless of the form of the internal DNN architecture. It will be explained later (see section 2.3).
 
-Moreover, in VAE, we should define the joint distribution p(x,z)=p(x|z)p(z) as the generative model. In **Distribution API**, you can directly calculate the product of different distributions!
+Moreover, in VAE, we should define the joint distribution p(x,z)=p(x|z)p(z) as the generative model. In **Distribution API**, you can directly calculate the product of different distributions! See [some examples](https://github.com/masa-su/pixyz/blob/master/examples/distributions.ipynb) for details.
 ```python
 p_joint = p * prior
 print(p_joint)
