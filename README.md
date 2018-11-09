@@ -8,7 +8,7 @@
 ## What is Pixyz?
 Pixyz is developed to implement various kind of deep generative models, which is based on [PyTorch](https://pytorch.org/).
 
-Recently, many papers on deep generation models have been published. However, it is likely to be difficult to reproduce them with codes as there is a gap between mathematical formulas presented in these papers and actual implementation of them. Our objective is to create a new library which enables us to fill this gap and easy to implement these models. With Pixyz, you can implement even more complicated models **just as if writing these formulas**, as shown below.
+Recently, many papers on deep generation models have been published. However, it is likely to be difficult to reproduce them with codes since there is a gap between mathematical formulas presented in these papers and actual implementation of them. Our objective is to create a new library which enables us to fill this gap and easy to implement these models. With Pixyz, you can implement even more complicated models **just as if writing these formulas**, as shown below.
 
 Our library supports following typical deep generative models.
 
@@ -18,6 +18,8 @@ Our library supports following typical deep generative models.
 * Implicit models
   * generative adversarial networks
 
+Note: since this library is under development, there are possibilities to have many bugs.
+
 ## Installation
 ```
 $ git clone https://github.com/masa-su/pixyz.git
@@ -26,7 +28,9 @@ $ pip install -e pixyz --process-dependency-links
 
 ## Quick Start
 
-So now, let's create a deep generative model with Pixyz! Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model q(z|x) and a generative model p(x,z)=p(x|z)p(z), which are defined by DNNs, and this objective function is as follows.
+So now, let's create a deep generative model with Pixyz!
+
+Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model q(z|x) and a generative model p(x,z)=p(x|z)p(z), which are defined by DNNs, and this objective function is as follows.
 
 <img src="https://latex.codecogs.com/gif.latex?{\cal&space;L}(x;&space;\phi,&space;\theta)&space;=&space;E_{q_\phi(z|x)}[\log\frac{p_\theta(x,z)}{q_\phi(z|x)}]" /> (1)
 
@@ -37,7 +41,7 @@ For example, p(x|z) (Bernoulli) and q(z|x) (normal) can be defined as follows.
 
 ```python
 from pixyz.distributions import Bernoulli, Normal
-# inference model q(z|x)
+# inference model (encoder) q(z|x)
 class Inference(Normal):
     def __init__(self):
         super(Inference, self).__init__(cond_var=["x"], var=["z"], name="q")        
@@ -47,13 +51,13 @@ class Inference(Normal):
         self.fc31 = nn.Linear(512, 64)
         self.fc32 = nn.Linear(512, 64)
 
-    def forward(self, x):
+    def forward(self, x):  # the name of this argument should be same as cond_var.
         h = F.relu(self.fc1(x))
         h = F.relu(self.fc2(h))
-        return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
+        return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}  # return paramaters of the normal distribution
 
     
-# generative model p(x|z)    
+# generative model (decoder) p(x|z)    
 class Generator(Bernoulli):
     def __init__(self):
         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
@@ -62,10 +66,10 @@ class Generator(Bernoulli):
         self.fc2 = nn.Linear(512, 512)
         self.fc3 = nn.Linear(512, 128)
 
-    def forward(self, z):
+    def forward(self, z):  # the name of this argument should be same as cond_var.
         h = F.relu(self.fc1(z))
         h = F.relu(self.fc2(h))
-        return {"probs": F.sigmoid(self.fc3(h))}
+        return {"probs": F.sigmoid(self.fc3(h))}    # return a paramater of the Bernoulli distribution
 ```
 Once defined, we can create these instances from them. 
 ```python
@@ -108,7 +112,7 @@ print(p_joint)
 >>    (fc3): Linear(in_features=512, out_features=784, bias=True)
 >>  )
 ```
-This distribution can also perform sampling and likelihood estimation in the same way. Thanks to this API, we can easily implement even more complicated probabilistic models.
+This distribution can also perform sampling and likelihood estimation in the same way. Thanks to this API, we can easily implement *even more complicated probabilistic models*.
 
 ### 2. Set objective function and train the model
 After defining distributions, we should set the objective fuction of the model and train (optimize) it. In Pixyz, there are three ways to do this.
@@ -159,7 +163,7 @@ We can check what formal this loss is just by printing!
 print(loss_cls)
 >> -(sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)) - sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])
 ```
-When you want to estimate a value of the loss function given data, you can use `estimate` method.
+When you want to estimate a value of the loss function given data, you can use the `estimate` method.
 ```python
 loss_tensor = loss_cls.estimate({"x": x_tensor, "y": y_tensor, "x_u": x_u_tensor})
 print(loss_tensor)
@@ -175,7 +179,7 @@ loss_tensor.backward()
 optimizer.step()
 ```
 
-Alternatively, you can set it as the loss function of `pixyz.Model` class to train (using `pixyz.models.CustumLossModel`).
+Alternatively, you can set it as the loss function of the `pixyz.Model` class to train (using `pixyz.models.CustumLossModel`).
 ```python
 from pixyz.models import CustumLossModel
 model = CustumLossModel(loss_tensor, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
@@ -206,7 +210,7 @@ print(loglike)
 >> tensor([[-540.9977, -541.6169, -542.1608,...], device='cuda:0')
 ```
 
-By using these functions in Distribution API, ELBO (Eq.(1)) given data (x_tensor) can also be calculated as follows.
+By using these functions in Distribution API, ELBO (Eq.(1)) under given data (x_tensor) can also be calculated as follows.
 ```python
 # p: p(x|z)
 # q: q(z|x)
