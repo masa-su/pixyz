@@ -207,7 +207,7 @@ Moreover, estimating log-likelihood is also possible (using the `log_likelihood`
 # data: {"x": x_tensor, "z": z_tensor}
 loglike = p.log_likelihood(data)
 print(loglike)
->> tensor([[-540.9977, -541.6169, -542.1608,...], device='cuda:0')
+>> tensor([[-540.9977, -541.6169, -542.1608,...]], device='cuda:0')
 ```
 
 By using these functions in Distribution API, ELBO (Eq.(1)) under given data (x_tensor) can also be calculated as follows.
