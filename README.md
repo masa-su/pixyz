@@ -131,7 +131,7 @@ model = VI(p_joint, q, optimizer=optim.Adam, optimizer_params={"lr":1e-3})
 ```
 Mission complete! To train this model, simply run the `train` method with data as input.
 ```python
-loss = model.train({"x": x_tensor}) # x_tensor is torch.Tensor
+loss = model.train({"x": x_tensor}) # x_tensor is the input data (torch.Tensor)
 ```
 
 In addition to VI, we prepared various models for Model API such as GAN, VAE (negative reconstruction error + KL), ML etc.
