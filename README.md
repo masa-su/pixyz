@@ -18,7 +18,7 @@ Our library supports following typical deep generative models.
 * Implicit models
   * generative adversarial networks
 
-Note: since this library is under development, there are possibilities to have many bugs.
+**Note**: since this library is under development, there are possibilities to have many bugs.
 
 ## Installation
 ```
