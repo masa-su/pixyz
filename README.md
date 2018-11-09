@@ -96,7 +96,7 @@ print(p)
 >>     (fc3): Linear(in_features=512, out_features=784, bias=True)
 >> )
 ```
-Conveniently, each instance (distribution) can **perform sampling** and **estimate (log-)likelihood** given samples regardless of the form of the internal DNN architecture. It will be explained later (see section 2.3).
+Conveniently, each instance (distribution) can **perform sampling** and **estimate (log-)likelihood** over given samples regardless of the form of the internal DNN architecture. It will be explained later (see section 2.3).
 
 Moreover, in VAE, we should define the joint distribution p(x,z)=p(x|z)p(z) as the generative model. In **Distribution API**, you can directly calculate the product of different distributions! See [some examples](https://github.com/masa-su/pixyz/blob/master/examples/distributions.ipynb) for details.
 ```python
