@@ -764,9 +764,8 @@ def sum_samples(samples):
     dim = samples.dim()
 
     if (dim >= 1) and (dim <= 4):
-        for _ in range(1, dim):
-            samples = torch.sum(samples, dim=-1)
+        dim_list = list(torch.arange(samples.dim()))
+        samples = torch.sum(samples, dim=dim_list[1:])
         return samples
-    raise ValueError("The dim of samples must be any of 2, 3, or 4, "
+    raise ValueError("The dim of samples must be any of 1, 2, 3, or 4, "
                      "got dim %s." % dim)
-

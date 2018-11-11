@@ -34,7 +34,7 @@ def gauss_gauss_kl(loc1, scale1, loc2, scale2):
     var_ratio = (scale1 / scale2).pow(2)
     t1 = ((loc1 - loc2) / scale2).pow(2)
     _kl = 0.5 * (var_ratio + t1 - 1 - var_ratio.log())
-    for _ in range(1, _kl.dim()):
-        _kl = torch.sum(_kl, dim=-1)
-    return _kl
 
+    dim_list = list(torch.arange(_kl.dim()))
+    _kl = torch.sum(_kl, dim=dim_list[1:])
+    return _kl
