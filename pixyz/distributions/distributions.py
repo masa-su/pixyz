@@ -439,7 +439,7 @@ class DistributionBase(Distribution):
         self._set_distribution(_x_dict)
 
         log_like = self._get_log_like(x_dict)
-        log_like = mean_sum_samples(log_like)
+        log_like = sum_samples(log_like)
         return log_like
 
     def forward(self, **params):
@@ -760,17 +760,10 @@ class MarginalizeVarDistribution(Distribution):
             return self._a.__getattribute__(item)
 
 
-def mean_sum_samples(samples):
+def sum_samples(samples):
     dim = samples.dim()
-#     if dim == 4:
-#         return torch.mean(torch.sum(torch.sum(samples, dim=2), dim=2), dim=1)
-#     elif dim == 3:
-#         return torch.sum(torch.sum(samples, dim=-1), dim=-1)
-#     elif dim == 2:
-#         return torch.sum(samples, dim=-1)
-#     elif dim == 1:
-#         return samples
-    if dim >= 2 and dim <=4:
+
+    if (dim >= 2) and (dim <= 4):
         for _ in range(1, dim):
             samples = torch.sum(samples, dim=-1)
         return samples
