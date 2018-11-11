@@ -7,7 +7,7 @@ from torch.distributions.one_hot_categorical\
     import OneHotCategorical as CategoricalTorch
 
 from ..utils import get_dict_values
-from .distributions import DistributionBase, mean_sum_samples
+from .distributions import DistributionBase, sum_samples
 
 
 class Normal(DistributionBase):
@@ -81,7 +81,7 @@ class RelaxedBernoulli(DistributionBase):
             self._set_distribution(_x, sampling=False)
 
         log_like = self._get_log_like(x)
-        return mean_sum_samples(log_like)
+        return sum_samples(log_like)
 
     def sample_mean(self, x):
         params = self.forward(**x)
@@ -162,7 +162,7 @@ class RelaxedCategorical(DistributionBase):
             self._set_distribution(_x, sampling=False)
 
         log_like = self._get_log_like(x)
-        return mean_sum_samples(log_like)
+        return sum_samples(log_like)
 
     def sample_mean(self, x):
         params = self.forward(**x)

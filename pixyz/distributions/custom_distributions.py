@@ -1,7 +1,7 @@
 import torch
 
 from ..utils import get_dict_values
-from .distributions import Distribution, mean_sum_samples
+from .distributions import Distribution, sum_samples
 
 
 class CustomLikelihoodDistribution(Distribution):
@@ -35,5 +35,5 @@ class CustomLikelihoodDistribution(Distribution):
 
         _x_dict = get_dict_values(x_dict, self._var)
         log_like = torch.log(self.likelihood(_x_dict[0]))
-        log_like = mean_sum_samples(log_like)
+        log_like = sum_samples(log_like)
         return log_like
