@@ -762,13 +762,17 @@ class MarginalizeVarDistribution(Distribution):
 
 def mean_sum_samples(samples):
     dim = samples.dim()
-    if dim == 4:
-        return torch.mean(torch.sum(torch.sum(samples, dim=2), dim=2), dim=1)
-    elif dim == 3:
-        return torch.sum(torch.sum(samples, dim=-1), dim=-1)
-    elif dim == 2:
-        return torch.sum(samples, dim=-1)
-    elif dim == 1:
+#     if dim == 4:
+#         return torch.mean(torch.sum(torch.sum(samples, dim=2), dim=2), dim=1)
+#     elif dim == 3:
+#         return torch.sum(torch.sum(samples, dim=-1), dim=-1)
+#     elif dim == 2:
+#         return torch.sum(samples, dim=-1)
+#     elif dim == 1:
+#         return samples
+    if dim >= 2 and dim <=4:
+        for _ in range(1, dim):
+            samples = torch.sum(samples, dim=-1)
         return samples
     raise ValueError("The dim of samples must be any of 2, 3, or 4,"
                      "got dim %s." % dim)
