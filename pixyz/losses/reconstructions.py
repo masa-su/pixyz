@@ -3,7 +3,7 @@ from .losses import Loss
 
 class StochasticReconstructionLoss(Loss):
     def __init__(self, encoder, decoder, input_var=None):
-        if len(input_var) == 0:
+        if input_var is None:
             input_var = encoder.input_var
         super().__init__(encoder, decoder, input_var=input_var)
 
