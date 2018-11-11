@@ -29,7 +29,9 @@ class KullbackLeibler(Loss):
                                             self._p2.distribution_name))
 
 
-def gauss_gauss_kl(loc1, scale1, loc2, scale2, dim=1):
+def gauss_gauss_kl(loc1, scale1, loc2, scale2):
     _kl = torch.log(scale2) - torch.log(scale1) \
-            + (scale1 + (loc1 - loc2)**2) / scale2 - 1
-    return 0.5 * torch.sum(_kl, dim=dim)
+            + (scale1**2 + (loc1 - loc2)**2) / scale2**2 - 1/2
+    for _ in range(1, loc1.dim()):
+        _kl = torch.sum(_kl, dim=-1)
+    return _kl
