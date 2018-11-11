@@ -763,10 +763,10 @@ class MarginalizeVarDistribution(Distribution):
 def sum_samples(samples):
     dim = samples.dim()
 
-    if (dim >= 2) and (dim <= 4):
+    if (dim >= 1) and (dim <= 4):
         for _ in range(1, dim):
             samples = torch.sum(samples, dim=-1)
         return samples
-    raise ValueError("The dim of samples must be any of 2, 3, or 4,"
+    raise ValueError("The dim of samples must be any of 2, 3, or 4, "
                      "got dim %s." % dim)
 
