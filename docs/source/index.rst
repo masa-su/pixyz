@@ -9,8 +9,8 @@ Welcome to Pixyz's documentation!
 .. toctree::
    :glob:
    :maxdepth: 2
-   modules/*   
 
+   pixyz
 
 
 Indices and tables

@@ -150,21 +150,23 @@ class Distribution(nn.Module):
         Parameters
         ----------
         params_dict : dict
+            Input parameters.
 
         Returns
         -------
         output_dict : dict
+            Output parameters
 
         Examples
         --------
-        >> print(dist_1.prob_text, dist_1.distribution_name)
-        >> > p(x) Normal
-        >> dist_1.get_params()
-        >> > {"loc": 0, "scale": 1}
-        >> print(dist_2.prob_text, dist_2.distribution_name)
-        >> > p(x|z) Normal
-        >> dist_1.get_params({"z": 1})
-        >> > {"loc": 0, "scale": 1}
+        >>> print(dist_1.prob_text, dist_1.distribution_name)
+        p(x) Normal
+        >>> dist_1.get_params()
+        {"loc": 0, "scale": 1}
+        >>> print(dist_2.prob_text, dist_2.distribution_name)
+        p(x|z) Normal
+        >>> dist_1.get_params({"z": 1})
+        {"loc": 0, "scale": 1}
         """
 
         NotImplementedError
@@ -208,11 +210,12 @@ class Distribution(nn.Module):
         Parameters
         ----------
         x_dict : dict
-
+            Input samples.
 
         Returns
         -------
         log_like : torch.Tensor
+            Log-likelihood.
 
         """
 
@@ -221,16 +224,6 @@ class Distribution(nn.Module):
     def forward(self, *args, **kwargs):
         """
         When this class is inherited by DNNs, it is also intended that this method is overrided.
-
-        Parameters
-        ----------
-        params : dict
-
-
-        Returns
-        -------
-        params : dict
-
         """
 
         NotImplementedError
@@ -368,22 +361,26 @@ class DistributionBase(Distribution):
         Parameters
         ----------
         vars_dict : dict
+            Dictionary.
 
         replace_dict : dict
+            Dictionary.
 
         Returns
         -------
         params_dict : dict
+            Dictionary.
 
         vars_dict : dict
+            Dictionary.
 
         Examples
         --------
-        >> replace_dict
-        >> > {"a": "loc"}
-        >> x = {"a": 0, "b": 1}
-        >> distribution._replace_vars_to_params(x, replace_dict)
-        >> > {"loc": 0}, {"b": 1}
+        >>> replace_dict
+        {"a": "loc"}
+        >>> x = {"a": 0, "b": 1}
+        >>> distribution._replace_vars_to_params(x, replace_dict)
+        {"loc": 0}, {"b": 1}
         """
 
         params_dict = {replace_dict[key]: value for key, value in vars_dict.items()
@@ -448,20 +445,26 @@ class DistributionBase(Distribution):
 
 class MultiplyDistribution(Distribution):
     """
-    Multiply by given distributions, e.g, p(x,y|z) = p(x|z,y)p(y|z).
+    Multiply by given distributions, e.g, :math:`p(x,y|z) = p(x|z,y)p(y|z)`.
     In this class, it is checked if two distributions can be multiplied.
 
     p(x|z)p(z|y) -> Valid
+
     p(x|z)p(y|z) -> Valid
+
     p(x|z)p(y|a) -> Valid
+
     p(x|z)p(z|x) -> Invalid (recursive)
+
     p(x|z)p(x|y) -> Invalid (conflict)
 
     Parameters
     -------
     a : pixyz.Distribution
+        Distribution.
 
     b : pixyz.Distribution
+        Distribution.
 
     Examples
     --------
@@ -597,8 +600,10 @@ class ReplaceVarDistribution(Distribution):
     Attributes
     ----------
     a : pixyz.Distribution (not pixyz.MultiplyDistribution)
+        Distribution.
 
     replace_dict : dict
+        Dictionary.
     """
 
     def __init__(self, a, replace_dict):
@@ -679,13 +684,15 @@ class ReplaceVarDistribution(Distribution):
 class MarginalizeVarDistribution(Distribution):
     """
     Marginalize variables in Distribution.
-    p(x) = ∫p(x,z)dz
+    :math:`p(x) = \int p(x,z) dz`
 
     Attributes
     ----------
     a : pixyz.Distribution (not pixyz.DistributionBase)
+        Distribution.
 
     marginalize_list : list
+        Variables to marginalize.
     """
 
     def __init__(self, a, marginalize_list):
@@ -763,7 +770,7 @@ class MarginalizeVarDistribution(Distribution):
 def sum_samples(samples):
     dim = samples.dim()
 
-    if (dim >= 1) and (dim <= 4):
+    if dim <= 4:
         dim_list = list(torch.arange(samples.dim()))
         samples = torch.sum(samples, dim=dim_list[1:])
         return samples

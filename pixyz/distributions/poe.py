@@ -9,12 +9,14 @@ from .distributions import MultiplyDistribution
 
 class NormalPoE(nn.Module):
     """
-    p(z|x,y) \propto p(z)p(z|x)p(z|y)
+    :math:`p(z|x,y) \propto p(z)p(z|x)p(z|y)`
 
     Parameters
     -------
     dists : list
+        Other distributions.
     prior : Distribution
+        Prior distribution.
 
     Examples
     --------
