@@ -109,3 +109,6 @@ venv.bak/
 # backup files
 *~
 #*#
+
+# sphinx
+docs/build
