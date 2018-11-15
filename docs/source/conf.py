@@ -23,8 +23,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'Pixyz'
-copyright = '2018, masa'
-author = 'masa'
+copyright = '2018, masa-su'
+author = 'masa-su'
 
 # The short X.Y version
 version = ''
@@ -164,3 +164,6 @@ texinfo_documents = [
      author, 'Pixyz', 'One line description of project.',
      'Miscellaneous'),
 ]
+
+autodoc_member_order = 'bysource'
+autodoc_default_flags =  ['show-inheritance']

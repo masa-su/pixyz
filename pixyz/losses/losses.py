@@ -76,7 +76,7 @@ class Loss(object):
 
     def test(self, x={}, **kwargs):
         """
-        Train the implicit (adversarial) loss function.
+        Test the implicit (adversarial) loss function.
         """
         return 0
 
