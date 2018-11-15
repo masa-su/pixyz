@@ -12,11 +12,11 @@ from .distributions import DistributionBase, sum_samples
 
 class Normal(DistributionBase):
 
-    def __init__(self, **kwargs):
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
         self.params_keys = ["loc", "scale"]
         self.DistributionTorch = NormalTorch
 
-        super().__init__(**kwargs)
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
 
     @property
     def distribution_name(self):
@@ -29,11 +29,11 @@ class Normal(DistributionBase):
 
 class Bernoulli(DistributionBase):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = BernoulliTorch
 
-        super().__init__(*args, **kwargs)
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
 
     @property
     def distribution_name(self):
@@ -46,15 +46,14 @@ class Bernoulli(DistributionBase):
 
 class RelaxedBernoulli(DistributionBase):
 
-    def __init__(self, temperature,
-                 *args, **kwargs):
+    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = BernoulliTorch
         # use relaxed version only when sampling
         self.RelaxedDistributionTorch = RelaxedBernoulliTorch
         self.temperature = temperature
 
-        super().__init__(*args, **kwargs)
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
 
     @property
     def distribution_name(self):
@@ -93,8 +92,8 @@ class FactorizedBernoulli(Bernoulli):
     Generative Models of Visually Grounded Imagination
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
 
     @property
     def distribution_name(self):
@@ -109,12 +108,12 @@ class FactorizedBernoulli(Bernoulli):
 
 class Categorical(DistributionBase):
 
-    def __init__(self, one_hot=True, *args, **kwargs):
+    def __init__(self, one_hot=True, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
         self.one_hot = one_hot
         self.params_keys = ["probs"]
         self.DistributionTorch = CategoricalTorch
 
-        super().__init__(*args, **kwargs)
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
 
     @property
     def distribution_name(self):
@@ -127,15 +126,15 @@ class Categorical(DistributionBase):
 
 class RelaxedCategorical(DistributionBase):
 
-    def __init__(self, temperature,
-                 *args, **kwargs):
+    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=1,
+                 **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = CategoricalTorch
         # use relaxed version only when sampling
         self.RelaxedDistributionTorch = RelaxedOneHotCategoricalTorch
         self.temperature = temperature
 
-        super().__init__(*args, **kwargs)
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
 
     @property
     def distribution_name(self):
