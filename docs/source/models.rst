@@ -4,15 +4,24 @@ pixyz.models (Model API)
 .. automodule:: pixyz.models
 .. currentmodule:: pixyz.models
 
+Model
+----------------------------
+
+.. currentmodule:: pixyz.models.model
+.. autoclass:: Model
+    :members:
+    :undoc-members:
+
 Standard models
 ----------------------------
 
 ML
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. currentmodule:: pixyz.models
 .. autoclass:: ML
     :members:
-    :show-inheritance:
+    :undoc-members:
 
 
 VAE
@@ -21,7 +30,6 @@ VAE
 .. autoclass:: VAE
     :members:
     :undoc-members:
-    :show-inheritance:
 
 VI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -29,7 +37,6 @@ VI
 .. autoclass:: VI
     :members:
     :undoc-members:
-    :show-inheritance:
 
 GAN
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,7 +44,6 @@ GAN
 .. autoclass:: GAN
     :members:
     :undoc-members:
-    :show-inheritance:
 
 Custom models
 ----------------------------
@@ -48,4 +54,3 @@ CustomLossModel
 .. autoclass:: CustomLossModel
     :members:
     :undoc-members:
-    :show-inheritance:

@@ -459,7 +459,7 @@ class MultiplyDistribution(Distribution):
     p(x|z)p(x|y) -> Invalid (conflict)
 
     Parameters
-    -------
+    ----------
     a : pixyz.Distribution
         Distribution.
 

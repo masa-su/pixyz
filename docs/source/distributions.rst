@@ -10,6 +10,7 @@ pixyz.distributions (Distribution API)
 Distribution
 ---------------------
 
+.. currentmodule:: pixyz.distributions.distributions
 .. autoclass:: Distribution
     :members:
     :undoc-members:
@@ -17,6 +18,7 @@ Distribution
 Exponential families
 ---------------------
 
+.. currentmodule:: pixyz.distributions
 
 Normal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -43,52 +45,53 @@ FactorizedBernoulli
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
        
 .. autoclass:: FactorizedBernoulli
-    :members: forward, input_var, get_params, sample, log_likelihood
-    :show-inheritance:
+    :members:
+    :undoc-members:
 
 Categorical
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
        
 .. autoclass:: Categorical
-    :members: forward, input_var, get_params, sample, log_likelihood
-    :show-inheritance:
+    :members:
+    :undoc-members:
 
 RelaxedCategorical
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
        
 .. autoclass:: RelaxedCategorical
-    :members: forward, input_var, get_params, sample, log_likelihood
-    :show-inheritance:
+    :members:
+    :undoc-members:
 
 Special distributions
 ---------------------
-
-Deterministic
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: Deterministic
-    :members: forward, input_var, sample
-    :show-inheritance:
-
-DataDistribution
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: DataDistribution
-    :members: input_var, sample
-    :show-inheritance:
 
 NormalPoE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: NormalPoE
-    :show-inheritance:
+    :members:
+    :undoc-members:
+
+Deterministic
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Deterministic
+    :members:
+    :undoc-members:
+
+DataDistribution
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: DataDistribution
+    :members:
+    :undoc-members:
 
 CustomLikelihoodDistribution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: CustomLikelihoodDistribution
-    :members: input_var, log_likelihood
-    :show-inheritance:
+    :members:
+    :undoc-members:
 
 Flow-based
 ------------------------
@@ -98,20 +101,41 @@ PlanarFlow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
        
 .. autoclass:: PlanarFlow
-    :members: forward, input_var, sample, log_likelihood
-    :show-inheritance:
+    :members:
+    :undoc-members:
 
 
 RealNVP
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
        
 .. autoclass:: RealNVP
-    :members: forward, input_var, sample, sample_inv, log_likelihood
-    :show-inheritance:
+    :members:
+    :undoc-members:
 
-Distributions receiving distributions
+Operators
 -------------------------------------
 
+ReplaceVarDistribution
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.distributions.distributions
+.. autoclass:: ReplaceVarDistribution
+    :members:
+    :undoc-members:
+
+MarginalizeVarDistribution
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MarginalizeVarDistribution
+    :members:
+    :undoc-members:
+
+MultiplyDistribution
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MultiplyDistribution
+    :members:
+    :undoc-members:
 
 Functions
 ------------------------

@@ -3,16 +3,25 @@ pixyz.losses (Loss API)
 
 .. automodule:: pixyz.losses
 .. currentmodule:: pixyz.losses
-		   
+
+Loss
+----------------------------
+
+.. currentmodule:: pixyz.losses.losses
+.. autoclass:: Loss
+    :members:
+    :undoc-members:
+
 Reconstruction loss
 ----------------------------
 
 StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. currentmodule:: pixyz.losses
 .. autoclass:: StochasticReconstructionLoss
     :members:
-    :show-inheritance:
+    :undoc-members:
 
 Likelihood
 ----------------------------
@@ -22,7 +31,7 @@ NLL
 
 .. autoclass:: NLL
     :members:
-    :show-inheritance:
+    :undoc-members:
 
 Lower bound
 ----------------------------
@@ -32,8 +41,7 @@ ELBO
 
 .. autoclass:: ELBO
     :members:
-    :show-inheritance:       
-       
+    :undoc-members:
 
 Similarity 
 ----------------------------
@@ -43,14 +51,14 @@ SimilarityLoss
 
 .. autoclass:: SimilarityLoss
     :members:
-    :show-inheritance:
-       
+    :undoc-members:
+
 MultiModalContrastivenessLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: MultiModalContrastivenessLoss
     :members:
-    :show-inheritance:                  
+    :undoc-members:
 
 Adversarial loss (GAN loss)
 ----------------------------
@@ -60,11 +68,78 @@ AdversarialJSDivergence
 
 .. autoclass:: AdversarialJSDivergence
     :members:
-    :show-inheritance:                  
+    :undoc-members:
 
 AdversarialWassersteinDistance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: AdversarialWassersteinDistance
     :members:
-    :show-inheritance:
+    :undoc-members:
+
+Operators
+----------------------------
+
+LossOperator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses.losses
+.. autoclass:: LossOperator
+    :members:
+    :undoc-members:
+
+LossSelfOperator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: LossSelfOperator
+    :members:
+    :undoc-members:
+
+AddLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AddLoss
+    :members:
+    :undoc-members:
+
+SubLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: SubLoss
+    :members:
+    :undoc-members:
+
+MulLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MulLoss
+    :members:
+    :undoc-members:
+
+DivLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: DivLoss
+    :members:
+    :undoc-members:
+
+NegLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: NegLoss
+    :members:
+    :undoc-members:
+
+BatchMean
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: BatchMean
+    :members:
+    :undoc-members:
+
+BatchSum
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: BatchSum
+    :members:
+    :undoc-members:
