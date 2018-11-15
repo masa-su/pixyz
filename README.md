@@ -4,6 +4,8 @@
 
 
 [![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
+[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4.1-yellow.svg)](https://github.com/masa-su/pixyz)
+
 
 ## What is Pixyz?
 Pixyz is developed to implement various kind of deep generative models, which is based on [PyTorch](https://pytorch.org/).
