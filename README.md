@@ -227,3 +227,6 @@ elbo = p_joint.log_likelihood(samples_dict) -q.log_likelihood(samples_dict) # lo
 ## More information
 For more detailed usage, please check our [sample codes](https://github.com/masa-su/pixyz/tree/master/examples).
 If you encounter some problems in using Pixyz, please let us know.
+
+## Acknowledgements
+This library is based on results obtained from a project commissioned by the New Energy and Industrial Technology Development Organization (NEDO). 
