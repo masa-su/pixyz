@@ -24,7 +24,7 @@ Our library supports following typical deep generative models.
 Using Pixyz, you can implement these different models **in the same API** and **in combination with each other**.
 
 
-The overview of Pixyz is as follows. Each API is described below.
+The overview of Pixyz is as follows. Each API will be discussed below.
 ![overview](https://user-images.githubusercontent.com/11865486/48596532-d73bf180-e99c-11e8-996f-79a9e95ab459.png)
 
 **Note**: since this library is under development, there are possibilities to have many bugs.
