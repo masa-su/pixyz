@@ -7,6 +7,11 @@
 [![Pytorch Version](https://img.shields.io/badge/pytorch-0.4.1-yellow.svg)](https://github.com/masa-su/pixyz)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest&style=flat)](https://pixyz.readthedocs.io/en/latest/?badge=latest)
 
+- ![What is Pixyz?](https://github.com/masa-su/pixyz#what-is-pixyz)
+- ![Installation](https://github.com/masa-su/pixyz#installation)
+- ![Quick Start](https://github.com/masa-su/pixyz#quick-start)
+- ![More information](https://github.com/masa-su/pixyz#more-information)
+- ![Acknowledgements](https://github.com/masa-su/pixyz#acknowledgements)
 
 ## What is Pixyz?
 Pixyz is a high-level deep generative models API, based on [PyTorch](https://pytorch.org/). It is developed with a focus on enabling easy implementation of various deep generative models.
@@ -43,7 +48,7 @@ Here, we consider to implement a variational auto-encoder (VAE) which is one of 
 
 <img src="https://latex.codecogs.com/gif.latex?{\cal&space;L}(x;&space;\phi,&space;\theta)&space;=&space;E_{q_\phi(z|x)}[\log\frac{p_\theta(x,z)}{q_\phi(z|x)}]" /> (1)
 
-### 1, Define the distributions
+### 1. Define the distributions
 First, we need to define two distributions (q(z|x), p(x|z)) with DNNs. In Pixyz, you can do this by implementing DNN architectures just as you do with PyTorch. The main difference is that we should write a class which inherits the `pixyz.distributions.*` class (**Distribution API**), not the `torch.nn.Module` class.
 
 For example, p(x|z) (Bernoulli) and q(z|x) (normal) can be defined as follows.
@@ -123,7 +128,7 @@ print(p_joint)
 ```
 This distribution can also perform sampling and likelihood estimation in the same way. Thanks to this API, we can easily implement *even more complicated probabilistic models*.
 
-### 2. Set objective function and train the model
+### 2. Set the objective function and train the model
 After defining distributions, we should set the objective fuction of the model and train (optimize) it. In Pixyz, there are three ways to do this.
 
 1. Model API
