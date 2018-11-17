@@ -9,9 +9,9 @@
 
 
 ## What is Pixyz?
-Pixyz is developed to implement various kind of deep generative models, which is based on [PyTorch](https://pytorch.org/).
+Pixyz is a high-level deep generative models API, based on [PyTorch](https://pytorch.org/). It is developed with a focus on enabling easy implementation of various deep generative models.
 
-Recently, many papers on deep generation models have been published. However, it is likely to be difficult to reproduce them with codes since there is a gap between mathematical formulas presented in these papers and actual implementation of them. Our objective is to create a new library which enables us to fill this gap and easy to implement these models. With Pixyz, you can implement even more complicated models **just as if writing these formulas**.
+Recently, many papers about deep generative models have been published. However, its reproduction becomes a hard task, for both specialists and practitioners, because such recent models become more complex and there are no unified tools that bridge mathematical formulation of them and implementation. The vision of our library is to enable both specialists and practitioners to implement such complex deep generative models by **just as if writing the formulas provided in these papers**.
 
 Our library supports following typical deep generative models.
 
