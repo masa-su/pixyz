@@ -126,7 +126,7 @@ print(p_joint)
 >>    (fc3): Linear(in_features=512, out_features=784, bias=True)
 >>  )
 ```
-This distribution can also perform sampling and likelihood estimation in the same way. Thanks to this API, we can easily implement *even more complicated probabilistic models*.
+This distribution can also perform sampling and likelihood estimation in the same way. Thanks to this API, we can easily implement **even more complicated probabilistic models**.
 
 ### 2. Set the objective function and train the model
 After defining distributions, we should set the objective fuction of the model and train (optimize) it. In Pixyz, there are three ways to do this.
@@ -151,13 +151,13 @@ loss = model.train({"x": x_tensor}) # x_tensor is the input data (torch.Tensor)
 In addition to VI, we prepared various models for Model API such as GAN, VAE (negative reconstruction error + KL), ML etc.
 
 #### 2.2. Loss API
-In general case, we simply use Model API. But how about this case?
+In the simple case, it is enough to just use the Model API. But how about this case?
 
 <img src="https://latex.codecogs.com/gif.latex?\sum_{x,y&space;\sim&space;p_{data}(x,&space;y)}&space;\left[E_{q(z|x,y)}\left[\log&space;\frac{p(x,z|y)}{q(z|x,y)}\right]&space;&plus;&space;\alpha&space;\log&space;q(y|x)\right]&space;&plus;&space;\sum_{x_u&space;\sim&space;p_{data}(x_u)}\left[E_{q(z|x_u,y)q(y|x_u)}\left[\log&space;\frac{p(x_u,z|y)}{q(z|x_u,y)q(y|x_u)}\right]\right]" /> (2)
 
-This is the (negative) loss function of semi-supervised VAE [Kingma+ 2015] (note that this loss function is slightly different from what is described in the original paper). It seems that it is too complicated to implement by Model API. 
+This is the (negative) loss function of semi-supervised VAE [Kingma+ 2015] (note that this loss function is slightly different from what is described in the original paper). It seems that it is too complicated to implement in Model API. 
 
-**Loss API** enables us to implement such complicated models as if just writing mathmatic formulas. If we have already define distributions which appear in Eq.(2) by Distribution API, we can easily convert Eq.(2) to the code style with `pixyz.losses.*` as follows.
+**Loss API** enables us to implement such complicated models as if just writing mathmatic formulas. If we have already defined distributions which appear in Eq.(2) by Distribution API, we can easily convert Eq.(2) to the code style with `pixyz.losses.*` as follows.
 ```python
 from pixyz.losses import ELBO, NLL
 # The defined distributions are p_joint_u, q_u, p_joint, q, f.
@@ -172,19 +172,19 @@ nll = NLL(f)
 
 loss_cls = -(elbo - (0.1 * nll)).sum() - elbo_u.sum() 
 ```
-We can check what formal this loss is just by printing!
+We can check what format this loss is just by printing!
 ```python
 print(loss_cls)
 >> -(sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)) - sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])
 ```
-When you want to estimate a value of the loss function given data, you can use the `estimate` method.
+When you want to estimate a value of the loss function given data, use the `estimate` method.
 ```python
 loss_tensor = loss_cls.estimate({"x": x_tensor, "y": y_tensor, "x_u": x_u_tensor})
 print(loss_tensor)
 >> tensor(1.00000e+05 *
           1.2587, device='cuda:0')
 ```
-Since the type of this value is just `torch.Tensor`, You can train it just like normal way in PyTorch, 
+Since the type of this value is just `torch.Tensor`, you can train it just like a normal way in PyTorch, 
 ```python
 optimizer = optim.Adam(list(q.parameters())+list(p.parameters())+list(f.parameters()), lr=1e-3)
 
