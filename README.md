@@ -7,11 +7,11 @@
 [![Pytorch Version](https://img.shields.io/badge/pytorch-0.4.1-yellow.svg)](https://github.com/masa-su/pixyz)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest&style=flat)](https://pixyz.readthedocs.io/en/latest/?badge=latest)
 
-- [What is Pixyz?](https://github.com/masa-su/pixyz#what-is-pixyz)
-- [Installation](https://github.com/masa-su/pixyz#installation)
-- [Quick Start](https://github.com/masa-su/pixyz#quick-start)
-- [More information](https://github.com/masa-su/pixyz#more-information)
-- [Acknowledgements](https://github.com/masa-su/pixyz#acknowledgements)
+- [What is Pixyz?](#what-is-pixyz)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [More information](#more-information)
+- [Acknowledgements](#acknowledgements)
 
 ## What is Pixyz?
 Pixyz is a high-level deep generative models API, based on [PyTorch](https://pytorch.org/). It is developed with a focus on enabling easy implementation of various deep generative models.
