@@ -49,7 +49,7 @@ Here, we consider to implement a variational auto-encoder (VAE) which is one of 
 <img src="https://latex.codecogs.com/gif.latex?{\cal&space;L}(x;&space;\phi,&space;\theta)&space;=&space;E_{q_\phi(z|x)}[\log\frac{p_\theta(x,z)}{q_\phi(z|x)}]" /> (1)
 
 ### 1. Define the distributions
-First, we need to define two distributions (q(z|x), p(x|z)) with DNNs. In Pixyz, you can do this by implementing DNN architectures just as you do with PyTorch. The main difference is that we should write a class which inherits the `pixyz.distributions.*` class (**Distribution API**), not the `torch.nn.Module` class.
+First, we need to define two distributions (q(z|x), p(x|z)) with DNNs. In Pixyz, you can do this by implementing DNN architectures just as you do in PyTorch. The main difference is that we should write a class which inherits the `pixyz.distributions.*` class (**Distribution API**), not the `torch.nn.Module` class.
 
 For example, p(x|z) (Bernoulli) and q(z|x) (normal) can be defined as follows.
 
@@ -58,7 +58,7 @@ from pixyz.distributions import Bernoulli, Normal
 # inference model (encoder) q(z|x)
 class Inference(Normal):
     def __init__(self):
-        super(Inference, self).__init__(cond_var=["x"], var=["z"], name="q")        
+        super(Inference, self).__init__(cond_var=["x"], var=["z"], name="q")  # var: variables of this distribution, cond_var: coditional variables.
 
         self.fc1 = nn.Linear(784, 512)
         self.fc2 = nn.Linear(512, 512)
