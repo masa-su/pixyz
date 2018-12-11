@@ -8,6 +8,7 @@ from .similarities import (
 
 from .reconstructions import (
     StochasticReconstructionLoss,
+    StochasticExpectationLoss,
 )
 
 from .elbo import (
