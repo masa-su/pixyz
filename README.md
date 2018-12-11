@@ -1,4 +1,4 @@
-# Pixyz: a library for developing deep generative models
+# Pixyz: A library for developing deep generative models
 
 ![logo](https://user-images.githubusercontent.com/11865486/47983581-31c08c80-e117-11e8-8d9d-1efbd920718c.png)
 
@@ -193,10 +193,10 @@ loss_tensor.backward()
 optimizer.step()
 ```
 
-Alternatively, you can set it as the loss function of the `pixyz.Model` class to train (using `pixyz.models.CustumLossModel`).
+Alternatively, you can set it as the loss function of the `pixyz.Model` class to train (using `pixyz.models.Model`).
 ```python
-from pixyz.models import CustumLossModel
-model = CustumLossModel(loss_tensor, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
+from pixyz.models import Model
+model = Model(loss_tensor, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
 model.train({"x":x, "y":y, "x_u":x_u})
 ```
 

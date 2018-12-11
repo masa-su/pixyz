@@ -6,7 +6,7 @@ from ..losses import AdversarialJSDivergence
 
 class GAN(Model):
     """
-    Generative adversarial Network
+    Generative Adversarial Network
     """
     def __init__(self, p_data, p, discriminator,
                  optimizer=optim.Adam,
@@ -14,19 +14,16 @@ class GAN(Model):
                  d_optimizer=optim.Adam,
                  d_optimizer_params={},):
 
-        distributions = nn.ModuleList([p])
-        super().__init__(distributions)
+        # set distributions (for training)
+        distributions = [p]
 
         # set losses
-        loss_cls = AdversarialJSDivergence(p_data, p, discriminator,
-                                           optimizer=d_optimizer, optimizer_params=d_optimizer_params).mean()
-        self.loss_cls = loss_cls
-        self.test_loss_cls = loss_cls
-        self.loss_text = str(loss_cls)
+        loss = AdversarialJSDivergence(p_data, p, discriminator,
+                                       optimizer=d_optimizer, optimizer_params=d_optimizer_params).mean()
 
-        # set params and optim
-        params = self.distributions.parameters()
-        self.optimizer = optimizer(params, **optimizer_params)
+        super().__init__(loss, test_loss=loss,
+                         distributions=distributions,
+                         optimizer=optimizer, optimizer_params=optimizer_params)
 
     def train(self, train_x={}, adversarial_loss=True, **kwargs):
         if adversarial_loss:

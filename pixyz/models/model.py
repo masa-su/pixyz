@@ -1,17 +1,28 @@
-from abc import ABCMeta
+from torch import optim, nn
 import torch
 import re
 
+from ..utils import tolist
+
 
 class Model(object):
-    __metaclass__ = ABCMeta
+    def __init__(self, loss,
+                 test_loss=None,
+                 distributions=[],
+                 optimizer=optim.Adam,
+                 optimizer_params={}):
 
-    def __init__(self, distributions):
+        # set losses
         self.loss_cls = None
         self.test_loss_cls = None
-        self.optimizer = None
+        self.set_loss(loss, test_loss)
 
-        self.distributions = distributions
+        # set distributions (for training)
+        self.distributions = nn.ModuleList(tolist(distributions))
+
+        # set params and optim
+        params = self.distributions.parameters()
+        self.optimizer = optimizer(params, **optimizer_params)
 
     def __str__(self):
         prob_text = [prob.prob_text for prob in self.distributions._modules.values()]
@@ -21,6 +32,13 @@ class Model(object):
         optimizer_text = re.sub('^', ' ' * 2, str(self.optimizer), flags=re.MULTILINE)
         text += "Optimizer: \n{}".format(optimizer_text)
         return text
+
+    def set_loss(self, loss, test_loss=None):
+        self.loss_cls = loss
+        if test_loss:
+            self.test_loss_cls = test_loss
+        else:
+            self.test_loss_cls = loss
 
     def train(self, train_x={}, **kwargs):
         self.distributions.train()
