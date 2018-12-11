@@ -6,6 +6,9 @@ from ..losses import NLL
 
 
 class ML(Model):
+    """
+    Maximum Likelihood (log-likelihood)
+    """
     def __init__(self, p,
                  other_distributions=[],
                  optimizer=optim.Adam,

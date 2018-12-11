@@ -6,6 +6,9 @@ from ..losses import ELBO
 
 
 class VI(Model):
+    """
+    Variational Inference (Amortized inference)
+    """
     def __init__(self, p, approximate_dist,
                  other_distributions=[],
                  optimizer=optim.Adam,
