@@ -193,10 +193,10 @@ loss_tensor.backward()
 optimizer.step()
 ```
 
-Alternatively, you can set it as the loss function of the `pixyz.Model` class to train (using `pixyz.models.CustumLossModel`).
+Alternatively, you can set it as the loss function of the `pixyz.Model` class to train (using `pixyz.models.Model`).
 ```python
-from pixyz.models import CustumLossModel
-model = CustumLossModel(loss_tensor, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
+from pixyz.models import Model
+model = Model(loss_tensor, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
 model.train({"x":x, "y":y, "x_u":x_u})
 ```
 
