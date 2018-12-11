@@ -16,20 +16,17 @@ class VAE(Model):
                  optimizer=optim.Adam,
                  optimizer_params={}):
 
-        distributions = nn.ModuleList([encoder, decoder] + tolist(other_distributions))
-        super().__init__(distributions)
+        # set distributions (for training)
+        distributions = [encoder, decoder] + tolist(other_distributions)
 
         # set losses
         reconstruction =\
             StochasticReconstructionLoss(encoder, decoder)
-        loss_cls = (reconstruction + regularizer).mean()
-        self.loss_cls = loss_cls
-        self.test_loss_cls = loss_cls
-        self.loss_text = str(loss_cls)
+        loss = (reconstruction + regularizer).mean()
 
-        # set params and optim
-        params = self.distributions.parameters()
-        self.optimizer = optimizer(params, **optimizer_params)
+        super().__init__(loss, test_loss=loss,
+                         distributions=distributions,
+                         optimizer=optimizer, optimizer_params=optimizer_params)
 
     def train(self, train_x={}, **kwargs):
         return super().train(train_x, **kwargs)
