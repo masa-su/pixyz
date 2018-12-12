@@ -12,19 +12,33 @@ Loss
     :members:
     :undoc-members:
 
-Reconstruction loss
-----------------------------
+Negative expected value of log-likelihood (entropy)
+---------------------------------------------------
+
+CrossEntropy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses
+.. autoclass:: CrossEntropy
+    :members:
+    :undoc-members:
+
+Entropy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Entropy
+    :members:
+    :undoc-members:       
 
 StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pixyz.losses
 .. autoclass:: StochasticReconstructionLoss
     :members:
     :undoc-members:
 
-Likelihood
-----------------------------
+Negative log-likelihood
+---------------------------------------------------
        
 NLL
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,13 +91,24 @@ AdversarialWassersteinDistance
     :members:
     :undoc-members:
 
+Loss for special purpose
+----------------------------
+
+Parameter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses.losses
+.. autoclass:: Parameter
+    :members:
+    :undoc-members:
+
+       
 Operators
 ----------------------------
 
 LossOperator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pixyz.losses.losses
 .. autoclass:: LossOperator
     :members:
     :undoc-members:

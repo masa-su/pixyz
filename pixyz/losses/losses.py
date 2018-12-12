@@ -1,7 +1,7 @@
 import numbers
 from copy import deepcopy
 
-from ..utils import get_dict_values
+from ..utils import get_dict_values, tolist
 
 
 class Loss(object):
@@ -92,6 +92,21 @@ class ValueLoss(Loss):
     @property
     def loss_text(self):
         return str(self._loss1)
+
+
+class Parameter(Loss):
+    def __init__(self, input_var):
+        if not isinstance(input_var, str):
+            raise ValueError
+        self._input_var = tolist(input_var)
+
+    def estimate(self, x={}, **kwargs):
+        _x = super().estimate(x)
+        return _x[self._input_var[0]]
+
+    @property
+    def loss_text(self):
+        return str(self._input_var[0])
 
 
 class LossOperator(Loss):
@@ -244,6 +259,16 @@ class NegLoss(LossSelfOperator):
 
 
 class BatchMean(LossSelfOperator):
+    r"""
+    Loss averaged over batch data.
+
+    .. math::
+
+        \mathbb{E}_{p_{data}(x)}[\mathcal{L}(x)] \approx \frac{1}{N}\sum_{i=1}^N \mathcal{L}(x_i),
+
+    where :math:`x_i \sim p_{data}(x)` and :math:`\mathcal{L}` is a loss function.
+    """
+
     @property
     def loss_text(self):
         return "mean({})".format(self._loss1.loss_text)  # TODO: fix it
@@ -254,6 +279,16 @@ class BatchMean(LossSelfOperator):
 
 
 class BatchSum(LossSelfOperator):
+    r"""
+    Loss summed over batch data.
+
+    .. math::
+
+        \sum_{i=1}^N \mathcal{L}(x_i),
+
+    where :math:`x_i \sim p_{data}(x)` and :math:`\mathcal{L}` is a loss function.
+    """
+
     @property
     def loss_text(self):
         return "sum({})".format(self._loss1.loss_text)  # TODO: fix it

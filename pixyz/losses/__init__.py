@@ -6,9 +6,10 @@ from .similarities import (
     MultiModalContrastivenessLoss,
 )
 
-from .reconstructions import (
+from .expectations import (
+    CrossEntropy,
+    Entropy,
     StochasticReconstructionLoss,
-    StochasticExpectationLoss,
 )
 
 from .elbo import (
@@ -24,8 +25,14 @@ from .adversarial_loss import (
     AdversarialWassersteinDistance
 )
 
+from .losses import (
+    Parameter,
+)
 
 __all__ = [
+    'Parameter',
+    'CrossEntropy',
+    'Entropy',
     'StochasticReconstructionLoss',
     'KullbackLeibler',
     'NLL',

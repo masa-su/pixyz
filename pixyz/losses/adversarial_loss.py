@@ -5,9 +5,14 @@ from ..utils import get_dict_values, detach_dict
 
 
 class AdversarialJSDivergence(Loss):
-    """
+    r"""
     Adversarial loss (Jensen-Shannon divergence).
+
+    .. math::
+
+        \mathcal{L}_{adv} = 2 \dot JS[p_{data}(x)||p(x)] + const.
     """
+
     def __init__(self, p_data, p, discriminator, input_var=None, optimizer=optim.Adam, optimizer_params={},
                  inverse_g_loss=True):
         super().__init__(p_data, p, input_var=input_var)
@@ -114,6 +119,10 @@ class AdversarialJSDivergence(Loss):
 
 
 class AdversarialWassersteinDistance(AdversarialJSDivergence):
+    r"""
+    Adversarial loss (Wasserstein Distance).
+    """
+
     def __init__(self, p_data, p, discriminator,
                  clip_value=0.01, **kwargs):
         super().__init__(p_data, p, discriminator, **kwargs)
