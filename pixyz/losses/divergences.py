@@ -4,6 +4,14 @@ from .losses import Loss
 
 
 class KullbackLeibler(Loss):
+    r"""
+    Kullback-Leibler divergence (analytical).
+
+    .. math::
+
+        KL[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
+    """
+
     def __init__(self, p1, p2, input_var=None):
         super().__init__(p1, p2, input_var)
 

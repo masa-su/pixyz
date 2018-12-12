@@ -12,19 +12,33 @@ Loss
     :members:
     :undoc-members:
 
-Reconstruction loss
-----------------------------
+Negative expected value of log-likelihood (entropy)
+---------------------------------------------------
+
+CrossEntropy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses
+.. autoclass:: CrossEntropy
+    :members:
+    :undoc-members:
+
+Entropy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Entropy
+    :members:
+    :undoc-members:       
 
 StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pixyz.losses
 .. autoclass:: StochasticReconstructionLoss
     :members:
     :undoc-members:
 
-Likelihood
-----------------------------
+Negative log-likelihood
+---------------------------------------------------
        
 NLL
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
