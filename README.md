@@ -196,7 +196,7 @@ optimizer.step()
 Alternatively, you can set it as the loss function of the `pixyz.Model` class to train (using `pixyz.models.Model`).
 ```python
 from pixyz.models import Model
-model = Model(loss_tensor, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
+model = Model(loss_cls, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
 model.train({"x":x, "y":y, "x_u":x_u})
 ```
 
