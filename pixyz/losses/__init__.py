@@ -24,8 +24,12 @@ from .adversarial_loss import (
     AdversarialWassersteinDistance
 )
 
+from .losses import (
+    Parameter,
+)
 
 __all__ = [
+    'Parameter',
     'StochasticReconstructionLoss',
     'KullbackLeibler',
     'NLL',

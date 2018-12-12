@@ -77,13 +77,24 @@ AdversarialWassersteinDistance
     :members:
     :undoc-members:
 
+Loss for special purpose
+----------------------------
+
+Parameter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses.losses
+.. autoclass:: Parameter
+    :members:
+    :undoc-members:
+
+       
 Operators
 ----------------------------
 
 LossOperator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pixyz.losses.losses
 .. autoclass:: LossOperator
     :members:
     :undoc-members:

@@ -1,7 +1,7 @@
 import numbers
 from copy import deepcopy
 
-from ..utils import get_dict_values
+from ..utils import get_dict_values, tolist
 
 
 class Loss(object):
@@ -92,6 +92,21 @@ class ValueLoss(Loss):
     @property
     def loss_text(self):
         return str(self._loss1)
+
+
+class Parameter(Loss):
+    def __init__(self, input_var):
+        if not isinstance(input_var, str):
+            raise ValueError
+        self._input_var = tolist(input_var)
+
+    def estimate(self, x={}, **kwargs):
+        _x = super().estimate(x)
+        return _x[self._input_var[0]]
+
+    @property
+    def loss_text(self):
+        return str(self._input_var[0])
 
 
 class LossOperator(Loss):
