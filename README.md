@@ -236,7 +236,8 @@ elbo = p_joint.log_likelihood(samples_dict) -q.log_likelihood(samples_dict) # lo
 ```
 
 ## More information
-For more detailed usage, please check our [sample codes](https://github.com/masa-su/pixyz/tree/master/examples).
+For more detailed usage, please check our [sample codes](https://github.com/masa-su/pixyz/tree/master/examples) and the [pixyzoo](https://github.com/masa-su/pixyzoo) repository.
+
 If you encounter some problems in using Pixyz, please let us know.
 
 ## Acknowledgements
