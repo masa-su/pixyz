@@ -29,6 +29,10 @@ from .losses import (
     Parameter,
 )
 
+from .autoregressive import (
+    AutoRegressive,
+)
+
 __all__ = [
     'Parameter',
     'CrossEntropy',
@@ -41,4 +45,5 @@ __all__ = [
     'MultiModalContrastivenessLoss',
     'AdversarialJSDivergence',
     'AdversarialWassersteinDistance',
+    'AutoRegressive',
 ]

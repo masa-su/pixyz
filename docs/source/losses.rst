@@ -91,6 +91,16 @@ AdversarialWassersteinDistance
     :members:
     :undoc-members:
 
+Auto-regressive loss
+----------------------------
+
+AutoRegressive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AutoRegressive
+    :members:
+    :undoc-members:
+       
 Loss for special purpose
 ----------------------------
 
