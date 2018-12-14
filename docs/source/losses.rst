@@ -57,6 +57,17 @@ ELBO
     :members:
     :undoc-members:
 
+Divergence
+----------------------------
+
+KullbackLeibler
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: KullbackLeibler
+    :members:
+    :undoc-members:
+
+
 Similarity 
 ----------------------------
     
@@ -94,10 +105,24 @@ AdversarialWassersteinDistance
 Auto-regressive loss
 ----------------------------
 
-AutoRegressive
+AutoRegressiveLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: AutoRegressive
+.. autoclass:: AutoRegressiveLoss
+    :members:
+    :undoc-members:
+
+AutoRegressiveDRAWLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AutoRegressiveDRAWLoss
+    :members:
+    :undoc-members:
+
+AutoRegressiveSeriesLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AutoRegressiveSeriesLoss
     :members:
     :undoc-members:
        

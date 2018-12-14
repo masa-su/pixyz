@@ -30,7 +30,9 @@ from .losses import (
 )
 
 from .autoregressive import (
-    AutoRegressive,
+    AutoRegressiveLoss,
+    AutoRegressiveDRAWLoss,
+    AutoRegressiveSeriesLoss,
 )
 
 __all__ = [
@@ -45,5 +47,7 @@ __all__ = [
     'MultiModalContrastivenessLoss',
     'AdversarialJSDivergence',
     'AdversarialWassersteinDistance',
-    'AutoRegressive',
+    'AutoRegressiveLoss',
+    'AutoRegressiveDRAWLoss',
+    'AutoRegressiveSeriesLoss',
 ]

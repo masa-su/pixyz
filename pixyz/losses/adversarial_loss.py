@@ -10,7 +10,7 @@ class AdversarialJSDivergence(Loss):
 
     .. math::
 
-        \mathcal{L}_{adv} = 2 \dot JS[p_{data}(x)||p(x)] + const.
+        \mathcal{L}_{adv} = 2 \cdot JS[p_{data}(x)||p(x)] + const.
     """
 
     def __init__(self, p_data, p, discriminator, input_var=None, optimizer=optim.Adam, optimizer_params={},
