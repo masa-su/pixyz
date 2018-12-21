@@ -57,6 +57,17 @@ ELBO
     :members:
     :undoc-members:
 
+Divergence
+----------------------------
+
+KullbackLeibler
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: KullbackLeibler
+    :members:
+    :undoc-members:
+
+
 Similarity 
 ----------------------------
     
