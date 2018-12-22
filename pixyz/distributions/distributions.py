@@ -142,7 +142,7 @@ class Distribution(nn.Module):
 
         return checked_x
 
-    def get_params(self, params_dict):
+    def get_params(self, params_dict={}):
         """
         This method aims to get parameters of this distributions from constant parameters set in
         initialization and outputs of DNNs.
@@ -391,7 +391,7 @@ class DistributionBase(Distribution):
 
         return params_dict, vars_dict
 
-    def get_params(self, params_dict):
+    def get_params(self, params_dict={}):
         params_dict, vars_dict = self._replace_vars_to_params(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
 
