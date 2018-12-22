@@ -29,6 +29,7 @@ from .real_nvp import (
 
 from .poe import NormalPoE
 
+from .mixture_distributions import MixtureModel
 
 __all__ = [
     'CustomLikelihoodDistribution',
@@ -44,4 +45,5 @@ __all__ = [
     'PlanarFlow',
     'RealNVP',
     'NormalPoE',
+    'MixtureModel',
 ]
