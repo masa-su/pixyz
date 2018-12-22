@@ -78,7 +78,7 @@ class MixtureModel(Distribution):
     def distribution_name(self):
         return "Mixture Model"
 
-    def get_posterior_prob(self, x_dict):
+    def get_posterior_probs(self, x_dict):
 
         # log p(x, z) - log p(x)
         loglike = self.log_likelihood_all_hidden(x_dict) -\
