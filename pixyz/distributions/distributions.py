@@ -411,7 +411,10 @@ class DistributionBase(Distribution):
             if shape:
                 sample_shape = shape
             else:
-                sample_shape = (batch_size, self.dim)
+                if self.dim is None:
+                    sample_shape = (batch_size, )
+                else:
+                    sample_shape = (batch_size, self.dim)
 
             self._set_distribution()
             output_dict = self._get_sample(reparam=reparam,
