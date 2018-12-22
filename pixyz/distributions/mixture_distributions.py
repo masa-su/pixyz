@@ -78,8 +78,13 @@ class MixtureModel(Distribution):
     def distribution_name(self):
         return "Mixture Model"
 
-    def posterior(self):
-        pass
+    def get_posterior_prob(self, x_dict):
+
+        # log p(x, z) - log p(x)
+        loglike = self.log_likelihood_all_hidden(x_dict) -\
+                  self.marginalize_var(self._hidden_var[0]).log_likelihood(x_dict)
+
+        return torch.exp(loglike)
 
     def sample(self, batch_size=1, return_all=True, **kwargs):
         hidden_output = []
@@ -103,8 +108,12 @@ class MixtureModel(Distribution):
     def log_likelihood_all_hidden(self, x_dict):
         log_likelihood_all = []
 
-        for d in self._distributions:
-            log_likelihood_all.append(d.log_likelihood(x_dict))
+        hidden_device = x_dict[self._visible_var[0]].device
+        eye_tensor = torch.eye(10).to(hidden_device)  # for prior
+
+        for i, d in enumerate(self._distributions):
+            prior_loglike = self._prior.log_likelihood({self._hidden_var[0]: eye_tensor[i]})
+            log_likelihood_all.append(d.log_likelihood(x_dict) + prior_loglike)
 
         return torch.stack(log_likelihood_all, dim=0)
 
