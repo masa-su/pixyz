@@ -8,6 +8,7 @@ from .distributions import Distribution
 class MixtureModel(Distribution):
     """
     Mixture models.
+    :math:`p(x) = \sum_i p(x|z=i)p(z=i)`
 
     Parameters
     ----------
@@ -15,10 +16,28 @@ class MixtureModel(Distribution):
         List of distributions.
 
     prior : pixyz.Distribution.Categorical
-        Prior distribution of latent variable (the contribution rate).
+        Prior distribution of latent variable (i.e., the contribution rate).
+        This should be a categorical distribution and
+        the number of its category should be the same as the length of the distribution list.
 
     Examples
     --------
+    >>> from pixyz.distributions import Normal, Categorical
+    >>> from pixyz.distributions.mixture_distributions import MixtureModel
+    >>>
+    >>> z_dim = 3  # the number of mixture
+    >>> x_dim = 2  # the input dimension.
+    >>>
+    >>> distributions = []  # the list of distributions
+    >>> for i in range(z_dim):
+    >>>     loc = torch.randn(x_dim)  # initialize the value of location (mean)
+    >>>     scale = torch.empty(x_dim).fill_(1.)  # initialize the value of scale (variance)
+    >>>     distributions.append(Normal(loc=loc, scale=scale, var=["x"], name="p_%d" %i))
+    >>>
+    >>> probs = torch.empty(z_dim).fill_(1. / z_dim)  # initialize the value of probabilities
+    >>> prior = Categorical(probs=probs, var=["z"], name="prior")
+    >>>
+    >>> p = MixtureModel(distributions=distributions, prior=prior)
     """
 
     def __init__(self, distributions, prior, name="p"):
@@ -28,11 +47,11 @@ class MixtureModel(Distribution):
             distributions = nn.ModuleList(distributions)
 
         if prior.distribution_name != "Categorical":
-            raise ValueError
+            raise ValueError("The prior must be the categorical distribution.")
 
         # check the number of mixture
         if len(prior.get_params()["probs"]) != len(distributions):
-            raise ValueError
+            raise ValueError("The number of its category must be the same as the length of the distribution list.")
 
         # check whether all distributions have the same variable.
         var_list = []
@@ -82,7 +101,7 @@ class MixtureModel(Distribution):
         loglike = self.log_likelihood_all_hidden(x_dict) - self.log_likelihood(x_dict)
 
         # p(z|x)
-        return torch.exp(loglike)
+        return torch.exp(loglike)  # (num_mix, batch_size)
 
     def sample(self, batch_size=1, return_hidden=False, **kwargs):
         hidden_output = []
@@ -104,11 +123,25 @@ class MixtureModel(Distribution):
         return output_dict
 
     def log_likelihood_all_hidden(self, x_dict):
-        # log p(x, z)
+        """
+        Estimate joint log-likelihood, log p(x, z), where input is `x`.
+
+        Parameters
+        ----------
+        x_dict : dict
+            Input variables (including `var`).
+
+        Returns
+        -------
+        loglike : torch.Tensor
+            dim=0 : the number of mixture
+            dim=1 : the size of batch
+        """
+
         log_likelihood_all = []
 
         _device = x_dict[self._var[0]].device
-        eye_tensor = torch.eye(10).to(_device)  # for prior
+        eye_tensor = torch.eye(len(self._distributions)).to(_device)  # for prior
 
         for i, d in enumerate(self._distributions):
             # p(z=i)
@@ -118,10 +151,23 @@ class MixtureModel(Distribution):
             # p(x, z=i)
             log_likelihood_all.append(loglike + prior_loglike)
 
-        return torch.stack(log_likelihood_all, dim=0)  # (num_mix, )
+        return torch.stack(log_likelihood_all, dim=0)  # (num_mix, batch_size)
 
     def log_likelihood(self, x_dict):
-        # log p(x)
+        """
+        Estimate log-likelihood, log p(x).
+
+        Parameters
+        ----------
+        x_dict : dict
+            Input variables (including `var`).
+
+        Returns
+        -------
+        loglike : torch.Tensor
+            The log-likelihood value of x.
+        """
+
         loglike = self.log_likelihood_all_hidden(x_dict)
         return torch.logsumexp(loglike, 0)
 
