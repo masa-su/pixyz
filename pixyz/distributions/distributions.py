@@ -740,14 +740,6 @@ class MarginalizeVarDistribution(Distribution):
         return output_dict
 
     def log_likelihood(self, x_dict):
-        if self._a.distribution_name == "Mixture Model":
-            if self._marginalize_list == self._a._hidden_var:
-                loglike = self._a.log_likelihood_all_hidden(x_dict)
-                return torch.logsumexp(loglike, 0)
-            else:
-                raise ValueError("The likelihood of the distribution whose visible variables are marginalized "
-                                 "cannot be estimated.")
-
         raise NotImplementedError
 
     def sample_mean(self, x):

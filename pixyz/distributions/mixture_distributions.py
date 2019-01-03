@@ -38,19 +38,18 @@ class MixtureModel(Distribution):
         var_list = []
         for d in distributions:
             var_list += d.var
-        visible_var = list(set(var_list))
+        var_list = list(set(var_list))
 
-        if len(visible_var) != 1:
-            raise ValueError("All distributions must have the same variable")
+        if len(var_list) != 1:
+            raise ValueError("All distributions must have the same variable.")
 
         hidden_var = prior.var
 
-        super().__init__(var=visible_var+hidden_var, name=name)
+        super().__init__(var=var_list, name=name)
 
         self._distributions = distributions
         self._prior = prior
 
-        self._visible_var = visible_var
         self._hidden_var = hidden_var
 
     @property
@@ -66,7 +65,7 @@ class MixtureModel(Distribution):
         _mixture_prob_text = []
         for i, d in enumerate(self._distributions):
             _mixture_prob_text.append("{}({}|{}={}){}({}={})".format(
-                d.name, self._visible_var[0], self._hidden_var[0], i,
+                d.name, self._var[0], self._hidden_var[0], i,
                 self._prior.name, self._hidden_var[0], i
             ))
 
@@ -79,46 +78,56 @@ class MixtureModel(Distribution):
         return "Mixture Model"
 
     def get_posterior_probs(self, x_dict):
+        # log p(z|x) = log p(x, z) - log p(x)
+        loglike = self.log_likelihood_all_hidden(x_dict) - self.log_likelihood(x_dict)
 
-        # log p(x, z) - log p(x)
-        loglike = self.log_likelihood_all_hidden(x_dict) -\
-                  self.marginalize_var(self._hidden_var[0]).log_likelihood(x_dict)
-
+        # p(z|x)
         return torch.exp(loglike)
 
-    def sample(self, batch_size=1, return_all=True, **kwargs):
+    def sample(self, batch_size=1, return_hidden=False, **kwargs):
         hidden_output = []
-        visible_output = []
+        var_output = []
 
         for i in range(batch_size):
             # sample from prior
             _hidden_output = self._prior.sample()[self._hidden_var[0]]
             hidden_output.append(_hidden_output)
 
-            visible_output.append(self._distributions[
-                                      _hidden_output.argmax(dim=-1)].sample()[self._visible_var[0]])
+            var_output.append(self._distributions[
+                                      _hidden_output.argmax(dim=-1)].sample()[self._var[0]])
 
-        output_dict = {self._visible_var[0]: torch.cat(visible_output, 0)}
+        output_dict = {self._var[0]: torch.cat(var_output, 0)}
 
-        if return_all:
+        if return_hidden:
             output_dict.update({self._hidden_var[0]: torch.cat(hidden_output, 0)})
 
         return output_dict
 
     def log_likelihood_all_hidden(self, x_dict):
+        # log p(x, z)
         log_likelihood_all = []
 
-        hidden_device = x_dict[self._visible_var[0]].device
-        eye_tensor = torch.eye(10).to(hidden_device)  # for prior
+        _device = x_dict[self._var[0]].device
+        eye_tensor = torch.eye(10).to(_device)  # for prior
 
         for i, d in enumerate(self._distributions):
+            # p(z=i)
             prior_loglike = self._prior.log_likelihood({self._hidden_var[0]: eye_tensor[i]})
-            log_likelihood_all.append(d.log_likelihood(x_dict) + prior_loglike)
+            # p(x|z=i)
+            loglike = d.log_likelihood(x_dict)
+            # p(x, z=i)
+            log_likelihood_all.append(loglike + prior_loglike)
 
-        return torch.stack(log_likelihood_all, dim=0)
+        return torch.stack(log_likelihood_all, dim=0)  # (num_mix, )
 
     def log_likelihood(self, x_dict):
-        visible_dict = get_dict_values(x_dict, self._visible_var, return_dict=True)
+        # log p(x)
+        loglike = self.log_likelihood_all_hidden(x_dict)
+        return torch.logsumexp(loglike, 0)
+
+    def _log_likelihood_given_hidden(self, x_dict):
+        # log p(x, z)
+        visible_dict = get_dict_values(x_dict, self._var, return_dict=True)
         loglike_all_hidden = self.log_likelihood_all_hidden(visible_dict)
 
         hidden_sample_idx = get_dict_values(x_dict, self._hidden_var, return_dict=False)[0].argmax(dim=-1)
