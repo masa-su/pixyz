@@ -55,7 +55,7 @@ class AdversarialLoss(Loss):
         return loss
 
 
-class AdversarialJSDivergence(AdversarialLoss):
+class AdversarialJensenShannon(AdversarialLoss):
     r"""
     Adversarial loss (Jensen-Shannon divergence).
 
@@ -140,7 +140,7 @@ class AdversarialJSDivergence(AdversarialLoss):
         return y1_loss + y2_loss
 
 
-class AdversarialKLDivergence(AdversarialLoss):
+class AdversarialKullbackLeibler(AdversarialLoss):
     r"""
     Adversarial loss (Kullback-Leibler Distance).
 
