@@ -88,12 +88,19 @@ MultiModalContrastivenessLoss
 Adversarial loss (GAN loss)
 ----------------------------
 
-AdversarialJSDivergence
+AdversarialJensenShannon
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: AdversarialJSDivergence
+.. autoclass:: AdversarialJensenShannon
     :members:
     :undoc-members:
+
+AdversarialKullbackLeibler
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AdversarialKullbackLeibler
+    :members:
+    :undoc-members:       
 
 AdversarialWassersteinDistance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

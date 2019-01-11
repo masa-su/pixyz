@@ -61,7 +61,8 @@ class AdversarialJensenShannon(AdversarialLoss):
 
     .. math::
 
-        \mathcal{L}_{adv} = 2 \dot JS[p(x)||q(x)] + const.
+        \mathbb{E}_{p(x)}[\log D^*(x)] + \mathbb{E}_{q(x)}[\log (1-D^*(x))] = 2 \cdot D_{JS}[p(x)||q(x)] + 2 \log 2
+        \geq D_{JS}[p(x)||q(x)]
     """
 
     def __init__(self, p, q, discriminator, input_var=None, optimizer=optim.Adam, optimizer_params={},
@@ -142,11 +143,11 @@ class AdversarialJensenShannon(AdversarialLoss):
 
 class AdversarialKullbackLeibler(AdversarialLoss):
     r"""
-    Adversarial loss (Kullback-Leibler Distance).
+    Adversarial loss (Kullback-Leibler divergence).
 
     .. math::
 
-        \mathcal{L}_{adv} = KL[q(x)||p(x)] = \mathbb{E}_{q(x)}[\log \frac{q(x)}{p(x)}]
+        \mathbb{E}_{q(x)}[\log \frac{D^*(x)}{1-D^*(x)}] = \mathbb{E}_{q(x)}[\log \frac{q(x)}{p(x)}] = D_{KL}[q(x)||p(x)]
 
     Note that this divergence trains to close q to p.
     """
@@ -209,7 +210,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
 
 class AdversarialWassersteinDistance(AdversarialJensenShannon):
     r"""
-    Adversarial loss (Wasserstein Distance).
+    Adversarial loss (Wasserstein distance).
     """
 
     def __init__(self, p, q, discriminator,
