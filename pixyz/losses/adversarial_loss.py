@@ -219,7 +219,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
 
     .. math::
 
-         W(p, q) = \sup_{||d||_{L} \geq 1} \mathbb{E}_{p(x)}[d(x)] - \mathbb{E}_{q(x)}[d(x)]
+         W(p, q) = \sup_{||d||_{L} \leq 1} \mathbb{E}_{p(x)}[d(x)] - \mathbb{E}_{q(x)}[d(x)]
 
     """
 
