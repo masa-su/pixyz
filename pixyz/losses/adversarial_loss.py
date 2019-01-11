@@ -207,7 +207,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         return self.bce_loss(y1, t1) + self.bce_loss(y2, t2)
 
 
-class AdversarialWassersteinDistance(AdversarialJSDivergence):
+class AdversarialWassersteinDistance(AdversarialJensenShannon):
     r"""
     Adversarial loss (Wasserstein Distance).
     """
