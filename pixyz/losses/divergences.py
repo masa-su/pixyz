@@ -9,7 +9,7 @@ class KullbackLeibler(Loss):
 
     .. math::
 
-        KL[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
+        D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
     """
 
     def __init__(self, p1, p2, input_var=None):
