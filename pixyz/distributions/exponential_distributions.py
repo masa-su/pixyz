@@ -12,7 +12,7 @@ from .distributions import DistributionBase, sum_samples
 
 class Normal(DistributionBase):
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["loc", "scale"]
         self.DistributionTorch = NormalTorch
 
@@ -29,7 +29,7 @@ class Normal(DistributionBase):
 
 class Bernoulli(DistributionBase):
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = BernoulliTorch
 
@@ -46,7 +46,7 @@ class Bernoulli(DistributionBase):
 
 class RelaxedBernoulli(DistributionBase):
 
-    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
+    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = BernoulliTorch
         # use relaxed version only when sampling
@@ -92,7 +92,7 @@ class FactorizedBernoulli(Bernoulli):
     Generative Models of Visually Grounded Imagination
     """
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
 
     @property
@@ -108,8 +108,7 @@ class FactorizedBernoulli(Bernoulli):
 
 class Categorical(DistributionBase):
 
-    def __init__(self, one_hot=True, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
-        self.one_hot = one_hot
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = CategoricalTorch
 
@@ -126,7 +125,7 @@ class Categorical(DistributionBase):
 
 class RelaxedCategorical(DistributionBase):
 
-    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=1,
+    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None,
                  **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = CategoricalTorch

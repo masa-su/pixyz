@@ -62,8 +62,16 @@ RelaxedCategorical
     :members:
     :undoc-members:
 
-Special distributions
+Complex distributions
 ---------------------
+
+MixtureModel
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MixtureModel
+    :members:
+    :undoc-members:
+
 
 NormalPoE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,6 +79,9 @@ NormalPoE
 .. autoclass:: NormalPoE
     :members:
     :undoc-members:
+       
+Special distributions
+---------------------
 
 Deterministic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

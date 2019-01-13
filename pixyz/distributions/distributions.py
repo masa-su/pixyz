@@ -142,7 +142,7 @@ class Distribution(nn.Module):
 
         return checked_x
 
-    def get_params(self, params_dict):
+    def get_params(self, params_dict={}):
         """
         This method aims to get parameters of this distributions from constant parameters set in
         initialization and outputs of DNNs.
@@ -391,7 +391,7 @@ class DistributionBase(Distribution):
 
         return params_dict, vars_dict
 
-    def get_params(self, params_dict):
+    def get_params(self, params_dict={}):
         params_dict, vars_dict = self._replace_vars_to_params(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
 
@@ -411,7 +411,10 @@ class DistributionBase(Distribution):
             if shape:
                 sample_shape = shape
             else:
-                sample_shape = (batch_size, self.dim)
+                if self.dim is None:
+                    sample_shape = (batch_size, )
+                else:
+                    sample_shape = (batch_size, self.dim)
 
             self._set_distribution()
             output_dict = self._get_sample(reparam=reparam,
@@ -730,13 +733,14 @@ class MarginalizeVarDistribution(Distribution):
         return self._a.get_params(params_dict)
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
-        output_dict = self._a.sample(x, shape, batch_size, False, reparam)
+        output_dict = self._a.sample(x=x, shape=shape, batch_size=batch_size, return_all=False,
+                                     reparam=reparam)
         output_dict = delete_dict_values(output_dict, self._marginalize_list)
 
         return output_dict
 
-    def log_likelihood(self, x):
-        NotImplementedError
+    def log_likelihood(self, x_dict):
+        raise NotImplementedError
 
     def sample_mean(self, x):
         return self._a.sample_mean(x)
