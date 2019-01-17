@@ -57,6 +57,9 @@ class Loss(object):
     def __neg__(self):
         return NegLoss(self)
 
+    def abs(self):
+        return AbsLoss(self)
+
     def mean(self):
         return BatchMean(self)
 
@@ -256,6 +259,16 @@ class NegLoss(LossSelfOperator):
     def estimate(self, x={}, **kwargs):
         loss = self._loss1.estimate(x, **kwargs)
         return -loss
+
+
+class AbsLoss(LossSelfOperator):
+    @property
+    def loss_text(self):
+        return "|{}|".format(self._loss1.loss_text)
+
+    def estimate(self, x={}, **kwargs):
+        loss = self._loss1.estimate(x, **kwargs)
+        return loss.abs()
 
 
 class BatchMean(LossSelfOperator):
