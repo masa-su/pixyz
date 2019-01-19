@@ -173,6 +173,13 @@ NegLoss
     :members:
     :undoc-members:
 
+AbsLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AbsLoss
+    :members:
+    :undoc-members:
+
 BatchMean
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
