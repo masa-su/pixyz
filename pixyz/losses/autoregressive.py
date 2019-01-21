@@ -108,23 +108,26 @@ class AutoRegressiveSeriesLoss(ARLoss):
         self.series_var = series_var
         self.non_series_var = list(set(self.input_var) - set(self.series_var))
 
-    def select_step_inputs(self, i, x):
+    def select_step_inputs(self, t, x):
         x = get_dict_values(x, self.series_var, return_dict=True)
-        return {k: v[i] for k, v in x.items()}
+        return {k: v[t] for k, v in x.items()}
 
     def estimate(self, x={}):
         x = super().estimate(x)
         # TODO: finish to write this estimate method (unfinished for now)
 
         step_loss_sum = 0
-        for i in range(self.max_iter):
-            non_series_x = get_dict_values(step_x, self.non_series_var, return_dict=True)
-            step_x = self.select_step_inputs(step_x)
+        step_x = x.copy()
+        for t in range(self.max_iter):
+            step_x.update(self.select_step_inputs(t, x))
+            non_series_x = get_dict_values(x, self.non_series_var, return_dict=True)
             step_x.update(non_series_x)
 
-            step_loss_sum += self.step_loss.estimate(x)
-            x = self.step_fn(i, x)
-        loss = step_loss_sum + self.last_loss.estimate(x)
+            step_x = self.step_fn(t, **step_x)
+            step_loss_sum += self.step_loss.estimate(step_x)
+        loss = step_loss_sum
+        if self.last_loss is not None:
+            loss += self.last_loss.estimate(x)
 
         if self.return_params:
             return loss, x
