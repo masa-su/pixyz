@@ -4,7 +4,7 @@ from .losses import Loss
 from ..utils import get_dict_values
 
 
-class ARLoss(Loss):
+class AutoRegressiveLoss(Loss):
     r"""
     Auto-regressive loss.
 
@@ -14,13 +14,12 @@ class ARLoss(Loss):
 
     def __init__(self, step_loss, last_loss=None,
                  step_fn=lambda x: x, max_iter=1, return_params=False,
-                 initial_states={},
-                 input_var=None):
+                 input_var=None, initial_var=None):
         self.last_loss = last_loss
         self.step_loss = step_loss
         self.max_iter = max_iter
         self.step_fn = step_fn
-        self.initial_states = initial_states
+        self.initial_var = initial_var
         self.return_params = return_params
 
         if input_var is not None:
@@ -47,11 +46,10 @@ class ARLoss(Loss):
         return " + ".join(_loss_text)
 
     def estimate(self, x={}):
-        x.update(self.initial_states)
         return x
 
 
-class ARDRAWLoss(ARLoss):
+class AutoRegressiveDRAWLoss(AutoRegressiveLoss):
     r"""
     Auto-regressive loss whose inputs are non-series data.
 
@@ -64,12 +62,11 @@ class ARDRAWLoss(ARLoss):
 
     def __init__(self, step_loss, last_loss=None,
                  step_fn=lambda x: x, max_iter=1, return_params=False,
-                 initial_states={},
-                 input_var=None):
+                 initial_var=None, input_var=None):
 
         super().__init__(step_loss, last_loss,
                          step_fn, max_iter, return_params,
-                         initial_states, input_var)
+                         initial_var, input_var)
 
     def estimate(self, x={}):
         x = super().estimate(x)
@@ -86,7 +83,7 @@ class ARDRAWLoss(ARLoss):
         return loss
 
 
-class AutoRegressiveSeriesLoss(ARLoss):
+class AutoRegressiveSeriesLoss(AutoRegressiveLoss):
     r"""
     Auto-regressive loss whose inputs are series data.
 
@@ -99,12 +96,16 @@ class AutoRegressiveSeriesLoss(ARLoss):
 
     def __init__(self, step_loss, last_loss=None,
                  step_fn=lambda x: x, max_iter=1, return_params=False,
-                 initial_states={}, series_var=None,
+                 initial_var=None, series_var=None,
                  input_var=None):
 
         super().__init__(step_loss, last_loss,
                          step_fn, max_iter, return_params,
-                         initial_states, input_var)
+                         input_var)
+        # input_var:
+        # series_var:
+        # non_series_var:
+
         self.series_var = series_var
         self.non_series_var = list(set(self.input_var) - set(self.series_var))
 
@@ -114,7 +115,6 @@ class AutoRegressiveSeriesLoss(ARLoss):
 
     def estimate(self, x={}):
         x = super().estimate(x)
-        # TODO: finish to write this estimate method (unfinished for now)
 
         step_loss_sum = 0
         step_x = x.copy()
