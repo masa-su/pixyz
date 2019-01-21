@@ -4,7 +4,7 @@ from .losses import Loss
 from ..utils import get_dict_values
 
 
-class AutoRegressiveLoss(Loss):
+class ARLoss(Loss):
     r"""
     Auto-regressive loss.
 
@@ -45,11 +45,8 @@ class AutoRegressiveLoss(Loss):
 
         return " + ".join(_loss_text)
 
-    def estimate(self, x={}):
-        return x
 
-
-class AutoRegressiveDRAWLoss(AutoRegressiveLoss):
+class ARDRAWLoss(ARLoss):
     r"""
     Auto-regressive loss whose inputs are non-series data.
 
@@ -83,7 +80,7 @@ class AutoRegressiveDRAWLoss(AutoRegressiveLoss):
         return loss
 
 
-class AutoRegressiveSeriesLoss(AutoRegressiveLoss):
+class ARSeriesLoss(ARLoss):
     r"""
     Auto-regressive loss whose inputs are series data.
 
@@ -96,40 +93,42 @@ class AutoRegressiveSeriesLoss(AutoRegressiveLoss):
 
     def __init__(self, step_loss, last_loss=None,
                  step_fn=lambda x: x, max_iter=1, return_params=False,
-                 initial_var=None, series_var=None,
-                 input_var=None):
+                 series_var=None, input_var=None):
 
         super().__init__(step_loss, last_loss,
                          step_fn, max_iter, return_params,
                          input_var)
-        # input_var:
-        # series_var:
-        # non_series_var:
 
         self.series_var = series_var
         self.non_series_var = list(set(self.input_var) - set(self.series_var))
 
-    def select_step_inputs(self, t, x):
-        x = get_dict_values(x, self.series_var, return_dict=True)
+    def slice_step_from_inputs(self, t, x):
         return {k: v[t] for k, v in x.items()}
 
     def estimate(self, x={}):
         x = super().estimate(x)
+        series_x = get_dict_values(x, self.series_var, return_dict=True)
 
         step_loss_sum = 0
-        step_x = x.copy()
-        for t in range(self.max_iter):
-            step_x.update(self.select_step_inputs(t, x))
-            non_series_x = get_dict_values(x, self.non_series_var, return_dict=True)
-            step_x.update(non_series_x)
 
-            step_x = self.step_fn(t, **step_x)
-            step_loss_sum += self.step_loss.estimate(step_x)
+        for t in range(self.max_iter):
+            # update series inputs
+            x.update(self.slice_step_from_inputs(t, series_x))
+
+            # sample
+            x = self.step_fn(t, **x)
+
+            # estimate
+            step_loss_sum += self.step_loss.estimate(x)
+
         loss = step_loss_sum
+
         if self.last_loss is not None:
+            x.update(self.slice_step_from_inputs(0, series_x))
             loss += self.last_loss.estimate(x)
 
         if self.return_params:
+            x.update(series_all_x)
             return loss, x
 
         return loss
