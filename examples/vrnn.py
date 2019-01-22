@@ -8,7 +8,7 @@ from torchvision import transforms, datasets
 from tensorboardX import SummaryWriter
 
 from pixyz.models import Model
-from pixyz.losses import ARSeriesLoss, KullbackLeibler, NLL
+from pixyz.losses import ARLoss, KullbackLeibler, NLL
 from pixyz.distributions import Bernoulli, Normal
 
 
@@ -109,9 +109,9 @@ if __name__ == '__main__':
         return {'x': x, 'h': h_next, 'h_prev': h, 'phi_x': phi_x, 'phi_z': phi_z, 'z': z}
 
     step_loss = (NLL(decoder) + KullbackLeibler(encoder, prior)).mean()
-    loss = ARSeriesLoss(step_loss, last_loss=None,
-                        step_fn=vrnn_step_fn, max_iter=t_max,
-                        series_var=['x'], input_var=['x', 'h'])
+    loss = ARLoss(step_loss, last_loss=None,
+                  step_fn=vrnn_step_fn, max_iter=t_max,
+                  series_var=['x'], input_var=['x', 'h'])
 
     print(loss)
     vrnn = Model(loss, distributions=[encoder, decoder, prior, f_phi_x, f_phi_z, rnncell],

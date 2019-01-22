@@ -31,8 +31,6 @@ from .losses import (
 
 from .autoregressive import (
     ARLoss,
-    ARDRAWLoss,
-    ARSeriesLoss,
 )
 
 __all__ = [
@@ -48,6 +46,4 @@ __all__ = [
     'AdversarialJSDivergence',
     'AdversarialWassersteinDistance',
     'ARLoss',
-    'ARDRAWLoss',
-    'ARSeriesLoss',
 ]
