@@ -112,27 +112,13 @@ AdversarialWassersteinDistance
 Auto-regressive loss
 ----------------------------
 
-AutoRegressiveLoss
+ARLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: AutoRegressiveLoss
+.. autoclass:: ARLoss
     :members:
     :undoc-members:
 
-AutoRegressiveDRAWLoss
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: AutoRegressiveDRAWLoss
-    :members:
-    :undoc-members:
-
-AutoRegressiveSeriesLoss
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: AutoRegressiveSeriesLoss
-    :members:
-    :undoc-members:
-       
 Loss for special purpose
 ----------------------------
 

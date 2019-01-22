@@ -8,8 +8,8 @@ class ARLoss(Loss):
     r"""
     Auto-regressive loss.
 
-    This loss performs "scan-like" operation. You can implement any auto-regressive models
-    by overriding this class.
+    This loss performs "scan"-like operation. You can implement arbitrary auto-regressive models
+    with this class.
 
     .. math::
 
