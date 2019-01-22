@@ -117,16 +117,16 @@ if __name__ == '__main__':
     recurrence = Recurrence().to(device)
 
     # define the loss function
-
-    def vrnn_step_fn(t, x, h_prev=None, h=None, z=None):
-        z = encoder.sample({"x": x, "h_prev": h})["z"]
-        h_next = recurrence(x, z, h)
-        return {'x': x, 'h_prev': h, 'h': h_next, 'z': z}
+    def vrnn_fn(t, x, h_prev=None, h=None, z=None):
+        z = encoder.sample({"x": x, "h_prev": h_prev})["z"]
+        h = recurrence(x, z, h_prev)
+        return {'x': x, 'h_prev': h_prev, 'h': h, 'z': z}
 
     step_loss = (NLL(decoder) + KullbackLeibler(encoder, prior)).mean()
     loss = ARLoss(step_loss, last_loss=None,
-                  step_fn=vrnn_step_fn, max_iter=t_max,
-                  series_var=['x'], input_var=['x', 'h'])
+                  fn=vrnn_fn, max_iter=t_max,
+                  series_var=['x'], input_var=['x', 'h_prev'],
+                  update_value={"h": "h_prev"})
 
     print(loss)
     vrnn = Model(loss, distributions=[encoder, decoder, prior, recurrence],
@@ -138,11 +138,11 @@ if __name__ == '__main__':
             data = data.to(device)
             batch_size = data.size()[0]
             x = data.transpose(0, 1)
-            h = torch.zeros(batch_size, recurrence.hidden_size).to(device)
+            h_prev = torch.zeros(batch_size, recurrence.hidden_size).to(device)
             if train_mode:
-                mean_loss += model.train({'x': x, 'h': h}).item() * batch_size
+                mean_loss += model.train({'x': x, 'h_prev': h_prev}).item() * batch_size
             else:
-                mean_loss += model.test({'x': x, 'h': h}).item() * batch_size
+                mean_loss += model.test({'x': x, 'h_prev': h_prev}).item() * batch_size
 
         mean_loss /= len(loader.dataset)
         if train_mode:
@@ -155,11 +155,11 @@ if __name__ == '__main__':
 
     def generation(batch_size):
         x = []
-        h = torch.zeros(batch_size, recurrence.hidden_size).to(device)
+        h_prev = torch.zeros(batch_size, recurrence.hidden_size).to(device)
         for step in range(t_max):
-            z_t = prior.sample({'h_prev': h})['z']
-            x_t = decoder.sample({'h_prev': h, 'z': z_t})['x']
-            h = recurrence(x_t, z_t, h)
+            z_t = prior.sample({'h_prev': h_prev})['z']
+            x_t = decoder.sample({'h_prev': h_prev, 'z': z_t})['x']
+            h_prev = recurrence(x_t, z_t, h_prev)
             x.append(x_t[None, :])
         x = torch.cat(x, dim=0).transpose(0, 1)
         return x
