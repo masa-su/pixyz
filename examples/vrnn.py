@@ -42,71 +42,87 @@ if __name__ == '__main__':
     else:
         device = "cpu"
 
+    class Phi_x(nn.Module):
+        def __init__(self):
+            super(Phi_x, self).__init__()
+            self.fc0 = nn.Linear(x_dim, h_dim)
+
+        def forward(self, x):
+            return F.relu(self.fc0(x))
+
+    class Phi_z(nn.Module):
+        def __init__(self):
+            super(Phi_z, self).__init__()
+            self.fc0 = nn.Linear(z_dim, h_dim)
+
+        def forward(self, z):
+            return F.relu(self.fc0(z))
+
+    f_phi_x = Phi_x().to(device)
+    f_phi_z = Phi_z().to(device)
+
     class Generator(Bernoulli):
         def __init__(self):
-            super(Generator, self).__init__(cond_var=["phi_z", "h_prev"], var=["x"])
+            super(Generator, self).__init__(cond_var=["z", "h"], var=["x"])
             self.fc1 = nn.Linear(h_dim + h_dim, h_dim)
             self.fc2 = nn.Linear(h_dim, h_dim)
             self.fc3 = nn.Linear(h_dim, x_dim)
+            self.f_phi_z = f_phi_z
 
-        def forward(self, phi_z, h_prev):
-            h = torch.cat((phi_z, h_prev), dim=-1)
+        def forward(self, z, h):
+            h = torch.cat((self.f_phi_z(z), h), dim=-1)
             h = F.relu(self.fc1(h))
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
     class Prior(Normal):
         def __init__(self):
-            super(Prior, self).__init__(cond_var=["h_prev"], var=["z"])
+            super(Prior, self).__init__(cond_var=["h"], var=["z"])
             self.fc1 = nn.Linear(h_dim, h_dim)
             self.fc21 = nn.Linear(h_dim, z_dim)
             self.fc22 = nn.Linear(h_dim, z_dim)
 
-        def forward(self, h_prev):
-            h = F.relu(self.fc1(h_prev))
+        def forward(self, h):
+            h = F.relu(self.fc1(h))
             return {"loc": self.fc21(h), "scale": F.softplus(self.fc22(h))}
 
     class Inference(Normal):
         def __init__(self):
-            super(Inference, self).__init__(cond_var=["phi_x", "h_prev"], var=["z"])
+            super(Inference, self).__init__(cond_var=["x", "h"], var=["z"])
             self.fc1 = nn.Linear(h_dim + h_dim, h_dim)
             self.fc21 = nn.Linear(h_dim, z_dim)
             self.fc22 = nn.Linear(h_dim, z_dim)
+            self.f_phi_x = f_phi_x
 
-        def forward(self, phi_x, h_prev):
-            h = torch.cat((phi_x, h_prev), dim=-1)
+        def forward(self, x, h):
+            h = torch.cat((self.f_phi_x(x), h), dim=-1)
             h = F.relu(self.fc1(h))
             return {"loc": self.fc21(h), "scale": F.softplus(self.fc22(h))}
 
-    class phi_x(nn.Module):
+    class Recurrence(nn.Module):
         def __init__(self):
-            super(phi_x, self).__init__()
-            self.fc0 = nn.Linear(x_dim, h_dim)
+            super(Recurrence, self).__init__()
+            self.rnncell = nn.GRUCell(h_dim * 2, h_dim).to(device)
+            self.f_phi_x = f_phi_x
+            self.f_phi_z = f_phi_z
+            self.hidden_size = self.rnncell.hidden_size
 
-        def forward(self, x):
-            return F.relu(self.fc0(x))
-
-    class phi_z(nn.Module):
-        def __init__(self):
-            super(phi_z, self).__init__()
-            self.fc0 = nn.Linear(z_dim, h_dim)
-
-        def forward(self, z):
-            return F.relu(self.fc0(z))
+        def forward(self, x, z, h):
+            h_next = self.rnncell(torch.cat((self.f_phi_z(z), self.f_phi_x(x)), dim=-1), h)
+            return h_next
 
     prior = Prior().to(device)
     decoder = Generator().to(device)
     encoder = Inference().to(device)
-    f_phi_x = phi_x().to(device)
-    f_phi_z = phi_z().to(device)
-    rnncell = nn.GRUCell(h_dim * 2, h_dim).to(device)
+    recurrence = Recurrence().to(device)
 
-    def vrnn_step_fn(t, x, h=None, h_prev=None, phi_x=None, phi_z=None, z=None):
-        z = prior.sample({"h_prev": h})["z"]
-        phi_z = f_phi_z(z)
-        phi_x = f_phi_x(x)
-        h_next = rnncell(torch.cat((phi_x, phi_z), dim=-1), h)
-        return {'x': x, 'h': h_next, 'h_prev': h, 'phi_x': phi_x, 'phi_z': phi_z, 'z': z}
+    # define the loss function
+
+    def vrnn_step_fn(t, x, h=None, z=None):
+        #z = encoder.sample({"x": x, "h": h})["z"]
+        z = prior.sample({"h": h})["z"]
+        h = recurrence(x, z, h)
+        return {'x': x, 'h': h, 'z': z}
 
     step_loss = (NLL(decoder) + KullbackLeibler(encoder, prior)).mean()
     loss = ARLoss(step_loss, last_loss=None,
@@ -114,7 +130,7 @@ if __name__ == '__main__':
                   series_var=['x'], input_var=['x', 'h'])
 
     print(loss)
-    vrnn = Model(loss, distributions=[encoder, decoder, prior, f_phi_x, f_phi_z, rnncell],
+    vrnn = Model(loss, distributions=[encoder, decoder, prior, recurrence],
                  optimizer=optim.Adam, optimizer_params={'lr': 1e-3})
 
     def data_loop(epoch, loader, model, device, train_mode=False):
@@ -123,7 +139,7 @@ if __name__ == '__main__':
             data = data.to(device)
             batch_size = data.size()[0]
             x = data.transpose(0, 1)
-            h = torch.zeros(batch_size, rnncell.hidden_size).to(device)
+            h = torch.zeros(batch_size, recurrence.hidden_size).to(device)
             if train_mode:
                 mean_loss += model.train({'x': x, 'h': h}).item() * batch_size
             else:
@@ -138,17 +154,14 @@ if __name__ == '__main__':
 
     train_loader, test_loader, t_max = init_dataset(32)
 
-    def generate(batch_size):
+    def generation(batch_size):
         x = []
-        h = torch.zeros(batch_size, rnncell.hidden_size).to(device)
+        h = torch.zeros(batch_size, recurrence.hidden_size).to(device)
         for step in range(t_max):
-            h_prev = h
-            z_t = prior.sample({'h_prev': h})['z']
-            phi_z_t = f_phi_z(z_t)
-            x_t = decoder.sample({'h_prev': h_prev, 'phi_z': phi_z_t})['x']
+            z_t = prior.sample({'h': h})['z']
+            x_t = decoder.sample({'h': h, 'z': z_t})['x']
+            h = recurrence(x_t, z_t, h)
             x.append(x_t[None, :])
-            phi_x_t = f_phi_x(x_t)
-            h = rnncell(torch.cat((phi_x_t, phi_z_t), dim=-1), h_prev)
         x = torch.cat(x, dim=0).transpose(0, 1)
         return x
 
@@ -161,5 +174,5 @@ if __name__ == '__main__':
         writer.add_scalar('train_loss', train_loss, epoch)
         writer.add_scalar('test_loss', test_loss, epoch)
 
-        sample = generate(32)[:, None]
+        sample = generation(32)[:, None]
         writer.add_image('Image_from_latent', sample, epoch)
