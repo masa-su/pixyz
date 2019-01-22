@@ -128,7 +128,7 @@ class ARSeriesLoss(ARLoss):
             loss += self.last_loss.estimate(x)
 
         if self.return_params:
-            x.update(series_all_x)
+            x.update(series_x)
             return loss, x
 
         return loss

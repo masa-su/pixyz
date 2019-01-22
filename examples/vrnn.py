@@ -5,7 +5,7 @@ from torch import optim
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import transforms, datasets
-from torchvision.utils import make_grid, save_image
+from tensorboardX import SummaryWriter
 
 from pixyz.models import Model
 from pixyz.losses import ARSeriesLoss, KullbackLeibler, NLL
@@ -125,15 +125,15 @@ if __name__ == '__main__':
             x = data.transpose(0, 1)
             h = torch.zeros(batch_size, rnncell.hidden_size).to(device)
             if train_mode:
-                mean_loss += model.train({'x': x, 'h': h}) * batch_size
+                mean_loss += model.train({'x': x, 'h': h}).item() * batch_size
             else:
-                mean_loss += model.test({'x': x, 'h': h}) * batch_size
+                mean_loss += model.test({'x': x, 'h': h}).item() * batch_size
 
         mean_loss /= len(loader.dataset)
         if train_mode:
-            print('Epoch: {} Train loss: {:.4f}'.format(epoch, -mean_loss))
+            print('Epoch: {} Train loss: {:.4f}'.format(epoch, mean_loss))
         else:
-            print('Test loss: {:.4f}'.format(-mean_loss))
+            print('Test loss: {:.4f}'.format(mean_loss))
         return mean_loss
 
     train_loader, test_loader, t_max = init_dataset(32)
@@ -144,16 +144,22 @@ if __name__ == '__main__':
         for step in range(t_max):
             h_prev = h
             z_t = prior.sample({'h_prev': h})['z']
-            phi_z_t = phi_z(z_t)
+            phi_z_t = f_phi_z(z_t)
             x_t = decoder.sample({'h_prev': h_prev, 'phi_z': phi_z_t})['x']
             x.append(x_t[None, :])
-            phi_x_t = phi_x(x_t)
+            phi_x_t = f_phi_x(x_t)
             h = rnncell(torch.cat((phi_x_t, phi_z_t), dim=-1), h_prev)
         x = torch.cat(x, dim=0).transpose(0, 1)
         return x
 
-    for epoch in range(10):
+    writer = SummaryWriter()
+
+    for epoch in range(100):
         train_loss = data_loop(epoch, train_loader, vrnn, device, train_mode=True)
         test_loss = data_loop(epoch, test_loader, vrnn, device)
-        filename = '../data/vrnn_generate_%d.png' % epoch
-        save_image(make_grid(generate(32)[:, None]), filename)
+
+        writer.add_scalar('train_loss', train_loss, epoch)
+        writer.add_scalar('test_loss', test_loss, epoch)
+
+        sample = generate(32)[:, None]
+        writer.add_image('Image_from_latent', sample, epoch)
