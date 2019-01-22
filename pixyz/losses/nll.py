@@ -7,7 +7,7 @@ class NLL(Loss):
 
     .. math::
 
-        \log p(x)
+        -\log p(x)
     """
 
     def __init__(self, p, input_var=None):
@@ -15,7 +15,7 @@ class NLL(Loss):
 
     @property
     def loss_text(self):
-        return "log {}".format(self._p1.prob_text)
+        return "-log {}".format(self._p1.prob_text)
 
     def estimate(self, x={}):
         _x = super().estimate(x)

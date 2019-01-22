@@ -57,6 +57,9 @@ class Loss(object):
     def __neg__(self):
         return NegLoss(self)
 
+    def abs(self):
+        return AbsLoss(self)
+
     def mean(self):
         return BatchMean(self)
 
@@ -66,7 +69,8 @@ class Loss(object):
     def estimate(self, x={}, **kwargs):
         if set(list(x.keys())) >= set(self._input_var):
             return get_dict_values(x, self._input_var, True)
-        raise ValueError("Input's keys are not valid.")
+        raise ValueError("Input's keys are not valid,"
+                         " given {}.".format(list(x.keys())))
 
     def train(self, x={}, **kwargs):
         """
@@ -256,6 +260,16 @@ class NegLoss(LossSelfOperator):
     def estimate(self, x={}, **kwargs):
         loss = self._loss1.estimate(x, **kwargs)
         return -loss
+
+
+class AbsLoss(LossSelfOperator):
+    @property
+    def loss_text(self):
+        return "|{}|".format(self._loss1.loss_text)
+
+    def estimate(self, x={}, **kwargs):
+        loss = self._loss1.estimate(x, **kwargs)
+        return loss.abs()
 
 
 class BatchMean(LossSelfOperator):

@@ -30,6 +30,10 @@ from .losses import (
     Parameter,
 )
 
+from .autoregressive import (
+    ARLoss,
+)
+
 __all__ = [
     'Parameter',
     'CrossEntropy',
@@ -43,4 +47,5 @@ __all__ = [
     'AdversarialJensenShannon',
     'AdversarialKullbackLeibler',
     'AdversarialWassersteinDistance',
+    'ARLoss',
 ]
