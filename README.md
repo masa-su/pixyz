@@ -5,7 +5,7 @@
 
 [![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
 [![Pytorch Version](https://img.shields.io/badge/pytorch-0.4.1-yellow.svg)](https://github.com/masa-su/pixyz)
-[![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest&style=flat)](https://pixyz.readthedocs.io/en/latest/?badge=latest)
+[![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
 
 - [What is Pixyz?](#what-is-pixyz)
 - [Installation](#installation)
@@ -196,7 +196,7 @@ optimizer.step()
 Alternatively, you can set it as the loss function of the `pixyz.Model` class to train (using `pixyz.models.Model`).
 ```python
 from pixyz.models import Model
-model = Model(loss_tensor, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
+model = Model(loss_cls, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
 model.train({"x":x, "y":y, "x_u":x_u})
 ```
 
@@ -236,7 +236,8 @@ elbo = p_joint.log_likelihood(samples_dict) -q.log_likelihood(samples_dict) # lo
 ```
 
 ## More information
-For more detailed usage, please check our [sample codes](https://github.com/masa-su/pixyz/tree/master/examples).
+For more detailed usage, please check our [sample codes](https://github.com/masa-su/pixyz/tree/master/examples) and the [pixyzoo](https://github.com/masa-su/pixyzoo) repository.
+
 If you encounter some problems in using Pixyz, please let us know.
 
 ## Acknowledgements

@@ -21,7 +21,8 @@ from .nll import (
 )
 
 from .adversarial_loss import (
-    AdversarialJSDivergence,
+    AdversarialJensenShannon,
+    AdversarialKullbackLeibler,
     AdversarialWassersteinDistance
 )
 
@@ -43,7 +44,8 @@ __all__ = [
     'ELBO',
     'SimilarityLoss',
     'MultiModalContrastivenessLoss',
-    'AdversarialJSDivergence',
+    'AdversarialJensenShannon',
+    'AdversarialKullbackLeibler',
     'AdversarialWassersteinDistance',
     'ARLoss',
 ]
