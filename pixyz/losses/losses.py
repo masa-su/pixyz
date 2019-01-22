@@ -69,7 +69,8 @@ class Loss(object):
     def estimate(self, x={}, **kwargs):
         if set(list(x.keys())) >= set(self._input_var):
             return get_dict_values(x, self._input_var, True)
-        raise ValueError("Input's keys are not valid.")
+        raise ValueError("Input's keys are not valid,"
+                         " given {}.".format(list(x.keys())))
 
     def train(self, x={}, **kwargs):
         """
