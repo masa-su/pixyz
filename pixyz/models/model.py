@@ -3,6 +3,7 @@ import torch
 import re
 
 from ..utils import tolist
+from ..distributions.distributions import Distribution
 
 
 class Model(object):
@@ -25,9 +26,19 @@ class Model(object):
         self.optimizer = optimizer(params, **optimizer_params)
 
     def __str__(self):
-        prob_text = [prob.prob_text for prob in self.distributions._modules.values()]
+        prob_text = []
+        func_text = []
+
+        for prob in self.distributions._modules.values():
+            if isinstance(prob, Distribution):
+                prob_text.append(prob.prob_text)
+            else:
+                func_text.append(prob.__str__())
 
         text = "Distributions (for training): \n  {} \n".format(", ".join(prob_text))
+        if len(func_text) > 0:
+            text += "Deterministic functions (for training): \n  {} \n".format(", ".join(func_text))
+
         text += "Loss function: \n  {} \n".format(str(self.loss_cls))
         optimizer_text = re.sub('^', ' ' * 2, str(self.optimizer), flags=re.MULTILINE)
         text += "Optimizer: \n{}".format(optimizer_text)
