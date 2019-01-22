@@ -63,39 +63,39 @@ if __name__ == '__main__':
 
     class Generator(Bernoulli):
         def __init__(self):
-            super(Generator, self).__init__(cond_var=["z", "h"], var=["x"])
+            super(Generator, self).__init__(cond_var=["z", "h_prev"], var=["x"])
             self.fc1 = nn.Linear(h_dim + h_dim, h_dim)
             self.fc2 = nn.Linear(h_dim, h_dim)
             self.fc3 = nn.Linear(h_dim, x_dim)
             self.f_phi_z = f_phi_z
 
-        def forward(self, z, h):
-            h = torch.cat((self.f_phi_z(z), h), dim=-1)
+        def forward(self, z, h_prev):
+            h = torch.cat((self.f_phi_z(z), h_prev), dim=-1)
             h = F.relu(self.fc1(h))
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
     class Prior(Normal):
         def __init__(self):
-            super(Prior, self).__init__(cond_var=["h"], var=["z"])
+            super(Prior, self).__init__(cond_var=["h_prev"], var=["z"])
             self.fc1 = nn.Linear(h_dim, h_dim)
             self.fc21 = nn.Linear(h_dim, z_dim)
             self.fc22 = nn.Linear(h_dim, z_dim)
 
-        def forward(self, h):
-            h = F.relu(self.fc1(h))
+        def forward(self, h_prev):
+            h = F.relu(self.fc1(h_prev))
             return {"loc": self.fc21(h), "scale": F.softplus(self.fc22(h))}
 
     class Inference(Normal):
         def __init__(self):
-            super(Inference, self).__init__(cond_var=["x", "h"], var=["z"])
+            super(Inference, self).__init__(cond_var=["x", "h_prev"], var=["z"])
             self.fc1 = nn.Linear(h_dim + h_dim, h_dim)
             self.fc21 = nn.Linear(h_dim, z_dim)
             self.fc22 = nn.Linear(h_dim, z_dim)
             self.f_phi_x = f_phi_x
 
-        def forward(self, x, h):
-            h = torch.cat((self.f_phi_x(x), h), dim=-1)
+        def forward(self, x, h_prev):
+            h = torch.cat((self.f_phi_x(x), h_prev), dim=-1)
             h = F.relu(self.fc1(h))
             return {"loc": self.fc21(h), "scale": F.softplus(self.fc22(h))}
 
@@ -107,8 +107,8 @@ if __name__ == '__main__':
             self.f_phi_z = f_phi_z
             self.hidden_size = self.rnncell.hidden_size
 
-        def forward(self, x, z, h):
-            h_next = self.rnncell(torch.cat((self.f_phi_z(z), self.f_phi_x(x)), dim=-1), h)
+        def forward(self, x, z, h_prev):
+            h_next = self.rnncell(torch.cat((self.f_phi_z(z), self.f_phi_x(x)), dim=-1), h_prev)
             return h_next
 
     prior = Prior().to(device)
@@ -118,11 +118,10 @@ if __name__ == '__main__':
 
     # define the loss function
 
-    def vrnn_step_fn(t, x, h=None, z=None):
-        #z = encoder.sample({"x": x, "h": h})["z"]
-        z = prior.sample({"h": h})["z"]
-        h = recurrence(x, z, h)
-        return {'x': x, 'h': h, 'z': z}
+    def vrnn_step_fn(t, x, h_prev=None, h=None, z=None):
+        z = encoder.sample({"x": x, "h_prev": h})["z"]
+        h_next = recurrence(x, z, h)
+        return {'x': x, 'h_prev': h, 'h': h_next, 'z': z}
 
     step_loss = (NLL(decoder) + KullbackLeibler(encoder, prior)).mean()
     loss = ARLoss(step_loss, last_loss=None,
@@ -158,8 +157,8 @@ if __name__ == '__main__':
         x = []
         h = torch.zeros(batch_size, recurrence.hidden_size).to(device)
         for step in range(t_max):
-            z_t = prior.sample({'h': h})['z']
-            x_t = decoder.sample({'h': h, 'z': z_t})['x']
+            z_t = prior.sample({'h_prev': h})['z']
+            x_t = decoder.sample({'h_prev': h, 'z': z_t})['x']
             h = recurrence(x_t, z_t, h)
             x.append(x_t[None, :])
         x = torch.cat(x, dim=0).transpose(0, 1)
