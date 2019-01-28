@@ -10,7 +10,7 @@ from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, toli
 
 class Distribution(nn.Module):
     """
-    Distribution class. In pixyz, all distributions are required to inherit this class.
+    Distribution class. In Pixyz, all distributions are required to inherit this class.
 
     Attributes
     ----------
@@ -98,9 +98,9 @@ class Distribution(nn.Module):
 
     def _check_input(self, x, var=None):
         """
-        Check the type of a given input.
-        If this type is a dictionary, we check whether this key and `var` are same.
-        In case that this is list or tensor, we return a output formatted in a dictionary.
+        Check the type of given input.
+        If the input type is `dictionary`, this method checks whether the input keys contains the `var` list.
+        In case that its type is `list` or `tensor`, it returns the output formatted in `dictionary`.
 
         Parameters
         ----------
@@ -108,18 +108,18 @@ class Distribution(nn.Module):
             Input variables
 
         var : list or None
-            Variables to check if `x` has them.
+            Variables to check if given input contains them.
             This is set to None by default.
 
         Returns
         -------
         checked_x : dict
-            Variables which are checked in this method.
+            Variables checked in this method.
 
         Raises
         ------
         ValueError
-            Raises ValueError if the type of `x` is neither tensor, list, nor dictionary.
+            Raises ValueError if the type of input is neither tensor, list, nor dictionary.
         """
 
         if var is None:
@@ -129,16 +129,16 @@ class Distribution(nn.Module):
             checked_x = {var[0]: x}
 
         elif type(x) is list:
+            # TODO: we need to check if all the elements contained in this list are torch.Tensor.
             checked_x = dict(zip(var, x))
 
         elif type(x) is dict:
-            if not set(list(x.keys())) == set(var):
-                raise ValueError("Input's keys are not valid.")
+            if not (set(list(x.keys())) >= set(var)):
+                raise ValueError("Input keys are not valid.")
             checked_x = x
 
         else:
-            raise ValueError("The type of input is not valid, got %s."
-                             % type(x))
+            raise ValueError("The type of input is not valid, got %s." % type(x))
 
         return checked_x
 
@@ -355,7 +355,7 @@ class DistributionBase(Distribution):
 
     def _replace_vars_to_params(self, vars_dict, replace_dict):
         """
-        Replace variables in keys of a input dictionary to parameters of this distribution according to
+        Replace variables in input keys to parameters of this distribution according to
         these correspondences which is formatted in a dictionary and set in `_initialize_constant_params`.
 
         Parameters
@@ -369,9 +369,6 @@ class DistributionBase(Distribution):
         Returns
         -------
         params_dict : dict
-            Dictionary.
-
-        vars_dict : dict
             Dictionary.
 
         Examples
@@ -404,10 +401,11 @@ class DistributionBase(Distribution):
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
 
-        if len(x) == 0:  # unconditioned
-            if len(self.input_var) != 0:
-                raise ValueError("You should set inputs or parameters")
+        # check whether the input is valid or convert it to valid dictionary.
+        x_dict = self._check_input(x)
 
+        # unconditioned
+        if len(self.input_var) == 0:
             if shape:
                 sample_shape = shape
             else:
@@ -420,20 +418,22 @@ class DistributionBase(Distribution):
             output_dict = self._get_sample(reparam=reparam,
                                            sample_shape=sample_shape)
 
-        else:  # conditioned
-            x_dict = self._check_input(x)
-            self._set_distribution(x_dict)
+        # conditioned
+        else:
+            # remove redundant variables from x_dict
+            _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
+            self._set_distribution(_x_dict)
             output_dict = self._get_sample(reparam=reparam)
 
-            if return_all:
-                output_dict.update(x_dict)
+        if return_all:
+            output_dict.update(x_dict)
 
         return output_dict
 
     def log_likelihood(self, x_dict):
 
         if not set(list(x_dict.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input's keys are not valid.")
+            raise ValueError("Input keys are not valid.")
 
         _x_dict = get_dict_values(x_dict, self._cond_var, True)
         self._set_distribution(_x_dict)
