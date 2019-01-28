@@ -66,11 +66,19 @@ class Loss(object):
     def sum(self):
         return BatchSum(self)
 
-    def estimate(self, x={}, **kwargs):
-        if set(list(x.keys())) >= set(self._input_var):
-            return get_dict_values(x, self._input_var, True)
-        raise ValueError("Input's keys are not valid,"
-                         " given {}.".format(list(x.keys())))
+    def estimate(self, x={}, return_dict=False):
+        if not(set(list(x.keys())) >= set(self._input_var)):
+            raise ValueError("Input keys are not valid, got {}.".format(list(x.keys())))
+
+        loss, x = self._get_estimated_value(x)
+
+        if return_dict:
+            return loss, x
+
+        return loss
+
+    def _get_estimated_value(self, x):
+        return None, x
 
     def train(self, x={}, **kwargs):
         """
@@ -90,8 +98,8 @@ class ValueLoss(Loss):
         self._loss1 = loss1
         self._input_var = []
 
-    def estimate(self, x={}, **kwargs):
-        return self._loss1
+    def _get_estimated_value(self, x={}):
+        return self._loss1, x
 
     @property
     def loss_text(self):
@@ -104,9 +112,8 @@ class Parameter(Loss):
             raise ValueError
         self._input_var = tolist(input_var)
 
-    def estimate(self, x={}, **kwargs):
-        _x = super().estimate(x)
-        return _x[self._input_var[0]]
+    def _get_estimated_value(self, x={}):
+        return _x[self._input_var[0]], x
 
     @property
     def loss_text(self):
