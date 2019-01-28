@@ -73,7 +73,7 @@ class RelaxedBernoulli(DistributionBase):
         # output : dict
 
         if not set(list(x.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input's keys are not valid.")
+            raise ValueError("Input keys are not valid.")
 
         if len(self._cond_var) > 0:  # conditional distribution
             _x = get_dict_values(x, self._cond_var, True)
@@ -153,7 +153,7 @@ class RelaxedCategorical(DistributionBase):
         # output : dict
 
         if not set(list(x.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input's keys are not valid.")
+            raise ValueError("Input keys are not valid.")
 
         if len(self._cond_var) > 0:  # conditional distribution
             _x = get_dict_values(x, self._cond_var, True)
