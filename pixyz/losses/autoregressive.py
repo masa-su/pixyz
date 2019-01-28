@@ -4,27 +4,22 @@ from .losses import Loss
 from ..utils import get_dict_values
 
 
-class ARLoss(Loss):
+class IterativeLoss(Loss):
     r"""
-    Auto-regressive loss.
+    Iterative loss.
 
-    This loss performs "scan"-like operation. You can implement arbitrary auto-regressive models
-    with this class.
+    You can implement arbitrary model which needs to iteration (e.g., auto-regressive models) with this class.
 
     .. math::
 
         \mathcal{L} = \mathcal{L}_{last}(x_1, h_T) + \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t),
-
-    where :math:`h_t = f_{step}(x_{t-1}, h_{t-1})`.
     """
 
-    def __init__(self, step_loss, last_loss=None,
-                 step_fn=lambda x: x, max_iter=1,
+    def __init__(self, step_loss, last_loss=None, max_iter=1,
                  input_var=None, series_var=None, update_value=None):
         self.last_loss = last_loss
         self.step_loss = step_loss
         self.max_iter = max_iter
-        self.step_fn = step_fn
         self.update_value = update_value
 
         if input_var is not None:
@@ -64,11 +59,10 @@ class ARLoss(Loss):
             # update series inputs
             x.update(self.slice_step_from_inputs(t, series_x))
 
-            # sample and step
-            x = self.step_fn(t, **x)
-
             # estimate
-            step_loss_sum += self.step_loss.estimate(x)
+            step_loss, samples = self.step_loss.estimate(x, return_dict=True)
+            x.update(samples)
+            step_loss_sum += step_loss
 
             # update
             for key, value in self.update_value.items():

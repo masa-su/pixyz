@@ -31,7 +31,7 @@ from .losses import (
 )
 
 from .autoregressive import (
-    ARLoss,
+    IterativeLoss,
 )
 
 __all__ = [
@@ -47,5 +47,5 @@ __all__ = [
     'AdversarialJensenShannon',
     'AdversarialKullbackLeibler',
     'AdversarialWassersteinDistance',
-    'ARLoss',
+    'IterativeLoss',
 ]
