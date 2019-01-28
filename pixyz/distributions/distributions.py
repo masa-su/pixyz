@@ -420,13 +420,14 @@ class DistributionBase(Distribution):
 
         # conditioned
         else:
-            # remove redundant variables from x_dict
+            # remove redundant variables from x_dict.
             _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
             self._set_distribution(_x_dict)
             output_dict = self._get_sample(reparam=reparam)
 
         if return_all:
-            output_dict.update(x_dict)
+            x_dict.update(output_dict)
+            return x_dict
 
         return output_dict
 
@@ -435,7 +436,7 @@ class DistributionBase(Distribution):
         if not set(list(x_dict.keys())) >= set(self._cond_var + self._var):
             raise ValueError("Input keys are not valid.")
 
-        _x_dict = get_dict_values(x_dict, self._cond_var, True)
+        _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
         self._set_distribution(_x_dict)
 
         log_like = self._get_log_like(x_dict)
