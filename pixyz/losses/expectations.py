@@ -21,7 +21,7 @@ class CrossEntropy(Loss):
     def loss_text(self):
         return "-E_{}[log {}]".format(self._p1.prob_text, self._p2.prob_text)
 
-    def _get_estimated_value(self, x={}):
+    def _get_estimated_value(self, x={}, **kwargs):
         samples_dict = self._p1.sample(x, reparam=True, return_all=True)
         loss = -self._p2.log_likelihood(samples_dict)
         return loss, samples_dict
@@ -50,8 +50,8 @@ class Entropy(Loss):
     def loss_text(self):
         return "-E_{}[log {}]".format(self._p1.prob_text, self._p1.prob_text)
 
-    def _get_estimated_value(self, x={}):
-        samples_dict = self._p1.sample(x, reparam=True)
+    def _get_estimated_value(self, x={}, **kwargs):
+        samples_dict = self._p1.sample(x, reparam=True, return_all=True)
         loss = self._p1.log_likelihood(samples_dict)
         return loss, samples_dict
 
@@ -80,7 +80,8 @@ class StochasticReconstructionLoss(Loss):
     def loss_text(self):
         return "-E_{}[log {}]".format(self._p1.prob_text, self._p2.prob_text)
 
-    def _get_estimated_value(self, x={}):
-        samples_dict = self._p1.sample(x, reparam=True)
+    def _get_estimated_value(self, x={}, **kwargs):
+        samples_dict = self._p1.sample(x, reparam=True, return_all=True)
         loss = -self._p2.log_likelihood(samples_dict)
-        return loss
+        return loss, samples_dict
+

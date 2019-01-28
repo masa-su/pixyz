@@ -19,9 +19,7 @@ class KullbackLeibler(Loss):
     def loss_text(self):
         return "KL[{}||{}]".format(self._p1.prob_text, self._p2.prob_text)
 
-    def estimate(self, x, **kwargs):
-        x = super().estimate(x)
-
+    def _get_estimated_value(self, x, **kwargs):
         if self._p1.distribution_name == "Normal" and self._p2.distribution_name == "Normal":
             inputs = get_dict_values(x, self._p1.input_var, True)
             params1 = self._p1.get_params(inputs, **kwargs)
@@ -30,7 +28,7 @@ class KullbackLeibler(Loss):
             params2 = self._p2.get_params(inputs, **kwargs)
 
             return gauss_gauss_kl(params1["loc"], params1["scale"],
-                                  params2["loc"], params2["scale"])
+                                  params2["loc"], params2["scale"]), x
 
         raise Exception("You cannot use these distributions, "
                         "got %s and %s." % (self._p1.distribution_name,

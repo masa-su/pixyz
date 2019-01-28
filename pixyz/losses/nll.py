@@ -17,8 +17,7 @@ class NLL(Loss):
     def loss_text(self):
         return "-log {}".format(self._p1.prob_text)
 
-    def estimate(self, x={}):
-        _x = super().estimate(x)
+    def _get_estimated_value(self, x={}, **kwargs):
         nll = -self._p1.log_likelihood(x)
+        return nll, x
 
-        return nll

@@ -19,13 +19,12 @@ class ARLoss(Loss):
     """
 
     def __init__(self, step_loss, last_loss=None,
-                 step_fn=lambda x: x, max_iter=1, return_params=False,
+                 step_fn=lambda x: x, max_iter=1,
                  input_var=None, series_var=None, update_value=None):
         self.last_loss = last_loss
         self.step_loss = step_loss
         self.max_iter = max_iter
         self.step_fn = step_fn
-        self.return_params = return_params
         self.update_value = update_value
 
         if input_var is not None:
@@ -57,8 +56,7 @@ class ARLoss(Loss):
     def slice_step_from_inputs(self, t, x):
         return {k: v[t] for k, v in x.items()}
 
-    def estimate(self, x={}):
-        x = super().estimate(x)
+    def _get_estimated_value(self, x, **kwargs):
         series_x = get_dict_values(x, self.series_var, return_dict=True)
         step_loss_sum = 0
 
@@ -82,9 +80,6 @@ class ARLoss(Loss):
             x.update(self.slice_step_from_inputs(0, series_x))
             loss += self.last_loss.estimate(x)
 
-        if self.return_params:
-            x.update(series_x)
-            return loss, x
-
-        return loss
+        x.update(series_x)
+        return loss, x
 

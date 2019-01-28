@@ -81,12 +81,11 @@ class AdversarialJensenShannon(AdversarialLoss):
         return "mean(AdversarialJS[{}||{}])".format(self._p1.prob_text,
                                                     self._p2.prob_text)
 
-    def estimate(self, x={}, discriminator=False):
-        _x = super().estimate(x)
-        batch_size = get_dict_values(_x, self._p1.input_var[0])[0].shape[0]
+    def _get_estimated_value(self, x, discriminator=False, **kwargs):
+        batch_size = get_dict_values(x, self._p1.input_var[0])[0].shape[0]
 
         # sample x from p1
-        x_dict = get_dict_values(_x, self._p1.input_var, True)
+        x_dict = get_dict_values(x, self._p1.input_var, True)
         if self._p1_data_dist:
             x1_dict = x_dict
         else:
@@ -94,7 +93,7 @@ class AdversarialJensenShannon(AdversarialLoss):
             x1_dict = get_dict_values(x1_dict, self.d.input_var, True)
 
         # sample x from p2
-        x_dict = get_dict_values(_x, self._p2.input_var, True)
+        x_dict = get_dict_values(x, self._p2.input_var, True)
         x2_dict = self._p2.sample(x_dict, batch_size=batch_size)
         x2_dict = get_dict_values(x2_dict, self.d.input_var, True)
 
@@ -117,7 +116,7 @@ class AdversarialJensenShannon(AdversarialLoss):
         y1 = get_dict_values(y1_dict, self.d.var)[0]
         y2 = get_dict_values(y2_dict, self.d.var)[0]
 
-        return self.g_loss(y1, y2, batch_size)
+        return self.g_loss(y1, y2, batch_size), x  # TODO: fix
 
     def d_loss(self, y1, y2, batch_size):
         # set labels
@@ -166,8 +165,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         return "mean(AdversarialKL[{}||{}])".format(self._p1.prob_text,
                                                     self._p2.prob_text)
 
-    def estimate(self, x={}, discriminator=False):
-        _x = super().estimate(x)
+    def _get_estimated_value(self, x, discriminator=False, **kwargs):
         batch_size = get_dict_values(_x, self._p1.input_var[0])[0].shape[0]
 
         # sample x from p1
@@ -195,7 +193,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         y1_dict = self.d.sample(x1_dict)
         y1 = get_dict_values(y1_dict, self.d.var)[0]
 
-        return self.g_loss(y1, batch_size)
+        return self.g_loss(y1, batch_size), x
 
     def g_loss(self, y1, batch_size):
         # set labels

@@ -23,11 +23,9 @@ class ELBO(Loss):
                                         self._p1.prob_text,
                                         self._p2.prob_text)
 
-    def estimate(self, x={}, batch_size=None):
-        _x = super().estimate(x)
-        samples = self._p2.sample(_x, reparam=True, batch_size=batch_size)
-        lower_bound = self._p1.log_likelihood(samples) -\
-            self._p2.log_likelihood(samples)
+    def _get_estimated_value(self, x={}, batch_size=None, **kwargs):
+        samples_dict = self._p2.sample(x, reparam=True, batch_size=batch_size)
+        lower_bound = self._p1.log_likelihood(samples_dict) - self._p2.log_likelihood(samples_dict)
 
-        return lower_bound
+        return lower_bound, samples_dict
 
