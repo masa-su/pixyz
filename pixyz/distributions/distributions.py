@@ -548,38 +548,27 @@ class MultiplyDistribution(Distribution):
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
 
-        x = get_dict_values(x, self._input_var, return_dict=True)
-
         # sample from the parent distribution
-        parents_input = get_dict_values(x, self._parent.input_var, return_dict=True)
-        parents_output = self._parent.sample(x=parents_input,
-                                             shape=shape,
-                                             batch_size=batch_size,
-                                             return_all=False, reparam=reparam)
+        parents_x_dict = x
+        child_x_dict = self._parent.sample(x=parents_x_dict,
+                                           shape=shape,
+                                           batch_size=batch_size,
+                                           return_all=True, reparam=reparam)
 
         # sample from the child distribution
-        children_inh_input = get_dict_values(parents_output, self.inh_var, return_dict=True)
-        children_input_exc_inh_var = list(set(self._child.input_var)-set(self.inh_var))
-        children_input = get_dict_values(x, children_input_exc_inh_var, return_dict=True)
-        children_input.update(children_inh_input)
+        output_dict = self._child.sample(x=child_x_dict,
+                                         shape=shape,
+                                         batch_size=batch_size,
+                                         return_all=True, reparam=reparam)
 
-        children_output = self._child.sample(x=children_input,
-                                             shape=shape,
-                                             batch_size=batch_size,
-                                             return_all=False, reparam=reparam)
+        if return_all is False:
+            output_dict = get_dict_values(x, self._var, return_dict=True)
+            return output_dict
 
-        output = parents_output
-        output.update(children_output)
-
-        if return_all:
-            output.update(x)
-
-        return output
+        return output_dict
 
     def log_likelihood(self, x):
-        parents_x = get_dict_values(x, self._parent.cond_var + self._parent.var, return_dict=True)
-        children_x = get_dict_values(x, self._child.cond_var + self._child.var, return_dict=True)
-        log_like = self._parent.log_likelihood(parents_x) + self._child.log_likelihood(children_x)
+        log_like = self._parent.log_likelihood(x) + self._child.log_likelihood(x)
 
         return log_like
 
