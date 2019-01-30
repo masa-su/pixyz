@@ -37,6 +37,13 @@ StochasticReconstructionLoss
     :members:
     :undoc-members:
 
+ExpectationLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: ExpectationLoss
+    :members:
+    :undoc-members:
+
 Negative log-likelihood
 ---------------------------------------------------
        
@@ -109,13 +116,13 @@ AdversarialWassersteinDistance
     :members:
     :undoc-members:
 
-Auto-regressive loss
-----------------------------
+Loss for sequential distributions
+-----------------------------------
 
-ARLoss
+IterativeLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: ARLoss
+.. autoclass:: IterativeLoss
     :members:
     :undoc-members:
 

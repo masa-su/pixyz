@@ -10,6 +10,7 @@ from .expectations import (
     CrossEntropy,
     Entropy,
     StochasticReconstructionLoss,
+    ExpectationLoss,
 )
 
 from .elbo import (
@@ -39,6 +40,7 @@ __all__ = [
     'CrossEntropy',
     'Entropy',
     'StochasticReconstructionLoss',
+    'ExpectationLoss',
     'KullbackLeibler',
     'NLL',
     'ELBO',

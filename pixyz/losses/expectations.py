@@ -1,4 +1,5 @@
 from .losses import Loss
+from copy import deepcopy
 
 
 class CrossEntropy(Loss):
@@ -85,3 +86,35 @@ class StochasticReconstructionLoss(Loss):
         loss = -self._p2.log_likelihood(samples_dict)
         return loss, samples_dict
 
+
+class ExpectationLoss(Loss):
+    r"""
+    Expectation of a given loss function (Monte Carlo approximation).
+
+    .. math::
+
+        \mathbb{E}_{p(x)}[loss(x)] \approx \frac{1}{L}\sum_{l=1}^L loss(x_l),
+
+    where :math:`x_l \sim p(x)`.
+    """
+
+    def __init__(self, p, loss, input_var=None):
+
+        if input_var is None:
+            input_var = list(set(p.input_var) | set(loss.input_var) - set(p.var))
+        self._loss = loss
+
+        super().__init__(p, input_var=input_var)
+
+    @property
+    def loss_text(self):
+        return "E_{}[{}]".format(self._p1.prob_text, self._loss.loss_text)
+
+    def _get_estimated_value(self, x={}, **kwargs):
+        samples_dict = self._p1.sample(x, reparam=True, return_all=True)
+
+        # TODO: whether estimate or _get_estimate_value
+        loss, loss_sample_dict = self._loss.estimate(samples_dict, return_dict=True)
+        samples_dict.update(loss_sample_dict)
+
+        return loss, samples_dict
