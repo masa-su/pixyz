@@ -4,7 +4,7 @@
 
 
 [![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
-[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4.1-yellow.svg)](https://github.com/masa-su/pixyz)
+[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4,1.0-yellow.svg)](https://github.com/masa-su/pixyz)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
 
 - [What is Pixyz?](#what-is-pixyz)
