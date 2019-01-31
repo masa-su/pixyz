@@ -74,6 +74,13 @@ class StochasticReconstructionLoss(Loss):
 
         if input_var is None:
             input_var = encoder.input_var
+
+        if not(set(decoder.var) <= set(input_var)):
+            raise ValueError("Variable {} (in the `{}` class) is not included"
+                             " in `input_var` of the `{}` class.".format(decoder.var,
+                                                                         decoder.__class__.__name__,
+                                                                         encoder.__class__.__name__))
+
         super().__init__(encoder, decoder, input_var=input_var)
 
     @property
