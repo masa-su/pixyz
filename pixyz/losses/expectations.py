@@ -1,5 +1,4 @@
 from .losses import Loss
-from copy import deepcopy
 
 
 class CrossEntropy(Loss):
@@ -87,7 +86,7 @@ class StochasticReconstructionLoss(Loss):
         return loss, samples_dict
 
 
-class ExpectationLoss(Loss):
+class LossExpectation(Loss):
     r"""
     Expectation of a given loss function (Monte Carlo approximation).
 

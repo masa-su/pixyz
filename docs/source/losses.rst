@@ -37,10 +37,10 @@ StochasticReconstructionLoss
     :members:
     :undoc-members:
 
-ExpectationLoss
+LossExpectation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: ExpectationLoss
+.. autoclass:: LossExpectation
     :members:
     :undoc-members:
 
