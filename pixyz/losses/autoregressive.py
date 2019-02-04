@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 from .losses import Loss
+from .expectations import LossExpectation
 from ..utils import get_dict_values
 
 
@@ -16,11 +17,16 @@ class IterativeLoss(Loss):
     """
 
     def __init__(self, step_loss, last_loss=None, max_iter=1,
-                 input_var=None, series_var=None, update_value=None):
+                 input_var=None, series_var=None, update_value={}, slice_step=None, timestep_var="t"):
         self.last_loss = last_loss
         self.step_loss = step_loss
         self.max_iter = max_iter
         self.update_value = update_value
+        self.timestep_var = timestep_var
+
+        self.slice_step = slice_step
+        if self.slice_step:
+            self.step_loss = LossExpectation(self.slice_step, self.step_loss)
 
         if input_var is not None:
             self._input_var = input_var
@@ -32,8 +38,10 @@ class IterativeLoss(Loss):
                 _input_var += deepcopy(self.step_loss.input_var)
             self._input_var = sorted(set(_input_var), key=_input_var.index)
 
+            if self.step_loss:
+                self._input_var.remove(timestep_var)  # delete the variable of time step
+
         self.series_var = series_var
-        self.non_series_var = list(set(self.input_var) - set(self.series_var))
 
     @property
     def loss_text(self):
@@ -48,7 +56,7 @@ class IterativeLoss(Loss):
 
         return " + ".join(_loss_text)
 
-    def slice_step_from_inputs(self, t, x):
+    def slice_step_fn(self, t, x):
         return {k: v[t] for k, v in x.items()}
 
     def _get_estimated_value(self, x, **kwargs):
@@ -56,8 +64,11 @@ class IterativeLoss(Loss):
         step_loss_sum = 0
 
         for t in range(self.max_iter):
-            # update series inputs
-            x.update(self.slice_step_from_inputs(t, series_x))
+            if self.slice_step:
+                x.update({self.timestep_var: t})
+            else:
+                # update series inputs & use slice_step_fn
+                x.update(self.slice_step_fn(t, series_x))
 
             # estimate
             step_loss, samples = self.step_loss.estimate(x, return_dict=True)
