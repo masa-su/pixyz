@@ -37,7 +37,7 @@ The overview of Pixyz is as follows. Each API will be discussed below.
 ## Installation
 ```
 $ git clone https://github.com/masa-su/pixyz.git
-$ pip install -e pixyz --process-dependency-links
+$ pip install -e pixyz
 ```
 
 ## Quick Start
