@@ -106,7 +106,7 @@ class AdversarialJensenShannon(AdversarialLoss):
             y2_dict = self.d.sample(detach_dict(x2_dict))
             y2 = get_dict_values(y2_dict, self.d.var)[0]
 
-            return self.d_loss(y1, y2, batch_size)
+            return self.d_loss(y1, y2, batch_size), x
 
         # sample y from x1
         y1_dict = self.d.sample(x1_dict)
