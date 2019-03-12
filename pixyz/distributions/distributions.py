@@ -642,7 +642,7 @@ class ReplaceVarDistribution(Distribution):
         return self._a.get_params(params_dict)
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
-        input_dict = get_dict_values(x, self._a.cond_var, return_dict=True)
+        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
         output_dict = self._a.sample(replaced_input_dict, shape=shape, batch_size=batch_size,
