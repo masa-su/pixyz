@@ -597,8 +597,6 @@ class ReplaceVarDistribution(Distribution):
 
     replace_dict : dict
         Dictionary.
-
-    # TODO: bugfix
     """
 
     def __init__(self, a, replace_dict):
@@ -653,13 +651,15 @@ class ReplaceVarDistribution(Distribution):
         return x
 
     def log_likelihood(self, x):
-        x = replace_dict_keys(x, self._replace_inv_dict)
+        input_dict = get_dict_values(x, self.cond_var + self.var, return_dict=True)
+        input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
 
-        return self._a.log_likelihood(x)
+        return self._a.log_likelihood(input_dict)
 
     def sample_mean(self, x):
-        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
-        return self._a.sample_mean(x)
+        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
+        input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
+        return self._a.sample_mean(input_dict)
 
     @property
     def input_var(self):
