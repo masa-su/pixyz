@@ -103,7 +103,7 @@ class PlanarFlowLayer(nn.Module):
         self.u.data.uniform_(-stdv, stdv)
 
     def forward(self, x, jacobian=False):
-        z = F.tanh(F.linear(x, self.weight, self.bias))
+        z = torch.tanh(F.linear(x, self.weight, self.bias))
         output = x + self.u * z
 
         if jacobian:
