@@ -431,6 +431,14 @@ class DistributionBase(Distribution):
 
         return output_dict
 
+    def sample_mean(self, x={}):
+        self._set_distribution(x)
+        return self.dist.mean
+
+    def sample_variance(self, x={}):
+        self._set_distribution(x)
+        return self.dist.variance
+
     def log_likelihood(self, x_dict):
 
         if not set(list(x_dict.keys())) >= set(self._cond_var + self._var):
