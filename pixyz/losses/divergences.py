@@ -13,6 +13,9 @@ class KullbackLeibler(Loss):
     .. math::
 
         D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
+
+    TODO: This class seems to be slightly slower than this previous implementation
+     (perhaps because of `set_distribution`).
     """
 
     def __init__(self, p1, p2, input_var=None, dim=None):
