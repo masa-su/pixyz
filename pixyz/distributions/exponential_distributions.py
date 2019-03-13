@@ -111,7 +111,7 @@ class FactorizedBernoulli(Bernoulli):
 
 class Categorical(DistributionBase):
     """
-    Categorical distribution parameterized by `probs`.
+    Categorical distribution parameterized by :attr:`probs`.
     """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
