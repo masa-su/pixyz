@@ -5,6 +5,7 @@ from torch.distributions \
     import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
 from torch.distributions.one_hot_categorical\
     import OneHotCategorical as CategoricalTorch
+from torch.distributions import Dirichlet as DirichletTorch
 
 from ..utils import get_dict_values
 from .distributions import DistributionBase, sum_samples
@@ -165,3 +166,19 @@ class RelaxedCategorical(DistributionBase):
     def sample_mean(self, x):
         params = self.forward(**x)
         return params["probs"]
+
+
+class Dirichlet(DistributionBase):
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
+        self.params_keys = ["concentration"]
+        self.DistributionTorch = DirichletTorch
+
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "Dirichlet"
+
+    def sample_mean(self, x):
+        params = self.forward(**x)
+        return params["concentration"]
