@@ -62,6 +62,27 @@ RelaxedCategorical
     :members:
     :undoc-members:
 
+Beta
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Beta
+    :members:
+    :undoc-members:
+
+Dirichlet
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Dirichlet
+    :members:
+    :undoc-members:
+
+Laplace
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Laplace
+    :members:
+    :undoc-members:
+
 Complex distributions
 ---------------------
 
