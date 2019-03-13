@@ -181,8 +181,7 @@ When you want to estimate a value of the loss function given data, use the `esti
 ```python
 loss_tensor = loss_cls.estimate({"x": x_tensor, "y": y_tensor, "x_u": x_u_tensor})
 print(loss_tensor)
->> tensor(1.00000e+05 *
-          1.2587, device='cuda:0')
+# tensor(1.00000e+05 * 1.2587, device='cuda:0')
 ```
 Since the type of this value is just `torch.Tensor`, you can train it just like a normal way in PyTorch, 
 ```python
