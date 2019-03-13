@@ -6,12 +6,17 @@ from torch.distributions \
 from torch.distributions.one_hot_categorical\
     import OneHotCategorical as CategoricalTorch
 from torch.distributions import Dirichlet as DirichletTorch
+from torch.distributions import Beta as BetaTorch
+from torch.distributions import Laplace as LaplaceTorch
 
 from ..utils import get_dict_values
 from .distributions import DistributionBase, sum_samples
 
 
 class Normal(DistributionBase):
+    """
+    Normal distribution parameterized by `loc` and `scale`.
+    """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["loc", "scale"]
@@ -23,12 +28,11 @@ class Normal(DistributionBase):
     def distribution_name(self):
         return "Normal"
 
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["loc"]
-
 
 class Bernoulli(DistributionBase):
+    """
+    Bernoulli distribution parameterized by `probs`.
+    """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["probs"]
@@ -40,12 +44,11 @@ class Bernoulli(DistributionBase):
     def distribution_name(self):
         return "Bernoulli"
 
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["probs"]
-
 
 class RelaxedBernoulli(DistributionBase):
+    """
+    Relaxed (reparameterizable) Bernoulli distribution parameterized by `probs`.
+    """
 
     def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["probs"]
@@ -83,14 +86,12 @@ class RelaxedBernoulli(DistributionBase):
         log_like = self._get_log_like(x)
         return sum_samples(log_like)
 
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["probs"]
-
 
 class FactorizedBernoulli(Bernoulli):
     """
-    Generative Models of Visually Grounded Imagination
+    Factorized Bernoulli distribution parameterized by `probs`.
+
+    See `Generative Models of Visually Grounded Imagination`
     """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
@@ -108,6 +109,9 @@ class FactorizedBernoulli(Bernoulli):
 
 
 class Categorical(DistributionBase):
+    """
+    Categorical distribution parameterized by `probs`.
+    """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["probs"]
@@ -119,12 +123,11 @@ class Categorical(DistributionBase):
     def distribution_name(self):
         return "Categorical"
 
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["probs"]
-
 
 class RelaxedCategorical(DistributionBase):
+    """
+    Relaxed (reparameterizable) categorical distribution parameterized by `probs`.
+    """
 
     def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None,
                  **kwargs):
@@ -163,12 +166,12 @@ class RelaxedCategorical(DistributionBase):
         log_like = self._get_log_like(x)
         return sum_samples(log_like)
 
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["probs"]
-
 
 class Dirichlet(DistributionBase):
+    """
+    Dirichlet distribution parameterized by `concentration`.
+    """
+
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["concentration"]
         self.DistributionTorch = DirichletTorch
@@ -179,6 +182,36 @@ class Dirichlet(DistributionBase):
     def distribution_name(self):
         return "Dirichlet"
 
-    def sample_mean(self, x):
-        params = self.forward(**x)
-        return params["concentration"]
+
+class Beta(DistributionBase):
+    """
+    Beta distribution parameterized by `concentration1` and `concentration0`.
+    """
+
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
+        self.params_keys = ["concentration1", "concentration0"]
+        self.DistributionTorch = BetaTorch
+
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "Beta"
+
+
+class Laplace(DistributionBase):
+    """
+    Laplace distribution parameterized by `loc` and `scale`.
+    """
+
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
+        self.params_keys = ["loc", "scale"]
+        self.DistributionTorch = LaplaceTorch
+
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "Laplace"
+
+

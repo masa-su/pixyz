@@ -6,6 +6,8 @@ from .exponential_distributions import (
     Categorical,
     RelaxedCategorical,
     Dirichlet,
+    Beta,
+    Laplace,
 )
 from .custom_distributions import (
     CustomLikelihoodDistribution,
@@ -43,6 +45,9 @@ __all__ = [
     'Categorical',
     'RelaxedCategorical',
     'Dirichlet',
+    'Beta',
+    'Laplace',
+
     'MultiplyDistribution',
     'PlanarFlow',
     'RealNVP',
