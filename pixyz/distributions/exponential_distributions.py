@@ -8,6 +8,7 @@ from torch.distributions.one_hot_categorical\
 from torch.distributions import Dirichlet as DirichletTorch
 from torch.distributions import Beta as BetaTorch
 from torch.distributions import Laplace as LaplaceTorch
+from torch.distributions import Gamma as GammaTorch
 
 from ..utils import get_dict_values
 from .distributions import DistributionBase, sum_samples
@@ -214,4 +215,19 @@ class Laplace(DistributionBase):
     def distribution_name(self):
         return "Laplace"
 
+
+class Gamma(DistributionBase):
+    """
+    Gamma distribution parameterized by `concentration` and `rate`.
+    """
+
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
+        self.params_keys = ["concentration", "rate"]
+        self.DistributionTorch = GammaTorch
+
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "Gamma"
 

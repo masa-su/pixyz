@@ -8,6 +8,7 @@ from .exponential_distributions import (
     Dirichlet,
     Beta,
     Laplace,
+    Gamma,
 )
 from .custom_distributions import (
     CustomLikelihoodDistribution,
@@ -47,6 +48,7 @@ __all__ = [
     'Dirichlet',
     'Beta',
     'Laplace',
+    'Gamma',
 
     'MultiplyDistribution',
     'PlanarFlow',
