@@ -16,7 +16,7 @@ from .distributions import DistributionBase, sum_samples
 
 class Normal(DistributionBase):
     """
-    Normal distribution parameterized by `loc` and `scale`.
+    Normal distribution parameterized by :attr:`loc` and :attr:`scale`.
     """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
@@ -32,7 +32,7 @@ class Normal(DistributionBase):
 
 class Bernoulli(DistributionBase):
     """
-    Bernoulli distribution parameterized by `probs`.
+    Bernoulli distribution parameterized by :attr:`probs`.
     """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
@@ -48,7 +48,7 @@ class Bernoulli(DistributionBase):
 
 class RelaxedBernoulli(DistributionBase):
     """
-    Relaxed (reparameterizable) Bernoulli distribution parameterized by `probs`.
+    Relaxed (reparameterizable) Bernoulli distribution parameterized by :attr:`probs`.
     """
 
     def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
@@ -90,7 +90,7 @@ class RelaxedBernoulli(DistributionBase):
 
 class FactorizedBernoulli(Bernoulli):
     """
-    Factorized Bernoulli distribution parameterized by `probs`.
+    Factorized Bernoulli distribution parameterized by :attr:`probs`.
 
     See `Generative Models of Visually Grounded Imagination`
     """
@@ -127,7 +127,7 @@ class Categorical(DistributionBase):
 
 class RelaxedCategorical(DistributionBase):
     """
-    Relaxed (reparameterizable) categorical distribution parameterized by `probs`.
+    Relaxed (reparameterizable) categorical distribution parameterized by :attr:`probs`.
     """
 
     def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None,
@@ -170,7 +170,7 @@ class RelaxedCategorical(DistributionBase):
 
 class Dirichlet(DistributionBase):
     """
-    Dirichlet distribution parameterized by `concentration`.
+    Dirichlet distribution parameterized by :attr:`concentration`.
     """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
@@ -186,7 +186,7 @@ class Dirichlet(DistributionBase):
 
 class Beta(DistributionBase):
     """
-    Beta distribution parameterized by `concentration1` and `concentration0`.
+    Beta distribution parameterized by :attr:`concentration1` and :attr:`concentration0`.
     """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
@@ -202,7 +202,7 @@ class Beta(DistributionBase):
 
 class Laplace(DistributionBase):
     """
-    Laplace distribution parameterized by `loc` and `scale`.
+    Laplace distribution parameterized by :attr:`loc` and :attr:`scale`.
     """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
@@ -218,7 +218,7 @@ class Laplace(DistributionBase):
 
 class Gamma(DistributionBase):
     """
-    Gamma distribution parameterized by `concentration` and `rate`.
+    Gamma distribution parameterized by :attr:`concentration` and :attr:`rate`.
     """
 
     def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
