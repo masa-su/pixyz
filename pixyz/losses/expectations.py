@@ -1,5 +1,4 @@
 from .losses import Loss
-from ..utils import get_dict_values
 
 
 class CrossEntropy(Loss):
@@ -22,17 +21,10 @@ class CrossEntropy(Loss):
     def loss_text(self):
         return "-E_{}[log {}]".format(self._p1.prob_text, self._p2.prob_text)
 
-    def estimate(self, x={}):
-        _x = super().estimate(x)
-        _p1_input = get_dict_values(_x, self._p1.input_var, return_dict=True)
-        samples = self._p1.sample(_p1_input, reparam=True, return_all=False)
-
-        _p2_input = get_dict_values(_x, self._p2.var, return_dict=True)
-        samples.update(_p2_input)
-
-        loss = -self._p2.log_likelihood(samples)
-
-        return loss
+    def _get_estimated_value(self, x={}, **kwargs):
+        samples_dict = self._p1.sample(x, reparam=True, return_all=True)
+        loss = -self._p2.log_likelihood(samples_dict)
+        return loss, samples_dict
 
 
 class Entropy(Loss):
@@ -58,13 +50,10 @@ class Entropy(Loss):
     def loss_text(self):
         return "-E_{}[log {}]".format(self._p1.prob_text, self._p1.prob_text)
 
-    def estimate(self, x={}):
-        _x = super().estimate(x)
-        samples = self._p1.sample(_x, reparam=True)
-
-        loss = self._p1.log_likelihood(samples)
-
-        return loss
+    def _get_estimated_value(self, x={}, **kwargs):
+        samples_dict = self._p1.sample(x, reparam=True, return_all=True)
+        loss = self._p1.log_likelihood(samples_dict)
+        return loss, samples_dict
 
 
 class StochasticReconstructionLoss(Loss):
@@ -85,15 +74,53 @@ class StochasticReconstructionLoss(Loss):
 
         if input_var is None:
             input_var = encoder.input_var
+
+        if not(set(decoder.var) <= set(input_var)):
+            raise ValueError("Variable {} (in the `{}` class) is not included"
+                             " in `input_var` of the `{}` class.".format(decoder.var,
+                                                                         decoder.__class__.__name__,
+                                                                         encoder.__class__.__name__))
+
         super().__init__(encoder, decoder, input_var=input_var)
 
     @property
     def loss_text(self):
         return "-E_{}[log {}]".format(self._p1.prob_text, self._p2.prob_text)
 
-    def estimate(self, x={}):
-        _x = super().estimate(x)
-        samples = self._p1.sample(_x, reparam=True)
-        loss = -self._p2.log_likelihood(samples)
+    def _get_estimated_value(self, x={}, **kwargs):
+        samples_dict = self._p1.sample(x, reparam=True, return_all=True)
+        loss = -self._p2.log_likelihood(samples_dict)
+        return loss, samples_dict
 
-        return loss
+
+class LossExpectation(Loss):
+    r"""
+    Expectation of a given loss function (Monte Carlo approximation).
+
+    .. math::
+
+        \mathbb{E}_{p(x)}[loss(x)] \approx \frac{1}{L}\sum_{l=1}^L loss(x_l),
+
+    where :math:`x_l \sim p(x)`.
+    """
+
+    def __init__(self, p, loss, input_var=None):
+
+        if input_var is None:
+            input_var = list(set(p.input_var) | set(loss.input_var) - set(p.var))
+        self._loss = loss
+
+        super().__init__(p, input_var=input_var)
+
+    @property
+    def loss_text(self):
+        return "E_{}[{}]".format(self._p1.prob_text, self._loss.loss_text)
+
+    def _get_estimated_value(self, x={}, **kwargs):
+        samples_dict = self._p1.sample(x, reparam=True, return_all=True)
+
+        # TODO: whether estimate or _get_estimate_value
+        loss, loss_sample_dict = self._loss.estimate(samples_dict, return_dict=True)
+        samples_dict.update(loss_sample_dict)
+
+        return loss, samples_dict

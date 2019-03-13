@@ -10,6 +10,7 @@ from .expectations import (
     CrossEntropy,
     Entropy,
     StochasticReconstructionLoss,
+    LossExpectation,
 )
 
 from .elbo import (
@@ -31,7 +32,7 @@ from .losses import (
 )
 
 from .autoregressive import (
-    ARLoss,
+    IterativeLoss,
 )
 
 __all__ = [
@@ -39,6 +40,7 @@ __all__ = [
     'CrossEntropy',
     'Entropy',
     'StochasticReconstructionLoss',
+    'LossExpectation',
     'KullbackLeibler',
     'NLL',
     'ELBO',
@@ -47,5 +49,5 @@ __all__ = [
     'AdversarialJensenShannon',
     'AdversarialKullbackLeibler',
     'AdversarialWassersteinDistance',
-    'ARLoss',
+    'IterativeLoss',
 ]

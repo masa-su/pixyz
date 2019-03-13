@@ -1,7 +1,7 @@
 import numbers
 from copy import deepcopy
 
-from ..utils import get_dict_values, tolist
+from ..utils import tolist
 
 
 class Loss(object):
@@ -66,11 +66,19 @@ class Loss(object):
     def sum(self):
         return BatchSum(self)
 
-    def estimate(self, x={}, **kwargs):
-        if set(list(x.keys())) >= set(self._input_var):
-            return get_dict_values(x, self._input_var, True)
-        raise ValueError("Input's keys are not valid,"
-                         " given {}.".format(list(x.keys())))
+    def estimate(self, x={}, return_dict=False, **kwargs):
+        if not(set(list(x.keys())) >= set(self._input_var)):
+            raise ValueError("Input keys are not valid, got {}.".format(list(x.keys())))
+
+        loss, x = self._get_estimated_value(x, **kwargs)
+
+        if return_dict:
+            return loss, x
+
+        return loss
+
+    def _get_estimated_value(self, x, **kwargs):
+        return x, x
 
     def train(self, x={}, **kwargs):
         """
@@ -90,8 +98,8 @@ class ValueLoss(Loss):
         self._loss1 = loss1
         self._input_var = []
 
-    def estimate(self, x={}, **kwargs):
-        return self._loss1
+    def _get_estimated_value(self, x={}, **kwargs):
+        return self._loss1, x
 
     @property
     def loss_text(self):
@@ -104,9 +112,8 @@ class Parameter(Loss):
             raise ValueError
         self._input_var = tolist(input_var)
 
-    def estimate(self, x={}, **kwargs):
-        _x = super().estimate(x)
-        return _x[self._input_var[0]]
+    def _get_estimated_value(self, x={}, **kwargs):
+        return x[self._input_var[0]], x
 
     @property
     def loss_text(self):
@@ -156,18 +163,22 @@ class LossOperator(Loss):
     def loss_text(self):
         NotImplementedError
 
-    def estimate(self, x={}, **kwargs):
+    def _get_estimated_value(self, x={}, **kwargs):
         if not isinstance(self._loss1, type(None)):
-            loss1 = self._loss1.estimate(x, **kwargs)
+            loss1, x1 = self._loss1._get_estimated_value(x, **kwargs)
         else:
             loss1 = 0
+            x1 = {}
 
         if not isinstance(self._loss2, type(None)):
-            loss2 = self._loss2.estimate(x, **kwargs)
+            loss2, x2 = self._loss2._get_estimated_value(x, **kwargs)
         else:
             loss2 = 0
+            x2 = {}
 
-        return loss1, loss2
+        x1.update(x2)
+
+        return loss1, loss2, x1
 
     def train(self, x, **kwargs):
         """
@@ -193,9 +204,9 @@ class AddLoss(LossOperator):
     def loss_text(self):
         return " + ".join(self._loss_text_list)
 
-    def estimate(self, x={}, **kwargs):
-        loss1, loss2 = super().estimate(x, **kwargs)
-        return loss1 + loss2
+    def _get_estimated_value(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+        return loss1 + loss2, x
 
 
 class SubLoss(LossOperator):
@@ -203,9 +214,9 @@ class SubLoss(LossOperator):
     def loss_text(self):
         return " - ".join(self._loss_text_list)
 
-    def estimate(self, x={}, **kwargs):
-        loss1, loss2 = super().estimate(x, **kwargs)
-        return loss1 - loss2
+    def _get_estimated_value(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+        return loss1 - loss2, x
 
 
 class MulLoss(LossOperator):
@@ -213,9 +224,9 @@ class MulLoss(LossOperator):
     def loss_text(self):
         return " * ".join(self._loss_text_list)
 
-    def estimate(self, x={}, **kwargs):
-        loss1, loss2 = super().estimate(x, **kwargs)
-        return loss1 * loss2
+    def _get_estimated_value(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+        return loss1 * loss2, x
 
 
 class DivLoss(LossOperator):
@@ -223,9 +234,9 @@ class DivLoss(LossOperator):
     def loss_text(self):
         return " / ".join(self._loss_text_list)
 
-    def estimate(self, x={}, **kwargs):
-        loss1, loss2 = super().estimate(x, **kwargs)
-        return loss1 / loss2
+    def _get_estimated_value(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+        return loss1 / loss2, x
 
 
 class LossSelfOperator(Loss):
@@ -257,9 +268,9 @@ class NegLoss(LossSelfOperator):
     def loss_text(self):
         return "-({})".format(self._loss1.loss_text)
 
-    def estimate(self, x={}, **kwargs):
-        loss = self._loss1.estimate(x, **kwargs)
-        return -loss
+    def _get_estimated_value(self, x={}, **kwargs):
+        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+        return -loss, x
 
 
 class AbsLoss(LossSelfOperator):
@@ -267,9 +278,9 @@ class AbsLoss(LossSelfOperator):
     def loss_text(self):
         return "|{}|".format(self._loss1.loss_text)
 
-    def estimate(self, x={}, **kwargs):
-        loss = self._loss1.estimate(x, **kwargs)
-        return loss.abs()
+    def _get_estimated_value(self, x={}, **kwargs):
+        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+        return loss.abs(), x
 
 
 class BatchMean(LossSelfOperator):
@@ -287,9 +298,9 @@ class BatchMean(LossSelfOperator):
     def loss_text(self):
         return "mean({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def estimate(self, x={}, **kwargs):
-        loss = self._loss1.estimate(x, **kwargs)
-        return loss.mean()
+    def _get_estimated_value(self, x={}, **kwargs):
+        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+        return loss.mean(), x
 
 
 class BatchSum(LossSelfOperator):
@@ -307,6 +318,6 @@ class BatchSum(LossSelfOperator):
     def loss_text(self):
         return "sum({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def estimate(self, x={}, **kwargs):
-        loss = self._loss1.estimate(x, **kwargs)
-        return loss.sum()
+    def _get_estimated_value(self, x={}, **kwargs):
+        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+        return loss.sum(), x

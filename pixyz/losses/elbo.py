@@ -11,11 +11,11 @@ class ELBO(Loss):
 
     where :math:`z_l \sim q(z|x)`.
     """
-    def __init__(self, p, approximate_dist, input_var=None):
+    def __init__(self, p, q, input_var=None):
         if input_var is None:
-            input_var = approximate_dist.input_var
+            input_var = q.input_var
 
-        super().__init__(p, approximate_dist, input_var=input_var)
+        super().__init__(p, q, input_var=input_var)
 
     @property
     def loss_text(self):
@@ -23,11 +23,10 @@ class ELBO(Loss):
                                         self._p1.prob_text,
                                         self._p2.prob_text)
 
-    def estimate(self, x={}, batch_size=None):
-        _x = super().estimate(x)
-        samples = self._p2.sample(_x, reparam=True, batch_size=batch_size)
-        lower_bound = self._p1.log_likelihood(samples) -\
-            self._p2.log_likelihood(samples)
+    def _get_estimated_value(self, x={}, batch_size=None, **kwargs):
+        samples_dict = self._p2.sample(x, reparam=True, batch_size=batch_size)
 
-        return lower_bound
+        lower_bound = self._p1.log_likelihood(samples_dict) - self._p2.log_likelihood(samples_dict)
+
+        return lower_bound, samples_dict
 

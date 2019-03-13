@@ -1,5 +1,6 @@
 from torch import optim, nn
 import torch
+from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 import re
 
 from ..utils import tolist
@@ -11,7 +12,8 @@ class Model(object):
                  test_loss=None,
                  distributions=[],
                  optimizer=optim.Adam,
-                 optimizer_params={}):
+                 optimizer_params={},
+                 clip_grad_norm=None, clip_grad_value=None):
 
         # set losses
         self.loss_cls = None
@@ -24,6 +26,9 @@ class Model(object):
         # set params and optim
         params = self.distributions.parameters()
         self.optimizer = optimizer(params, **optimizer_params)
+
+        self.clip_norm = clip_grad_norm
+        self.clip_value = clip_grad_value
 
     def __str__(self):
         prob_text = []
@@ -59,6 +64,11 @@ class Model(object):
 
         # backprop
         loss.backward()
+
+        if self.clip_norm:
+            clip_grad_norm_(self.distributions.parameters(), self.clip_norm)
+        if self.clip_value:
+            clip_grad_value_(self.distributions.parameters(), self.clip_value)
 
         # update params
         self.optimizer.step()

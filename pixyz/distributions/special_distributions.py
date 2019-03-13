@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from .distributions import Distribution
+from ..utils import get_dict_values
 
 
 class Deterministic(Distribution):
@@ -16,19 +17,18 @@ class Deterministic(Distribution):
         return "Deterministic"
 
     def sample(self, x={}, return_all=True, **kwargs):
-        if len(x) > 0:
-            x_dict = self._check_input(x)
-            output_dict = self.forward(**x_dict)
+        x_dict = self._check_input(x)
+        _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
+        output_dict = self.forward(**_x_dict)
 
-            if set(output_dict.keys()) != set(self._var):
-                raise ValueError("Output variables are not same as `var`.")
+        if set(output_dict.keys()) != set(self._var):
+            raise ValueError("Output variables are not same as `var`.")
 
-            if return_all:
-                output_dict.update(x_dict)
+        if return_all:
+            x_dict.update(output_dict)
+            return x_dict
 
-            return output_dict
-
-        raise ValueError("You should set inputs.")
+        return output_dict
 
 
 class DataDistribution(Distribution):
@@ -45,11 +45,8 @@ class DataDistribution(Distribution):
         return "Data distribution"
 
     def sample(self, x={}, **kwargs):
-        if len(x) > 0:
-            output_dict = self._check_input(x)
-            return output_dict
-
-        raise ValueError("You should set inputs.")
+        output_dict = self._check_input(x)
+        return output_dict
 
     @property
     def input_var(self):

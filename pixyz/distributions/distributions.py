@@ -10,7 +10,7 @@ from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, toli
 
 class Distribution(nn.Module):
     """
-    Distribution class. In pixyz, all distributions are required to inherit this class.
+    Distribution class. In Pixyz, all distributions are required to inherit this class.
 
     Attributes
     ----------
@@ -98,9 +98,9 @@ class Distribution(nn.Module):
 
     def _check_input(self, x, var=None):
         """
-        Check the type of a given input.
-        If this type is a dictionary, we check whether this key and `var` are same.
-        In case that this is list or tensor, we return a output formatted in a dictionary.
+        Check the type of given input.
+        If the input type is `dictionary`, this method checks whether the input keys contains the `var` list.
+        In case that its type is `list` or `tensor`, it returns the output formatted in `dictionary`.
 
         Parameters
         ----------
@@ -108,18 +108,18 @@ class Distribution(nn.Module):
             Input variables
 
         var : list or None
-            Variables to check if `x` has them.
+            Variables to check if given input contains them.
             This is set to None by default.
 
         Returns
         -------
         checked_x : dict
-            Variables which are checked in this method.
+            Variables checked in this method.
 
         Raises
         ------
         ValueError
-            Raises ValueError if the type of `x` is neither tensor, list, nor dictionary.
+            Raises ValueError if the type of input is neither tensor, list, nor dictionary.
         """
 
         if var is None:
@@ -129,16 +129,16 @@ class Distribution(nn.Module):
             checked_x = {var[0]: x}
 
         elif type(x) is list:
+            # TODO: we need to check if all the elements contained in this list are torch.Tensor.
             checked_x = dict(zip(var, x))
 
         elif type(x) is dict:
-            if not set(list(x.keys())) == set(var):
-                raise ValueError("Input's keys are not valid.")
+            if not (set(list(x.keys())) >= set(var)):
+                raise ValueError("Input keys are not valid.")
             checked_x = x
 
         else:
-            raise ValueError("The type of input is not valid, got %s."
-                             % type(x))
+            raise ValueError("The type of input is not valid, got %s." % type(x))
 
         return checked_x
 
@@ -290,7 +290,7 @@ class DistributionBase(Distribution):
             else:
                 raise ValueError
 
-    def _set_distribution(self, x={}):
+    def set_distribution(self, x={}):
         """
         Require self.params_keys and self.DistributionTorch
 
@@ -355,7 +355,7 @@ class DistributionBase(Distribution):
 
     def _replace_vars_to_params(self, vars_dict, replace_dict):
         """
-        Replace variables in keys of a input dictionary to parameters of this distribution according to
+        Replace variables in input keys to parameters of this distribution according to
         these correspondences which is formatted in a dictionary and set in `_initialize_constant_params`.
 
         Parameters
@@ -369,9 +369,6 @@ class DistributionBase(Distribution):
         Returns
         -------
         params_dict : dict
-            Dictionary.
-
-        vars_dict : dict
             Dictionary.
 
         Examples
@@ -404,10 +401,11 @@ class DistributionBase(Distribution):
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
 
-        if len(x) == 0:  # unconditioned
-            if len(self.input_var) != 0:
-                raise ValueError("You should set inputs or parameters")
+        # check whether the input is valid or convert it to valid dictionary.
+        x_dict = self._check_input(x)
 
+        # unconditioned
+        if len(self.input_var) == 0:
             if shape:
                 sample_shape = shape
             else:
@@ -416,27 +414,38 @@ class DistributionBase(Distribution):
                 else:
                     sample_shape = (batch_size, self.dim)
 
-            self._set_distribution()
+            self.set_distribution()
             output_dict = self._get_sample(reparam=reparam,
                                            sample_shape=sample_shape)
 
-        else:  # conditioned
-            x_dict = self._check_input(x)
-            self._set_distribution(x_dict)
+        # conditioned
+        else:
+            # remove redundant variables from x_dict.
+            _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
+            self.set_distribution(_x_dict)
             output_dict = self._get_sample(reparam=reparam)
 
-            if return_all:
-                output_dict.update(x_dict)
+        if return_all:
+            x_dict.update(output_dict)
+            return x_dict
 
         return output_dict
+
+    def sample_mean(self, x={}):
+        self.set_distribution(x)
+        return self.dist.mean
+
+    def sample_variance(self, x={}):
+        self.set_distribution(x)
+        return self.dist.variance
 
     def log_likelihood(self, x_dict):
 
         if not set(list(x_dict.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input's keys are not valid.")
+            raise ValueError("Input keys are not valid.")
 
-        _x_dict = get_dict_values(x_dict, self._cond_var, True)
-        self._set_distribution(_x_dict)
+        _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
+        self.set_distribution(_x_dict)
 
         log_like = self._get_log_like(x_dict)
         log_like = sum_samples(log_like)
@@ -547,38 +556,27 @@ class MultiplyDistribution(Distribution):
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
 
-        x = get_dict_values(x, self._input_var, return_dict=True)
-
         # sample from the parent distribution
-        parents_input = get_dict_values(x, self._parent.input_var, return_dict=True)
-        parents_output = self._parent.sample(x=parents_input,
-                                             shape=shape,
-                                             batch_size=batch_size,
-                                             return_all=False, reparam=reparam)
+        parents_x_dict = x
+        child_x_dict = self._parent.sample(x=parents_x_dict,
+                                           shape=shape,
+                                           batch_size=batch_size,
+                                           return_all=True, reparam=reparam)
 
         # sample from the child distribution
-        children_inh_input = get_dict_values(parents_output, self.inh_var, return_dict=True)
-        children_input_exc_inh_var = list(set(self._child.input_var)-set(self.inh_var))
-        children_input = get_dict_values(x, children_input_exc_inh_var, return_dict=True)
-        children_input.update(children_inh_input)
+        output_dict = self._child.sample(x=child_x_dict,
+                                         shape=shape,
+                                         batch_size=batch_size,
+                                         return_all=True, reparam=reparam)
 
-        children_output = self._child.sample(x=children_input,
-                                             shape=shape,
-                                             batch_size=batch_size,
-                                             return_all=False, reparam=reparam)
+        if return_all is False:
+            output_dict = get_dict_values(x, self._var, return_dict=True)
+            return output_dict
 
-        output = parents_output
-        output.update(children_output)
-
-        if return_all:
-            output.update(x)
-
-        return output
+        return output_dict
 
     def log_likelihood(self, x):
-        parents_x = get_dict_values(x, self._parent.cond_var + self._parent.var, return_dict=True)
-        children_x = get_dict_values(x, self._child.cond_var + self._child.var, return_dict=True)
-        log_like = self._parent.log_likelihood(parents_x) + self._child.log_likelihood(children_x)
+        log_like = self._parent.log_likelihood(x) + self._child.log_likelihood(x)
 
         return log_like
 
@@ -650,21 +648,26 @@ class ReplaceVarDistribution(Distribution):
         return self._a.get_params(params_dict)
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
-        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
+        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
+        replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
-        output_dict = self._a.sample(x, shape, batch_size, return_all, reparam)
+        output_dict = self._a.sample(replaced_input_dict, shape=shape, batch_size=batch_size,
+                                     return_all=False, reparam=reparam)
         output_dict = replace_dict_keys(output_dict, self._replace_dict)
 
-        return output_dict
+        x.update(output_dict)
+        return x
 
     def log_likelihood(self, x):
-        x = replace_dict_keys(x, self._replace_inv_dict)
+        input_dict = get_dict_values(x, self.cond_var + self.var, return_dict=True)
+        input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
 
-        return self._a.log_likelihood(x)
+        return self._a.log_likelihood(input_dict)
 
     def sample_mean(self, x):
-        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
-        return self._a.sample_mean(x)
+        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
+        input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
+        return self._a.sample_mean(input_dict)
 
     @property
     def input_var(self):

@@ -5,6 +5,10 @@ from .exponential_distributions import (
     FactorizedBernoulli,
     Categorical,
     RelaxedCategorical,
+    Dirichlet,
+    Beta,
+    Laplace,
+    Gamma,
 )
 from .custom_distributions import (
     CustomLikelihoodDistribution,
@@ -41,6 +45,11 @@ __all__ = [
     'FactorizedBernoulli',
     'Categorical',
     'RelaxedCategorical',
+    'Dirichlet',
+    'Beta',
+    'Laplace',
+    'Gamma',
+
     'MultiplyDistribution',
     'PlanarFlow',
     'RealNVP',

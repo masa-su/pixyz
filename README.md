@@ -4,7 +4,7 @@
 
 
 [![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
-[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4.1-yellow.svg)](https://github.com/masa-su/pixyz)
+[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
 
 - [What is Pixyz?](#what-is-pixyz)
@@ -101,14 +101,14 @@ prior = Normal(loc=loc, scale=scale, var=["z"], dim=64, name="p_prior")
 If you want to see what kind of distribution and architecture each instance defines, just `print` them!
 ```python
 print(p)
->> Distribution:
->>   p(x|z) (Bernoulli)
->> Network architecture:
->>   Generator(
->>     (fc1): Linear(in_features=64, out_features=512, bias=True)
->>     (fc2): Linear(in_features=512, out_features=512, bias=True)
->>     (fc3): Linear(in_features=512, out_features=784, bias=True)
->> )
+# Distribution:
+#   p(x|z) (Bernoulli)
+# Network architecture:
+#   Generator(
+#     (fc1): Linear(in_features=64, out_features=512, bias=True)
+#     (fc2): Linear(in_features=512, out_features=512, bias=True)
+#     (fc3): Linear(in_features=512, out_features=784, bias=True)
+# )
 ```
 Conveniently, each instance (distribution) can **perform sampling** and **estimate (log-)likelihood** over given samples regardless of the form of the internal DNN architecture. It will be explained later (see section 2.3).
 
@@ -116,15 +116,15 @@ Moreover, in VAE, we should define the joint distribution p(x,z)=p(x|z)p(z) as t
 ```python
 p_joint = p * prior
 print(p_joint)
->> Distribution:
->>   p(x,z) = p(x|z)p_prior(z)
->> Network architecture:
->>   p_prior(z) (Normal): Normal()
->>   p(x|z) (Bernoulli): Generator(
->>    (fc1): Linear(in_features=64, out_features=512, bias=True)
->>    (fc2): Linear(in_features=512, out_features=512, bias=True)
->>    (fc3): Linear(in_features=512, out_features=784, bias=True)
->>  )
+# Distribution:
+#   p(x,z) = p(x|z)p_prior(z)
+# Network architecture:
+#   p_prior(z) (Normal): Normal()
+#   p(x|z) (Bernoulli): Generator(
+#    (fc1): Linear(in_features=64, out_features=512, bias=True)
+#    (fc2): Linear(in_features=512, out_features=512, bias=True)
+#    (fc3): Linear(in_features=512, out_features=784, bias=True)
+#  )
 ```
 This distribution can also perform sampling and likelihood estimation in the same way. Thanks to this API, we can easily implement **even more complicated probabilistic models**.
 
@@ -175,14 +175,13 @@ loss_cls = -(elbo - (0.1 * nll)).sum() - elbo_u.sum()
 We can check what format this loss is just by printing!
 ```python
 print(loss_cls)
->> -(sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)) - sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])
+# -(sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)) - sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])
 ```
 When you want to estimate a value of the loss function given data, use the `estimate` method.
 ```python
 loss_tensor = loss_cls.estimate({"x": x_tensor, "y": y_tensor, "x_u": x_u_tensor})
 print(loss_tensor)
->> tensor(1.00000e+05 *
-          1.2587, device='cuda:0')
+# tensor(1.00000e+05 * 1.2587, device='cuda:0')
 ```
 Since the type of this value is just `torch.Tensor`, you can train it just like a normal way in PyTorch, 
 ```python
@@ -207,12 +206,12 @@ Distribution API itself can perform sampling. The type of arguments and return v
 # prior: p(z)
 samples_dict = prior.sample()
 print(samples_dict)
->> {'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
+# {'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
 print(p.sample(samples_dict))
->> {'x': tensor([[ 0.,  0.,...]], device='cuda:0', 'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
+# {'x': tensor([[ 0.,  0.,...]], device='cuda:0', 'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
 p_joint = p * p_prior  # p(x,z)
 print(p_joint.sample())
->> {'x': tensor([[ 0.,  1.,...]], device='cuda:0', 'z': tensor([[1.2795,  0.7561,...]], device='cuda:0')}
+# {'x': tensor([[ 0.,  1.,...]], device='cuda:0', 'z': tensor([[1.2795,  0.7561,...]], device='cuda:0')}
 ```
 
 Moreover, estimating log-likelihood is also possible (using the `log_likelihood` method).
@@ -221,7 +220,7 @@ Moreover, estimating log-likelihood is also possible (using the `log_likelihood`
 # data: {"x": x_tensor, "z": z_tensor}
 loglike = p.log_likelihood(data)
 print(loglike)
->> tensor([[-540.9977, -541.6169, -542.1608,...]], device='cuda:0')
+# tensor([[-540.9977, -541.6169, -542.1608,...]], device='cuda:0')
 ```
 
 By using these functions in Distribution API, ELBO (Eq.(1)) under given data (x_tensor) can also be calculated as follows.

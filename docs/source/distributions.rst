@@ -27,6 +27,13 @@ Normal
     :members:
     :undoc-members:
 
+Laplace
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Laplace
+    :members:
+    :undoc-members:
+
 Bernoulli
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
        
@@ -59,6 +66,27 @@ RelaxedCategorical
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
        
 .. autoclass:: RelaxedCategorical
+    :members:
+    :undoc-members:
+
+Beta
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Beta
+    :members:
+    :undoc-members:
+
+Dirichlet
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Dirichlet
+    :members:
+    :undoc-members:
+
+Gamma
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Gamma
     :members:
     :undoc-members:
 
