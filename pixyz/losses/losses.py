@@ -280,7 +280,7 @@ class AbsLoss(LossSelfOperator):
 
     def _get_estimated_value(self, x={}, **kwargs):
         loss, x = self._loss1._get_estimated_value(x, **kwargs)
-        return loss.abs, x
+        return loss.abs(), x
 
 
 class BatchMean(LossSelfOperator):
