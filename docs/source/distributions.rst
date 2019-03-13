@@ -27,6 +27,13 @@ Normal
     :members:
     :undoc-members:
 
+Laplace
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Laplace
+    :members:
+    :undoc-members:
+
 Bernoulli
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
        
@@ -76,10 +83,10 @@ Dirichlet
     :members:
     :undoc-members:
 
-Laplace
+Gamma
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Laplace
+.. autoclass:: Gamma
     :members:
     :undoc-members:
 
