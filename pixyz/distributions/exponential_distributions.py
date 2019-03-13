@@ -64,7 +64,7 @@ class RelaxedBernoulli(DistributionBase):
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def _set_distribution(self, x={}, sampling=True, **kwargs):
+    def set_distribution(self, x={}, sampling=True, **kwargs):
         params = self.get_params(x, **kwargs)
         if sampling is True:
             self.dist =\
@@ -82,7 +82,7 @@ class RelaxedBernoulli(DistributionBase):
 
         if len(self._cond_var) > 0:  # conditional distribution
             _x = get_dict_values(x, self._cond_var, True)
-            self._set_distribution(_x, sampling=False)
+            self.set_distribution(_x, sampling=False)
 
         log_like = self._get_log_like(x)
         return sum_samples(log_like)
@@ -144,7 +144,7 @@ class RelaxedCategorical(DistributionBase):
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def _set_distribution(self, x={}, sampling=True, **kwargs):
+    def set_distribution(self, x={}, sampling=True, **kwargs):
         params = self.get_params(x, **kwargs)
         if sampling is True:
             self.dist =\
@@ -162,7 +162,7 @@ class RelaxedCategorical(DistributionBase):
 
         if len(self._cond_var) > 0:  # conditional distribution
             _x = get_dict_values(x, self._cond_var, True)
-            self._set_distribution(_x, sampling=False)
+            self.set_distribution(_x, sampling=False)
 
         log_like = self._get_log_like(x)
         return sum_samples(log_like)

@@ -290,7 +290,7 @@ class DistributionBase(Distribution):
             else:
                 raise ValueError
 
-    def _set_distribution(self, x={}):
+    def set_distribution(self, x={}):
         """
         Require self.params_keys and self.DistributionTorch
 
@@ -414,7 +414,7 @@ class DistributionBase(Distribution):
                 else:
                     sample_shape = (batch_size, self.dim)
 
-            self._set_distribution()
+            self.set_distribution()
             output_dict = self._get_sample(reparam=reparam,
                                            sample_shape=sample_shape)
 
@@ -422,7 +422,7 @@ class DistributionBase(Distribution):
         else:
             # remove redundant variables from x_dict.
             _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
-            self._set_distribution(_x_dict)
+            self.set_distribution(_x_dict)
             output_dict = self._get_sample(reparam=reparam)
 
         if return_all:
@@ -432,11 +432,11 @@ class DistributionBase(Distribution):
         return output_dict
 
     def sample_mean(self, x={}):
-        self._set_distribution(x)
+        self.set_distribution(x)
         return self.dist.mean
 
     def sample_variance(self, x={}):
-        self._set_distribution(x)
+        self.set_distribution(x)
         return self.dist.variance
 
     def log_likelihood(self, x_dict):
@@ -445,7 +445,7 @@ class DistributionBase(Distribution):
             raise ValueError("Input keys are not valid.")
 
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self._set_distribution(_x_dict)
+        self.set_distribution(_x_dict)
 
         log_like = self._get_log_like(x_dict)
         log_like = sum_samples(log_like)
