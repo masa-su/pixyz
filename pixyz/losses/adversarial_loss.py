@@ -26,6 +26,9 @@ class AdversarialLoss(Loss):
         params = discriminator.parameters()
         self.d_optimizer = optimizer(params, **optimizer_params)
 
+    def _get_batch_size(self, x):
+        return get_dict_values(x, self.input_dist.input_var[0])[0].shape[0]
+
     def d_loss(self, y_p, y_q, batch_size):
         raise NotImplementedError
 
@@ -82,7 +85,7 @@ class AdversarialJensenShannon(AdversarialLoss):
                                                     self._q.prob_text)
 
     def _get_estimated_value(self, x, discriminator=False, **kwargs):
-        batch_size = get_dict_values(x, self._p.input_var[0])[0].shape[0]
+        batch_size = self._get_batch_size(x)
 
         # sample x_p from p
         x_p_dict = get_dict_values(self._p.sample(x, batch_size=batch_size), self.d.input_var, True)
@@ -159,7 +162,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
                                                     self._q.prob_text)
 
     def _get_estimated_value(self, x, discriminator=False, **kwargs):
-        batch_size = get_dict_values(x, self._p.input_var[0])[0].shape[0]
+        batch_size = self._get_batch_size(x)
 
         # sample x_p from p
         x_p_dict = get_dict_values(self._p.sample(x, batch_size=batch_size), self.d.input_var, True)
