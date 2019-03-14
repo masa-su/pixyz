@@ -42,14 +42,14 @@ class MMD(Loss):
 
     @property
     def loss_text(self):
-        return "MMD[{}||{}]".format(self._p1.prob_text, self._p2.prob_text)
+        return "MMD[{}||{}]".format(self._p.prob_text, self._q.prob_text)
 
     def _get_estimated_value(self, x={}, **kwargs):
         batch_size = get_dict_values(x, self.input_dist.input_var[0])[0].shape[0]
 
         # sample from distributions
-        p_x = get_dict_values(self._p1.sample(x, batch_size=batch_size), self._p1.var)[0]
-        q_x = get_dict_values(self._p2.sample(x, batch_size=batch_size), self._p2.var)[0]
+        p_x = get_dict_values(self._p.sample(x, batch_size=batch_size), self._p.var)[0]
+        q_x = get_dict_values(self._q.sample(x, batch_size=batch_size), self._q.var)[0]
 
         if p_x.shape != q_x.shape:
             raise ValueError("The two distribution variables must have the same shape.")

@@ -18,26 +18,26 @@ class KullbackLeibler(Loss):
      (perhaps because of `set_distribution`).
     """
 
-    def __init__(self, p1, p2, input_var=None, dim=None):
+    def __init__(self, p, q, input_var=None, dim=None):
         self.dim = dim
-        super().__init__(p1, p2, input_var)
+        super().__init__(p, q, input_var)
 
     @property
     def loss_text(self):
-        return "KL[{}||{}]".format(self._p1.prob_text, self._p2.prob_text)
+        return "KL[{}||{}]".format(self._p.prob_text, self._q.prob_text)
 
     def _get_estimated_value(self, x, **kwargs):
-        if (isinstance(self._p1, DistributionBase) is False) or (isinstance(self._p2, DistributionBase) is False):
+        if (isinstance(self._p, DistributionBase) is False) or (isinstance(self._q, DistributionBase) is False):
             raise ValueError("Divergence between these two distributions cannot be estimated, "
-                             "got %s and %s." % (self._p1.distribution_name, self._p2.distribution_name))
+                             "got %s and %s." % (self._p.distribution_name, self._q.distribution_name))
 
-        inputs = get_dict_values(x, self._p1.input_var, True)
-        self._p1.set_distribution(inputs)
+        inputs = get_dict_values(x, self._p.input_var, True)
+        self._p.set_distribution(inputs)
 
-        inputs = get_dict_values(x, self._p2.input_var, True)
-        self._p2.set_distribution(inputs)
+        inputs = get_dict_values(x, self._q.input_var, True)
+        self._q.set_distribution(inputs)
 
-        divergence = kl_divergence(self._p1.dist, self._p2.dist)
+        divergence = kl_divergence(self._p.dist, self._q.dist)
 
         if self.dim:
             _kl = torch.sum(divergence, dim=self.dim)
