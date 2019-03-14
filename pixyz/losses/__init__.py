@@ -35,6 +35,10 @@ from .autoregressive import (
     IterativeLoss,
 )
 
+from .mmd import (
+    MMD,
+)
+
 __all__ = [
     'Parameter',
     'CrossEntropy',
@@ -50,4 +54,5 @@ __all__ = [
     'AdversarialKullbackLeibler',
     'AdversarialWassersteinDistance',
     'IterativeLoss',
+    'MMD',
 ]

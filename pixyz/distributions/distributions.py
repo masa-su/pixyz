@@ -717,11 +717,11 @@ class MarginalizeVarDistribution(Distribution):
         if not((set(marginalize_list)) < set(_var)):
             raise ValueError()
 
-        if not((set(marginalize_list)).isdisjoint(set(a.input_var))):
+        if not((set(marginalize_list)).isdisjoint(set(_cond_var))):
             raise ValueError()
 
         if len(marginalize_list) == 0:
-            raise ValueError("Length of `marginalize_list` should be more than zero.")
+            raise ValueError("Length of `marginalize_list` must be at least 1, got %d." % len(marginalize_list))
 
         _var = [var for var in _var if var not in marginalize_list]
 
