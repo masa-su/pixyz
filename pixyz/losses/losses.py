@@ -1,7 +1,7 @@
 import numbers
 from copy import deepcopy
 
-from ..utils import get_dict_values, tolist
+from ..utils import tolist
 
 
 class Loss(object):
@@ -280,7 +280,7 @@ class AbsLoss(LossSelfOperator):
 
     def _get_estimated_value(self, x={}, **kwargs):
         loss, x = self._loss1._get_estimated_value(x, **kwargs)
-        return loss.abs, x
+        return loss.abs(), x
 
 
 class BatchMean(LossSelfOperator):

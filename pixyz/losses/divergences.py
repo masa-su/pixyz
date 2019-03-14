@@ -1,5 +1,8 @@
 import torch
+from torch.distributions import kl_divergence
+
 from ..utils import get_dict_values
+from ..distributions.distributions import DistributionBase
 from .losses import Loss
 
 
@@ -10,9 +13,13 @@ class KullbackLeibler(Loss):
     .. math::
 
         D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
+
+    TODO: This class seems to be slightly slower than this previous implementation
+     (perhaps because of `set_distribution`).
     """
 
-    def __init__(self, p1, p2, input_var=None):
+    def __init__(self, p1, p2, input_var=None, dim=None):
+        self.dim = dim
         super().__init__(p1, p2, input_var)
 
     @property
@@ -20,16 +27,27 @@ class KullbackLeibler(Loss):
         return "KL[{}||{}]".format(self._p1.prob_text, self._p2.prob_text)
 
     def _get_estimated_value(self, x, **kwargs):
-        if self._p1.distribution_name == "Normal" and self._p2.distribution_name == "Normal":
-            inputs = get_dict_values(x, self._p1.input_var, True)
-            params1 = self._p1.get_params(inputs, **kwargs)
+        if (isinstance(self._p1, DistributionBase) is False) or (isinstance(self._p2, DistributionBase) is False):
+            raise ValueError("Divergence between these two distributions cannot be estimated, "
+                             "got %s and %s." % (self._p1.distribution_name, self._p2.distribution_name))
 
-            inputs = get_dict_values(x, self._p2.input_var, True)
-            params2 = self._p2.get_params(inputs, **kwargs)
+        inputs = get_dict_values(x, self._p1.input_var, True)
+        self._p1.set_distribution(inputs)
 
-            return gauss_gauss_kl(params1["loc"], params1["scale"],
-                                  params2["loc"], params2["scale"]), x
+        inputs = get_dict_values(x, self._p2.input_var, True)
+        self._p2.set_distribution(inputs)
 
+        divergence = kl_divergence(self._p1.dist, self._p2.dist)
+
+        if self.dim:
+            _kl = torch.sum(divergence, dim=self.dim)
+            return divergence, x
+
+        dim_list = list(torch.arange(divergence.dim()))
+        divergence = torch.sum(divergence, dim=dim_list[1:])
+        return divergence, x
+
+"""
         if (self._p1.distribution_name == "vonMisesFisher" and \
             self._p2.distribution_name == "HypersphericalUniform"):
             inputs = get_dict_values(x, self._p1.input_var, True)
@@ -43,20 +61,14 @@ class KullbackLeibler(Loss):
                         "got %s and %s." % (self._p1.distribution_name,
                                             self._p2.distribution_name))
 
+        #inputs = get_dict_values(x, self._p2.input_var, True)
+        #self._p2.set_distribution(inputs)
 
-def gauss_gauss_kl(loc1, scale1, loc2, scale2, dim=None):
-    # https://github.com/pytorch/pytorch/blob/85408e744fc1746ab939ae824a26fd6821529a94/torch/distributions/kl.py#L384
-    var_ratio = (scale1 / scale2).pow(2)
-    t1 = ((loc1 - loc2) / scale2).pow(2)
-    _kl = 0.5 * (var_ratio + t1 - 1 - var_ratio.log())
+        #divergence = kl_divergence(self._p1.dist, self._p2.dist)
 
-    if dim:
-        _kl = torch.sum(_kl, dim=dim)
-        return _kl
-
-    dim_list = list(torch.arange(_kl.dim()))
-    _kl = torch.sum(_kl, dim=dim_list[1:])
-    return _kl
+        if self.dim:
+            _kl = torch.sum(divergence, dim=self.dim)
+            return divergence, x
 
 def vmf_hyu_kl(vmf_loc, vmf_scale, hyu_dim, device):
     __m = vmf_loc.shape[-1]
@@ -69,3 +81,4 @@ def vmf_hyu_kl(vmf_loc, vmf_scale, hyu_dim, device):
     hyu_entropy = math.log(2) + ((hyu_dim + 1) / 2) * math.log(math.pi) - torch.lgamma(
         torch.Tensor([(hyu_dim + 1) / 2])).to(device)
     return - vmf_entropy + hyu_entropy
+"""

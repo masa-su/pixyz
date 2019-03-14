@@ -290,7 +290,7 @@ class DistributionBase(Distribution):
             else:
                 raise ValueError
 
-    def _set_distribution(self, x={}):
+    def set_distribution(self, x={}):
         """
         Require self.params_keys and self.DistributionTorch
 
@@ -414,7 +414,7 @@ class DistributionBase(Distribution):
                 else:
                     sample_shape = (batch_size, self.dim)
 
-            self._set_distribution()
+            self.set_distribution()
             output_dict = self._get_sample(reparam=reparam,
                                            sample_shape=sample_shape)
 
@@ -422,7 +422,7 @@ class DistributionBase(Distribution):
         else:
             # remove redundant variables from x_dict.
             _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
-            self._set_distribution(_x_dict)
+            self.set_distribution(_x_dict)
             output_dict = self._get_sample(reparam=reparam)
 
         if return_all:
@@ -431,13 +431,21 @@ class DistributionBase(Distribution):
 
         return output_dict
 
+    def sample_mean(self, x={}):
+        self.set_distribution(x)
+        return self.dist.mean
+
+    def sample_variance(self, x={}):
+        self.set_distribution(x)
+        return self.dist.variance
+
     def log_likelihood(self, x_dict):
 
         if not set(list(x_dict.keys())) >= set(self._cond_var + self._var):
             raise ValueError("Input keys are not valid.")
 
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self._set_distribution(_x_dict)
+        self.set_distribution(_x_dict)
 
         log_like = self._get_log_like(x_dict)
         log_like = sum_samples(log_like)
@@ -597,8 +605,6 @@ class ReplaceVarDistribution(Distribution):
 
     replace_dict : dict
         Dictionary.
-
-    # TODO: bugfix
     """
 
     def __init__(self, a, replace_dict):
@@ -642,7 +648,7 @@ class ReplaceVarDistribution(Distribution):
         return self._a.get_params(params_dict)
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
-        input_dict = get_dict_values(x, self._a.cond_var, return_dict=True)
+        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
         output_dict = self._a.sample(replaced_input_dict, shape=shape, batch_size=batch_size,
@@ -653,13 +659,15 @@ class ReplaceVarDistribution(Distribution):
         return x
 
     def log_likelihood(self, x):
-        x = replace_dict_keys(x, self._replace_inv_dict)
+        input_dict = get_dict_values(x, self.cond_var + self.var, return_dict=True)
+        input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
 
-        return self._a.log_likelihood(x)
+        return self._a.log_likelihood(input_dict)
 
     def sample_mean(self, x):
-        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
-        return self._a.sample_mean(x)
+        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
+        input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
+        return self._a.sample_mean(input_dict)
 
     @property
     def input_var(self):

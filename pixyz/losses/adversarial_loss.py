@@ -106,7 +106,7 @@ class AdversarialJensenShannon(AdversarialLoss):
             y2_dict = self.d.sample(detach_dict(x2_dict))
             y2 = get_dict_values(y2_dict, self.d.var)[0]
 
-            return self.d_loss(y1, y2, batch_size)
+            return self.d_loss(y1, y2, batch_size), x
 
         # sample y from x1
         y1_dict = self.d.sample(x1_dict)
@@ -166,16 +166,16 @@ class AdversarialKullbackLeibler(AdversarialLoss):
                                                     self._p2.prob_text)
 
     def _get_estimated_value(self, x, discriminator=False, **kwargs):
-        batch_size = get_dict_values(_x, self._p1.input_var[0])[0].shape[0]
+        batch_size = get_dict_values(x, self._p1.input_var[0])[0].shape[0]
 
         # sample x from p1
-        x_dict = get_dict_values(_x, self._p1.input_var, True)
+        x_dict = get_dict_values(x, self._p1.input_var, True)
         x1_dict = self._p1.sample(x_dict, batch_size=batch_size)
         x1_dict = get_dict_values(x1_dict, self.d.input_var, True)
 
         if discriminator:
             # sample x from p2
-            x_dict = get_dict_values(_x, self._p2.input_var, True)
+            x_dict = get_dict_values(x, self._p2.input_var, True)
             x2_dict = self._p2.sample(x_dict, batch_size=batch_size)
             x2_dict = get_dict_values(x2_dict, self.d.input_var, True)
 
@@ -187,7 +187,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
             y2_dict = self.d.sample(detach_dict(x2_dict))
             y2 = get_dict_values(y2_dict, self.d.var)[0]
 
-            return self.d_loss(y1, y2, batch_size)
+            return self.d_loss(y1, y2, batch_size), x
 
         # sample y from x1
         y1_dict = self.d.sample(x1_dict)

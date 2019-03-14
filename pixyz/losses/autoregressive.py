@@ -9,16 +9,15 @@ class IterativeLoss(Loss):
     r"""
     Iterative loss.
 
-    You can implement arbitrary model which needs to iteration (e.g., auto-regressive models) with this class.
+    This class allows implementing an arbitrary model which requires iteration (e.g., auto-regressive models).
 
     .. math::
 
-        \mathcal{L} = \mathcal{L}_{last}(x_1, h_T) + \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t),
+        \mathcal{L} = \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t), where x_t = f_{slice_step}(x, t)
     """
 
-    def __init__(self, step_loss, last_loss=None, max_iter=1,
-                 input_var=None, series_var=None, update_value={}, slice_step=None, timestep_var="t"):
-        self.last_loss = last_loss
+    def __init__(self, step_loss, max_iter=1,
+                 input_var=None, series_var=None, update_value={}, slice_step=None, timestep_var=["t"]):
         self.step_loss = step_loss
         self.max_iter = max_iter
         self.update_value = update_value
@@ -32,29 +31,21 @@ class IterativeLoss(Loss):
             self._input_var = input_var
         else:
             _input_var = []
-            if self.last_loss is not None:
-                _input_var += deepcopy(self.last_loss.input_var)
-            if self.step_loss is not None:
-                _input_var += deepcopy(self.step_loss.input_var)
+            _input_var += deepcopy(self.step_loss.input_var)
+
             self._input_var = sorted(set(_input_var), key=_input_var.index)
 
-            if self.step_loss:
-                self._input_var.remove(timestep_var)  # delete the variable of time step
+            if slice_step:
+                self._input_var.remove(timestep_var[0])  # delete a time-step variable from input_var
 
         self.series_var = series_var
 
     @property
     def loss_text(self):
-        _loss_text = []
-        if self.last_loss is not None:
-            _loss_text.append(self.last_loss.loss_text)
 
-        if self.step_loss is not None:
-            _step_loss_text = "sum_(t=1)^(T={}) {}".format(str(self.max_iter),
-                                                           self.step_loss.loss_text)
-            _loss_text.append(_step_loss_text)
-
-        return " + ".join(_loss_text)
+        _loss_text = "sum({} in [1, {}]) ({})".format(self.timestep_var[0], str(self.max_iter),
+                                                      self.step_loss.loss_text)
+        return _loss_text
 
     def slice_step_fn(self, t, x):
         return {k: v[t] for k, v in x.items()}
@@ -73,7 +64,7 @@ class IterativeLoss(Loss):
         
         for t in range(max_iter):
             if self.slice_step:
-                x.update({self.timestep_var: t})
+                x.update({self.timestep_var[0]: t})
             else:
                 # update series inputs & use slice_step_fn
                 x.update(self.slice_step_fn(t, series_x))
@@ -89,10 +80,6 @@ class IterativeLoss(Loss):
                 x.update({value: x[key]})
 
         loss = step_loss_sum
-
-        if self.last_loss is not None:
-            x.update(self.slice_step_from_inputs(0, series_x))
-            loss += self.last_loss.estimate(x)
 
         x.update(series_x)
         return loss, x

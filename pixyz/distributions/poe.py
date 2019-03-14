@@ -54,7 +54,7 @@ class NormalPoE(nn.Module):
         self.distribution_name = "Normal"
         self.DistributionTorch = NormalTorch
 
-    def _set_distribution(self, x={}, **kwargs):
+    def set_distribution(self, x={}, **kwargs):
         params = self.get_params(x, **kwargs)
         self.dist = self.DistributionTorch(**params)
 
@@ -107,7 +107,7 @@ class NormalPoE(nn.Module):
         # input : tensor, list or dict
         # output : dict
 
-        self._set_distribution(x, **kwargs)
+        self.set_distribution(x, **kwargs)
         output = {self.var[0]: self._get_sample(**kwargs)}
 
         if return_all:
