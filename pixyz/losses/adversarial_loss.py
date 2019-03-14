@@ -7,24 +7,24 @@ from ..utils import get_dict_values, detach_dict
 class AdversarialLoss(Loss):
     def __init__(self, p, q, discriminator, input_var=None,
                  optimizer=optim.Adam, optimizer_params={}):
+        if p.var != q.var:
+            raise ValueError("The two distribution variables must be the same.")
+
+        if len(p.input_var) > 0:
+            self.input_dist = p
+        elif len(q.input_var) > 0:
+            self.input_dist = q
+        else:
+            raise NotImplementedError
+
         super().__init__(p, q, input_var=input_var)
+
         self.loss_optimizer = optimizer
         self.loss_optimizer_params = optimizer_params
         self.d = discriminator
 
         params = discriminator.parameters()
         self.d_optimizer = optimizer(params, **optimizer_params)
-
-        # TODO: fix this decision rule
-        if p.distribution_name == "Data distribution":
-            self._p_data_dist = True
-        else:
-            self._p_data_dist = False
-
-        if q.distribution_name == "Data distribution":
-            self._q_data_dist = True
-        else:
-            self._q_data_dist = False
 
     def d_loss(self, y_p, y_q, batch_size):
         raise NotImplementedError
@@ -84,45 +84,35 @@ class AdversarialJensenShannon(AdversarialLoss):
     def _get_estimated_value(self, x, discriminator=False, **kwargs):
         batch_size = get_dict_values(x, self._p.input_var[0])[0].shape[0]
 
-        # sample x from p
-        x_dict = get_dict_values(x, self._p.input_var, True)
-        if self._p_data_dist:
-            x_p_dict = x_dict
-        else:
-            x_p_dict = self._p.sample(x_dict, batch_size=batch_size)
-            x_p_dict = get_dict_values(x_p_dict, self.d.input_var, True)
-
-        # sample x from q
-        x_dict = get_dict_values(x, self._q.input_var, True)
-        x_q_dict = self._q.sample(x_dict, batch_size=batch_size)
-        x_q_dict = get_dict_values(x_q_dict, self.d.input_var, True)
+        # sample x_p from p
+        x_p_dict = get_dict_values(self._p.sample(x, batch_size=batch_size), self.d.input_var, True)
+        # sample x_q from q
+        x_q_dict = get_dict_values(self._q.sample(x, batch_size=batch_size), self.d.input_var, True)
 
         if discriminator:
-            # sample y from x_p
-            y_p_dict = self.d.sample(detach_dict(x_p_dict))
-            y_p = get_dict_values(y_p_dict, self.d.var)[0]
-
-            # sample y from x_q
-            y_q_dict = self.d.sample(detach_dict(x_q_dict))
-            y_q = get_dict_values(y_q_dict, self.d.var)[0]
+            # sample y_p from d
+            y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict)), self.d.var)[0]
+            # sample y_q from d
+            y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
 
             return self.d_loss(y_p, y_q, batch_size), x
 
-        # sample y from x_p
+        # sample y_p from d
         y_p_dict = self.d.sample(x_p_dict)
-        # sample y from x_q
+        # sample y_q from d
         y_q_dict = self.d.sample(x_q_dict)
 
         y_p = get_dict_values(y_p_dict, self.d.var)[0]
         y_q = get_dict_values(y_q_dict, self.d.var)[0]
 
-        return self.g_loss(y_p, y_q, batch_size), x  # TODO: fix
+        return self.g_loss(y_p, y_q, batch_size), x
 
     def d_loss(self, y_p, y_q, batch_size):
         # set labels
-        t1 = torch.ones(batch_size, 1).to(y_p.device)
-        t2 = torch.zeros(batch_size, 1).to(y_p.device)
-        return self.bce_loss(y_p, t1) + self.bce_loss(y_q, t2)
+        t_p = torch.ones(batch_size, 1).to(y_p.device)
+        t_q = torch.zeros(batch_size, 1).to(y_p.device)
+
+        return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
 
     def g_loss(self, y_p, y_q, batch_size):
         # set labels
@@ -136,8 +126,11 @@ class AdversarialJensenShannon(AdversarialLoss):
             y_p_loss = -self.bce_loss(y_p, t1)
             y_q_loss = -self.bce_loss(y_q, t2)
 
-        if self._p_data_dist:
+        if self._p.distribution_name == "Data distribution":
             y_p_loss = y_p_loss.detach()
+
+        if self._q.distribution_name == "Data distribution":
+            y_q_loss = y_q_loss.detach()
 
         return y_p_loss + y_q_loss
 
@@ -148,16 +141,16 @@ class AdversarialKullbackLeibler(AdversarialLoss):
 
     .. math::
 
-        D_{KL}[q(x)||p(x)] = \mathbb{E}_{q(x)}[\log \frac{q(x)}{p(x)}]
-         = \mathbb{E}_{q(x)}[\log \frac{d^*(x)}{1-d^*(x)}],
+        D_{KL}[p(x)||q(x)] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
+         = \mathbb{E}_{p(x)}[\log \frac{d^*(x)}{1-d^*(x)}],
 
-    where :math:`d^*(x) = \arg\max_{d} \mathbb{E}_{p(x)}[\log d(x)] + \mathbb{E}_{q(x)}[\log (1-d(x))]`.
+    where :math:`d^*(x) = \arg\max_{d} \mathbb{E}_{q(x)}[\log d(x)] + \mathbb{E}_{p(x)}[\log (1-d(x))]`.
 
-    Note that this divergence is minimized to close q to p.
+    Note that this divergence is minimized to close p to q.
     """
 
-    def __init__(self, q, p, discriminator, **kwargs):
-        super().__init__(q, p, discriminator, **kwargs)
+    def __init__(self, p, q, discriminator, **kwargs):
+        super().__init__(p, q, discriminator, **kwargs)
         self.bce_loss = nn.BCELoss()
 
     @property
@@ -168,47 +161,40 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     def _get_estimated_value(self, x, discriminator=False, **kwargs):
         batch_size = get_dict_values(x, self._p.input_var[0])[0].shape[0]
 
-        # sample x from p
-        x_dict = get_dict_values(x, self._p.input_var, True)
-        x_p_dict = self._p.sample(x_dict, batch_size=batch_size)
-        x_p_dict = get_dict_values(x_p_dict, self.d.input_var, True)
+        # sample x_p from p
+        x_p_dict = get_dict_values(self._p.sample(x, batch_size=batch_size), self.d.input_var, True)
 
         if discriminator:
-            # sample x from q
-            x_dict = get_dict_values(x, self._q.input_var, True)
-            x_q_dict = self._q.sample(x_dict, batch_size=batch_size)
-            x_q_dict = get_dict_values(x_q_dict, self.d.input_var, True)
+            # sample x_q from q
+            x_q_dict = get_dict_values(self._q.sample(x, batch_size=batch_size), self.d.input_var, True)
 
             # sample y_p from d
-            y_p_dict = self.d.sample(detach_dict(x_p_dict))
-            y_p = get_dict_values(y_p_dict, self.d.var)[0]
-
+            y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict)), self.d.var)[0]
             # sample y_q from d
-            y_q_dict = self.d.sample(detach_dict(x_q_dict))
-            y_q = get_dict_values(y_q_dict, self.d.var)[0]
+            y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
 
             return self.d_loss(y_p, y_q, batch_size), x
 
         # sample y from d
-        y_p_dict = self.d.sample(x_p_dict)
-        y_p = get_dict_values(y_p_dict, self.d.var)[0]
+        y_p = get_dict_values(self.d.sample(x_p_dict), self.d.var)[0]
 
         return self.g_loss(y_p, batch_size), x
 
     def g_loss(self, y_p, batch_size):
         # set labels
-        t1 = torch.ones(batch_size, 1).to(y_p.device)
-        t2 = torch.zeros(batch_size, 1).to(y_p.device)
+        t_p = torch.ones(batch_size, 1).to(y_p.device)
+        t_q = torch.zeros(batch_size, 1).to(y_p.device)
 
-        y_p_loss = -self.bce_loss(y_p, t1) + self.bce_loss(y_p, t2)
+        y_p_loss = -self.bce_loss(y_p, t_p) + self.bce_loss(y_p, t_q)
 
         return y_p_loss
 
     def d_loss(self, y_p, y_q, batch_size):
         # set labels
-        t1 = torch.ones(batch_size, 1).to(y_p.device)
-        t2 = torch.zeros(batch_size, 1).to(y_p.device)
-        return self.bce_loss(y_p, t1) + self.bce_loss(y_q, t2)
+        t_p = torch.ones(batch_size, 1).to(y_p.device)
+        t_q = torch.zeros(batch_size, 1).to(y_p.device)
+
+        return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
 
 
 class AdversarialWassersteinDistance(AdversarialJensenShannon):
@@ -235,12 +221,17 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
         return - (torch.mean(y_p) - torch.mean(y_q))
 
     def g_loss(self, y_p, y_q, *args, **kwargs):
-        if self._p_data_dist:
+        if self._p.distribution_name == "Data distribution":
             y_p = y_p.detach()
+
+        if self._q.distribution_name == "Data distribution":
+            y_q = y_q.detach()
+
         return torch.mean(y_p) - torch.mean(y_q)
 
     def train(self, train_x, **kwargs):
         loss = super().train(train_x, **kwargs)
+
         # Clip weights of discriminator
         for params in self.d.parameters():
             params.data.clamp_(-self._clip_value, self._clip_value)

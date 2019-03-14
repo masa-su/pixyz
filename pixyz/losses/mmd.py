@@ -18,7 +18,7 @@ class MMD(Loss):
         if p.var != q.var:
             raise ValueError("The two distribution variables must be the same.")
 
-        if len(p.var)!=1:
+        if len(p.var) != 1:
             raise ValueError("A given distribution must have only one variable.")
 
         if len(p.input_var) > 0:
