@@ -116,6 +116,20 @@ AdversarialWassersteinDistance
     :members:
     :undoc-members:
 
+MMD loss
+-----------------------------------
+
+MMD
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MMD
+    :members:
+    :undoc-members:
+
+Kernels
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autofunction:: rbf_kernel
+
 Loss for sequential distributions
 -----------------------------------
 

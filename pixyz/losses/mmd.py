@@ -10,7 +10,7 @@ class MMD(Loss):
     .. math::
 
         D_{MMD}[p||q] = \mathbb{E}_{p(x), p(x')}[k(x, x')] + \mathbb{E}_{q(x), q(x')}[k(x, x')]
-        - \mathbb{E}_{p(x), q(x')}[k(x, x')]
+        - 2\mathbb{E}_{p(x), q(x')}[k(x, x')]
 
     where :math:`k(x, x')` is any positive definite kernel.
     """
@@ -68,11 +68,11 @@ class MMD(Loss):
 
 def rbf_kernel(x, y, sigma_sqr=1, **kwargs):
     r"""
-    Radial basis function kernel.
+    Radial basis function (RBF) kernel.
 
     .. math::
 
-        k(x, x') = \exp (|frac{||x-x'||^2}{2|sigma^2})
+        k(x, x') = \exp (\frac{||x-x'||^2}{2\sigma^2})
     """
 
     kernel_input = ((x[:, None, :] - y[None, :, :])**2).mean(-1)
