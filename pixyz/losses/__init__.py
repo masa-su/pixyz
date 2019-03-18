@@ -37,7 +37,6 @@ from .autoregressive import (
 
 from .mmd import (
     MMD,
-    rbf_kernel,
 )
 
 __all__ = [
@@ -56,5 +55,4 @@ __all__ = [
     'AdversarialWassersteinDistance',
     'IterativeLoss',
     'MMD',
-    'rbf_kernel',
 ]

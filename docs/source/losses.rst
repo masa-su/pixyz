@@ -126,10 +126,6 @@ MMD
     :members:
     :undoc-members:
 
-Kernels
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autofunction:: rbf_kernel
-
 Loss for sequential distributions
 -----------------------------------
 
