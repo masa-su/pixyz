@@ -5,16 +5,17 @@ from ..utils import get_dict_values
 
 class MMD(Loss):
     r"""
-    Maximum Mean Discrepancy (MMD).
+    The Maximum Mean Discrepancy (MMD).
 
     .. math::
 
-        D_{MMD}[p||q] = \mathbb{E}_{p(x), p(x')}[k(x, x')] + \mathbb{E}_{q(x), q(x')}[k(x, x')]
+        D_{MMD^2}[p||q] = \mathbb{E}_{p(x), p(x')}[k(x, x')] + \mathbb{E}_{q(x), q(x')}[k(x, x')]
         - 2\mathbb{E}_{p(x), q(x')}[k(x, x')]
 
     where :math:`k(x, x')` is any positive definite kernel.
     """
-    def __init__(self, p, q, input_var=None, kernel="rbf", **kernel_params):
+
+    def __init__(self, p, q, input_var=None, kernel="gaussian", **kernel_params):
         if p.var != q.var:
             raise ValueError("The two distribution variables must be the same.")
 
@@ -28,8 +29,10 @@ class MMD(Loss):
         else:
             raise NotImplementedError
 
-        if kernel == "rbf":
-            self.kernel = rbf_kernel
+        if kernel == "gaussian":
+            self.kernel = gaussian_rbf_kernel
+        elif kernel == "inv-multiquadratic":
+            self.kernel = inverse_multiquadratic_rbf_kernel
         else:
             raise NotImplementedError
 
@@ -42,10 +45,13 @@ class MMD(Loss):
 
     @property
     def loss_text(self):
-        return "MMD[{}||{}]".format(self._p.prob_text, self._q.prob_text)
+        return "MMD^2[{}||{}]".format(self._p.prob_text, self._q.prob_text)
+
+    def _get_batch_size(self, x):
+        return get_dict_values(x, self.input_dist.input_var[0])[0].shape[0]
 
     def _get_estimated_value(self, x={}, **kwargs):
-        batch_size = get_dict_values(x, self.input_dist.input_var[0])[0].shape[0]
+        batch_size = self._get_batch_size(x)
 
         # sample from distributions
         p_x = get_dict_values(self._p.sample(x, batch_size=batch_size), self._p.var)[0]
@@ -57,28 +63,48 @@ class MMD(Loss):
         if len(p_x.shape) != 2:
             raise ValueError("The number of axes of a given sample must be 2, got %d" % len(p_x.shape))
 
-        # estimate MMD
-        p_kernel = self.kernel(p_x, p_x, **self.kernel_params).mean()
-        q_kernel = self.kernel(q_x, q_x, **self.kernel_params).mean()
-        pq_kernel = self.kernel(p_x, q_x, **self.kernel_params).mean()
-        mmd_loss = p_kernel + q_kernel - 2*pq_kernel
+        p_x_dim = p_x.shape[1]
+        q_x_dim = q_x.shape[1]
+
+        # estimate the squared MMD (unbiased estimator)
+        p_kernel = self.kernel(p_x, p_x, **self.kernel_params).sum() / (p_x_dim * (p_x_dim - 1))
+        q_kernel = self.kernel(q_x, q_x, **self.kernel_params).sum() / (q_x_dim * (q_x_dim - 1))
+        pq_kernel = self.kernel(p_x, q_x, **self.kernel_params).sum() / (p_x_dim * q_x_dim)
+        mmd_loss = p_kernel + q_kernel - 2 * pq_kernel
 
         return mmd_loss, x
 
 
-def rbf_kernel(x, y, sigma_sqr=1, **kwargs):
+def pairwise_distance_matrix(x, y, metric="euclidean"):
     r"""
-    Radial basis function (RBF) kernel.
+    Computes the pairwise distance matrix between x and y.
+    """
+
+    if metric == "euclidean":
+        return torch.sum((x[:, None, :] - y[None, :, :]) ** 2, dim=-1)
+
+    raise NotImplementedError
+
+
+def gaussian_rbf_kernel(x, y, sigma_sqr=2., **kwargs):
+    r"""
+    Gaussian radial basis function (RBF) kernel.
 
     .. math::
 
-        k(x, x') = \exp (\frac{||x-x'||^2}{2\sigma^2})
+        k(x, y) = \exp (\frac{||x-y||^2}{\sigma^2})
     """
 
-    kernel_input = ((x[:, None, :] - y[None, :, :])**2).mean(-1)
-    return torch.exp(-kernel_input / 2.0*sigma_sqr)
+    return torch.exp(-pairwise_distance_matrix(x, y) / (1. * sigma_sqr))
 
 
+def inverse_multiquadratic_rbf_kernel(x, y, sigma_sqr=2., **kwargs):
+    r"""
+    Inverse multi-quadratic radial basis function (RBF) kernel.
 
+    .. math::
 
+        k(x, y) = \frac{\sigma^2}{||x-y||^2 + \sigma^2}
+    """
 
+    return sigma_sqr / (pairwise_distance_matrix(x, y) + sigma_sqr)
