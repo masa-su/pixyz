@@ -31,7 +31,7 @@ class Deterministic(Distribution):
         return output_dict
 
     def sample_mean(self, x):
-        return self.sample(x, return_all=False)[self._var[0]][0]
+        return self.sample(x, return_all=False)[self._var[0]]
 
 
 class DataDistribution(Distribution):
@@ -52,7 +52,7 @@ class DataDistribution(Distribution):
         return output_dict
 
     def sample_mean(self, x):
-        return self.sample(x, return_all=False)[self._var[0]][0]
+        return self.sample(x, return_all=False)[self._var[0]
 
     @property
     def input_var(self):
