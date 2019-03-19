@@ -39,6 +39,10 @@ from .mmd import (
     MMD,
 )
 
+from .wasserstein import (
+    WassersteinDistance,
+)
+
 __all__ = [
     'Parameter',
     'CrossEntropy',
@@ -55,4 +59,5 @@ __all__ = [
     'AdversarialWassersteinDistance',
     'IterativeLoss',
     'MMD',
+    'WassersteinDistance',
 ]

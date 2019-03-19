@@ -64,7 +64,7 @@ ELBO
     :members:
     :undoc-members:
 
-Divergence
+Statistical distance
 ----------------------------
 
 KullbackLeibler
@@ -74,26 +74,23 @@ KullbackLeibler
     :members:
     :undoc-members:
 
-
-Similarity 
-----------------------------
-    
-SimilarityLoss
+WassersteinDistance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: SimilarityLoss
+.. autoclass:: WassersteinDistance
     :members:
     :undoc-members:
 
-MultiModalContrastivenessLoss
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+MMD
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: MultiModalContrastivenessLoss
+.. autoclass:: MMD
     :members:
     :undoc-members:
 
-Adversarial loss (GAN loss)
-----------------------------
+
+Adversarial statistical distance (GAN loss)
+-------------------------------------------
 
 AdversarialJensenShannon
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -116,15 +113,6 @@ AdversarialWassersteinDistance
     :members:
     :undoc-members:
 
-MMD loss
------------------------------------
-
-MMD
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: MMD
-    :members:
-    :undoc-members:
 
 Loss for sequential distributions
 -----------------------------------
