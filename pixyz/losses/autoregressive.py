@@ -54,7 +54,15 @@ class IterativeLoss(Loss):
         series_x = get_dict_values(x, self.series_var, return_dict=True)
         step_loss_sum = 0
 
-        for t in range(self.max_iter):
+        if "max_iter" in kwargs.keys():
+            max_iter = kwargs["max_iter"]
+        else: max_iter = self.max_iter
+
+        if "mask" in kwargs.keys():
+            mask = kwargs["mask"].float()
+        else: mask = None
+        
+        for t in range(max_iter):
             if self.slice_step:
                 x.update({self.timestep_var[0]: t})
             else:
@@ -64,6 +72,7 @@ class IterativeLoss(Loss):
             # estimate
             step_loss, samples = self.step_loss.estimate(x, return_dict=True)
             x.update(samples)
+            if mask is not None: step_loss *= mask[t]
             step_loss_sum += step_loss
 
             # update
@@ -74,4 +83,3 @@ class IterativeLoss(Loss):
 
         x.update(series_x)
         return loss, x
-

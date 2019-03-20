@@ -120,7 +120,7 @@ class LossExpectation(Loss):
         samples_dict = self._p1.sample(x, reparam=True, return_all=True)
 
         # TODO: whether estimate or _get_estimate_value
-        loss, loss_sample_dict = self._loss.estimate(samples_dict, return_dict=True)
+        loss, loss_sample_dict = self._loss.estimate(samples_dict, return_dict=True, **kwargs)
         samples_dict.update(loss_sample_dict)
 
         return loss, samples_dict
