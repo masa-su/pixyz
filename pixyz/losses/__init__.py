@@ -10,7 +10,7 @@ from .expectations import (
     CrossEntropy,
     Entropy,
     StochasticReconstructionLoss,
-    LossExpectation,
+    Expectation,
 )
 
 from .elbo import (
@@ -20,10 +20,6 @@ from .elbo import (
 from .pdf import (
     LogProb,
     Prob,
-)
-
-from .nll import (
-    NLL,
 )
 
 from .adversarial_loss import (
@@ -53,11 +49,10 @@ __all__ = [
     'CrossEntropy',
     'Entropy',
     'StochasticReconstructionLoss',
-    'LossExpectation',
+    'Expectation',
     'KullbackLeibler',
     'LogProb',
     'Prob',
-    'NLL',
     'ELBO',
     'SimilarityLoss',
     'MultiModalContrastivenessLoss',

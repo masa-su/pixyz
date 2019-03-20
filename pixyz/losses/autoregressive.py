@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from .losses import Loss
-from .expectations import LossExpectation
+from .expectations import Expectation
 from ..utils import get_dict_values
 
 
@@ -25,7 +25,7 @@ class IterativeLoss(Loss):
 
         self.slice_step = slice_step
         if self.slice_step:
-            self.step_loss = LossExpectation(self.slice_step, self.step_loss)
+            self.step_loss = Expectation(self.slice_step, self.step_loss)
 
         if input_var is not None:
             self._input_var = input_var

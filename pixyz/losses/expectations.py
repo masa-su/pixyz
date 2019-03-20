@@ -93,7 +93,7 @@ class StochasticReconstructionLoss(Loss):
         return loss, samples_dict
 
 
-class LossExpectation(Loss):
+class Expectation(Loss):
     r"""
     Expectation of a given loss function (Monte Carlo approximation).
 
