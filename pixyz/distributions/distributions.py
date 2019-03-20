@@ -6,6 +6,7 @@ from torch import nn
 from copy import deepcopy
 
 from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist
+from ..losses import LogProb, Prob
 
 
 class Distribution(nn.Module):
@@ -20,7 +21,7 @@ class Distribution(nn.Module):
     cond_var : list
         Conditional variables of this distribution.
         In case that cond_var is not empty, we must set the corresponding inputs in order to
-        sample variables or estimate the log likelihood.
+        sample variables.
 
     dim : int
         Number of dimensions of this distribution.
@@ -203,23 +204,14 @@ class Distribution(nn.Module):
 
         raise NotImplementedError
 
-    def log_likelihood(self, x_dict):
-        """
-        Estimate the log likelihood of this distribution from inputs formatted by a dictionary.
-
-        Parameters
-        ----------
-        x_dict : dict
-            Input samples.
-
-        Returns
-        -------
-        log_like : torch.Tensor
-            Log-likelihood.
-
-        """
-
+    def get_log_prob(self, *args, **kwargs):
         raise NotImplementedError
+
+    def log_prob(self, sum_features=True, feature_dims=None):
+        return LogProb(self, sum_features=sum_features, feature_dims=feature_dims)
+
+    def prob(self, sum_features=True, feature_dims=None):
+        return Prob(self, sum_features=sum_features, feature_dims=feature_dims)
 
     def forward(self, *args, **kwargs):
         """
@@ -339,22 +331,31 @@ class DistributionBase(Distribution):
 
         return samples_dict
 
-    def _get_log_like(self, x):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         """
         Parameters
         ----------
-        x : dict
+        x_dict : dict
+
+        sum_features : bool
+
+        feature_dims : None or list
 
         Returns
         -------
-        log_like : torch.Tensor
+        log_prob : torch.Tensor
 
         """
 
-        x_targets = get_dict_values(x, self._var)
-        log_like = self.dist.log_prob(*x_targets)
+        _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
+        self.set_distribution(_x_dict)
 
-        return log_like
+        x_targets = get_dict_values(x_dict, self._var)
+        log_prob = self.dist.log_prob(*x_targets)
+        if sum_features:
+            log_prob = sum_samples(log_prob)
+
+        return log_prob
 
     def _replace_vars_to_params(self, vars_dict, replace_dict):
         """
@@ -441,18 +442,6 @@ class DistributionBase(Distribution):
     def sample_variance(self, x={}):
         self.set_distribution(x)
         return self.dist.variance
-
-    def log_likelihood(self, x_dict):
-
-        if not set(list(x_dict.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input keys are not valid.")
-
-        _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self.set_distribution(_x_dict)
-
-        log_like = self._get_log_like(x_dict)
-        log_like = sum_samples(log_like)
-        return log_like
 
     def forward(self, **params):
         return params
@@ -578,10 +567,18 @@ class MultiplyDistribution(Distribution):
 
         return output_dict
 
-    def log_likelihood(self, x):
-        log_like = self._parent.log_likelihood(x) + self._child.log_likelihood(x)
+    def get_log_prob(self, x, sum_features=True, feature_dims=None):
+        parent_log_prob = self._parent.get_log_prob(x, sum_features=sum_features, feature_dims=feature_dims)
+        child_log_prob = self._child.get_log_prob(x, sum_features=sum_features, feature_dims=feature_dims)
 
-        return log_like
+        if sum_features:
+            return parent_log_prob + child_log_prob
+
+        if parent_log_prob.size() == child_log_prob.size():
+            return parent_log_prob + child_log_prob
+
+        raise ValueError("Two PDFs, {} and {}, have different sizes,"
+                         " so you must set sum_dim=True.".format(self._parent.prob_text, self._child.prob_text))
 
     def __repr__(self):
         if isinstance(self._parent, MultiplyDistribution):
@@ -661,16 +658,19 @@ class ReplaceVarDistribution(Distribution):
         x.update(output_dict)
         return x
 
-    def log_likelihood(self, x):
-        input_dict = get_dict_values(x, self.cond_var + self.var, return_dict=True)
-        input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
-
-        return self._a.log_likelihood(input_dict)
+    def get_log_prob(self, x_dict, **kwargs):
+        input_dict = replace_dict_keys(x_dict, self._replace_inv_dict)
+        return self._a.get_log_prob(input_dict, **kwargs)
 
     def sample_mean(self, x):
         input_dict = get_dict_values(x, self.cond_var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
         return self._a.sample_mean(input_dict)
+
+    def sample_variance(self, x):
+        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
+        input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
+        return self._a.sample_variance(input_dict)
 
     @property
     def input_var(self):
@@ -709,7 +709,7 @@ class MarginalizeVarDistribution(Distribution):
         marginalize_list = tolist(marginalize_list)
 
         if not isinstance(a, Distribution):
-            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(a)))
+            raise ValueError("Given input must be `pixyz.Distribution`, got {}.".format(type(a)))
 
         if isinstance(a, DistributionBase):
             raise ValueError("`pixyz.DistributionBase` cannot marginalize its variables for now.")
@@ -745,11 +745,11 @@ class MarginalizeVarDistribution(Distribution):
 
         return output_dict
 
-    def log_likelihood(self, x_dict):
-        raise NotImplementedError
-
     def sample_mean(self, x):
         return self._a.sample_mean(x)
+
+    def sample_variance(self, x):
+        return self._a.sample_variance(x)
 
     @property
     def input_var(self):
@@ -779,7 +779,6 @@ class MarginalizeVarDistribution(Distribution):
 
 def sum_samples(samples):
     dim = samples.dim()
-
     if dim <= 4:
         dim_list = list(torch.arange(samples.dim()))
         samples = torch.sum(samples, dim=dim_list[1:])

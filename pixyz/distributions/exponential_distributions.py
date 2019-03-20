@@ -73,20 +73,6 @@ class RelaxedBernoulli(DistributionBase):
         else:
             self.dist = self.DistributionTorch(**params)
 
-    def log_likelihood(self, x):
-        # input : dict
-        # output : dict
-
-        if not set(list(x.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input keys are not valid.")
-
-        if len(self._cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self._cond_var, True)
-            self.set_distribution(_x, sampling=False)
-
-        log_like = self._get_log_like(x)
-        return sum_samples(log_like)
-
 
 class FactorizedBernoulli(Bernoulli):
     """
@@ -102,11 +88,12 @@ class FactorizedBernoulli(Bernoulli):
     def distribution_name(self):
         return "FactorizedBernoulli"
 
-    def _get_log_like(self, x):
-        log_like = super()._get_log_like(x)
+    def get_log_prob(self, x):
+        log_prob = super().get_log_prob(x, sum_features=False)
         [_x] = get_dict_values(x, self._var)
-        log_like[_x == 0] = 0
-        return log_like
+        log_prob[_x == 0] = 0
+        log_prob = sum_samples(log_prob)
+        return log_prob
 
 
 class Categorical(DistributionBase):
@@ -152,20 +139,6 @@ class RelaxedCategorical(DistributionBase):
                                               **params)
         else:
             self.dist = self.DistributionTorch(**params)
-
-    def log_likelihood(self, x):
-        # input : dict
-        # output : dict
-
-        if not set(list(x.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input keys are not valid.")
-
-        if len(self._cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self._cond_var, True)
-            self.set_distribution(_x, sampling=False)
-
-        log_like = self._get_log_like(x)
-        return sum_samples(log_like)
 
 
 class Dirichlet(DistributionBase):

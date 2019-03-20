@@ -17,6 +17,11 @@ from .elbo import (
     ELBO,
 )
 
+from .pdf import (
+    LogProb,
+    Prob,
+)
+
 from .nll import (
     NLL,
 )
@@ -50,6 +55,8 @@ __all__ = [
     'StochasticReconstructionLoss',
     'LossExpectation',
     'KullbackLeibler',
+    'LogProb',
+    'Prob',
     'NLL',
     'ELBO',
     'SimilarityLoss',
