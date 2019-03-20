@@ -19,7 +19,7 @@ class GAN(Model):
 
         # set losses
         loss = AdversarialJensenShannon(p_data, p, discriminator,
-                                        optimizer=d_optimizer, optimizer_params=d_optimizer_params).mean()
+                                        optimizer=d_optimizer, optimizer_params=d_optimizer_params)
 
         super().__init__(loss, test_loss=loss,
                          distributions=distributions,

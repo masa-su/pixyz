@@ -35,6 +35,14 @@ from .autoregressive import (
     IterativeLoss,
 )
 
+from .mmd import (
+    MMD,
+)
+
+from .wasserstein import (
+    WassersteinDistance,
+)
+
 __all__ = [
     'Parameter',
     'CrossEntropy',
@@ -50,4 +58,6 @@ __all__ = [
     'AdversarialKullbackLeibler',
     'AdversarialWassersteinDistance',
     'IterativeLoss',
+    'MMD',
+    'WassersteinDistance',
 ]

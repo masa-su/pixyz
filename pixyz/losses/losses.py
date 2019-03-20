@@ -5,17 +5,17 @@ from ..utils import tolist
 
 
 class Loss(object):
-    def __init__(self, p1, p2=None, input_var=None):
-        self._p1 = p1
-        self._p2 = p2
+    def __init__(self, p, q=None, input_var=None):
+        self._p = p
+        self._q = q
         self._loss_text = None
 
         if input_var is not None:
             self._input_var = input_var
         else:
-            _input_var = deepcopy(p1.input_var)
-            if p2 is not None:
-                _input_var += deepcopy(p2.input_var)
+            _input_var = deepcopy(p.input_var)
+            if q is not None:
+                _input_var += deepcopy(q.input_var)
                 _input_var = sorted(set(_input_var), key=_input_var.index)
             self._input_var = _input_var
 
@@ -25,7 +25,7 @@ class Loss(object):
 
     @property
     def loss_text(self):
-        return "loss({},{})".format(self._p1.prob_text, self._p2.prob_text)
+        return "loss({},{})".format(self._p.prob_text, self._q.prob_text)
 
     def __str__(self):
         return self.loss_text

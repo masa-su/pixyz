@@ -19,14 +19,14 @@ class ELBO(Loss):
 
     @property
     def loss_text(self):
-        return "E_{}[log {}/{}]".format(self._p2.prob_text,
-                                        self._p1.prob_text,
-                                        self._p2.prob_text)
+        return "E_{}[log {}/{}]".format(self._q.prob_text,
+                                        self._p.prob_text,
+                                        self._q.prob_text)
 
     def _get_estimated_value(self, x={}, batch_size=None, **kwargs):
-        samples_dict = self._p2.sample(x, reparam=True, batch_size=batch_size)
+        samples_dict = self._q.sample(x, reparam=True, batch_size=batch_size)
 
-        lower_bound = self._p1.log_likelihood(samples_dict) - self._p2.log_likelihood(samples_dict)
+        lower_bound = self._p.log_likelihood(samples_dict) - self._q.log_likelihood(samples_dict)
 
         return lower_bound, samples_dict
 

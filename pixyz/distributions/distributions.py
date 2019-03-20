@@ -169,7 +169,7 @@ class Distribution(nn.Module):
         {"loc": 0, "scale": 1}
         """
 
-        NotImplementedError
+        raise NotImplementedError
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
@@ -201,7 +201,7 @@ class Distribution(nn.Module):
             Samples of this distribution.
         """
 
-        NotImplementedError
+        raise NotImplementedError
 
     def log_likelihood(self, x_dict):
         """
@@ -219,17 +219,20 @@ class Distribution(nn.Module):
 
         """
 
-        NotImplementedError
+        raise NotImplementedError
 
     def forward(self, *args, **kwargs):
         """
         When this class is inherited by DNNs, it is also intended that this method is overrided.
         """
 
-        NotImplementedError
+        raise NotImplementedError
 
     def sample_mean(self, x):
-        NotImplementedError
+        raise NotImplementedError
+
+    def sample_variance(self, x):
+        raise NotImplementedError
 
     def replace_var(self, **replace_dict):
         return ReplaceVarDistribution(self, replace_dict)
@@ -717,11 +720,11 @@ class MarginalizeVarDistribution(Distribution):
         if not((set(marginalize_list)) < set(_var)):
             raise ValueError()
 
-        if not((set(marginalize_list)).isdisjoint(set(a.input_var))):
+        if not((set(marginalize_list)).isdisjoint(set(_cond_var))):
             raise ValueError()
 
         if len(marginalize_list) == 0:
-            raise ValueError("Length of `marginalize_list` should be more than zero.")
+            raise ValueError("Length of `marginalize_list` must be at least 1, got %d." % len(marginalize_list))
 
         _var = [var for var in _var if var not in marginalize_list]
 
