@@ -68,11 +68,11 @@ class Loss(object, metaclass=abc.ABCMeta):
     def sum(self):
         return BatchSum(self)
 
-    def estimate(self, x={}, return_dict=False, **kwargs):
+    def eval(self, x={}, return_dict=False, **kwargs):
         if not(set(list(x.keys())) >= set(self._input_var)):
             raise ValueError("Input keys are not valid, got {}.".format(list(x.keys())))
 
-        loss, x = self._get_estimated_value(x, **kwargs)
+        loss, x = self._get_eval(x, **kwargs)
 
         if return_dict:
             return loss, x
@@ -80,7 +80,7 @@ class Loss(object, metaclass=abc.ABCMeta):
         return loss
 
     @abc.abstractmethod
-    def _get_estimated_value(self, x, **kwargs):
+    def _get_eval(self, x, **kwargs):
         raise NotImplementedError
 
 
@@ -89,7 +89,7 @@ class ValueLoss(Loss):
         self._loss1 = loss1
         self._input_var = []
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         return self._loss1, x
 
     @property
@@ -103,7 +103,7 @@ class Parameter(Loss):
             raise ValueError
         self._input_var = tolist(input_var)
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         return x[self._input_var[0]], x
 
     @property
@@ -154,15 +154,15 @@ class LossOperator(Loss):
     def loss_text(self):
         raise NotImplementedError
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         if not isinstance(self._loss1, type(None)):
-            loss1, x1 = self._loss1._get_estimated_value(x, **kwargs)
+            loss1, x1 = self._loss1._get_eval(x, **kwargs)
         else:
             loss1 = 0
             x1 = {}
 
         if not isinstance(self._loss2, type(None)):
-            loss2, x2 = self._loss2._get_estimated_value(x, **kwargs)
+            loss2, x2 = self._loss2._get_eval(x, **kwargs)
         else:
             loss2 = 0
             x2 = {}
@@ -195,8 +195,8 @@ class AddLoss(LossOperator):
     def loss_text(self):
         return " + ".join(self._loss_text_list)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_eval(x, **kwargs)
         return loss1 + loss2, x
 
 
@@ -205,8 +205,8 @@ class SubLoss(LossOperator):
     def loss_text(self):
         return " - ".join(self._loss_text_list)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_eval(x, **kwargs)
         return loss1 - loss2, x
 
 
@@ -215,8 +215,8 @@ class MulLoss(LossOperator):
     def loss_text(self):
         return " * ".join(self._loss_text_list)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_eval(x, **kwargs)
         return loss1 * loss2, x
 
 
@@ -225,8 +225,8 @@ class DivLoss(LossOperator):
     def loss_text(self):
         return " / ".join(self._loss_text_list)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_eval(x, **kwargs)
         return loss1 / loss2, x
 
 
@@ -259,8 +259,8 @@ class NegLoss(LossSelfOperator):
     def loss_text(self):
         return "-({})".format(self._loss1.loss_text)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1._get_eval(x, **kwargs)
         return -loss, x
 
 
@@ -269,8 +269,8 @@ class AbsLoss(LossSelfOperator):
     def loss_text(self):
         return "|{}|".format(self._loss1.loss_text)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1._get_eval(x, **kwargs)
         return loss.abs(), x
 
 
@@ -289,8 +289,8 @@ class BatchMean(LossSelfOperator):
     def loss_text(self):
         return "mean({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1._get_eval(x, **kwargs)
         return loss.mean(), x
 
 
@@ -309,8 +309,8 @@ class BatchSum(LossSelfOperator):
     def loss_text(self):
         return "sum({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1._get_eval(x, **kwargs)
         return loss.sum(), x
 
 
@@ -322,8 +322,8 @@ class SetLoss(Loss):
     def __getattr__(self, name):
         getattr(self._loss, name)
 
-    def _get_estimated_value(self, x, **kwargs):
-        return self._loss._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x, **kwargs):
+        return self._loss._get_eval(x, **kwargs)
 
     @property
     def loss_text(self):

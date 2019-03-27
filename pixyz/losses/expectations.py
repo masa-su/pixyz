@@ -29,11 +29,11 @@ class Expectation(Loss):
     def loss_text(self):
         return "E_{}[{}]".format(self._p.prob_text, self._f.loss_text)
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         samples_dict = self._p.sample(x, reparam=True, return_all=True)
 
-        # TODO: whether estimate or _get_estimate_value
-        loss, loss_sample_dict = self._f.estimate(samples_dict, return_dict=True, **kwargs)
+        # TODO: whether eval or _get_eval
+        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)
         samples_dict.update(loss_sample_dict)
 
         return loss, samples_dict

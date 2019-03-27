@@ -60,7 +60,7 @@ class Model(object):
         self.distributions.train()
 
         self.optimizer.zero_grad()
-        loss = self.loss_cls.estimate(train_x, **kwargs)
+        loss = self.loss_cls.eval(train_x, **kwargs)
 
         # backprop
         loss.backward()
@@ -79,6 +79,6 @@ class Model(object):
         self.distributions.eval()
 
         with torch.no_grad():
-            loss = self.test_loss_cls.estimate(test_x, **kwargs)
+            loss = self.test_loss_cls.eval(test_x, **kwargs)
 
         return loss

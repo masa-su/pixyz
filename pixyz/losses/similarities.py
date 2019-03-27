@@ -18,7 +18,7 @@ class SimilarityLoss(Loss):
     def _sim(self, x1, x2):
         return torch.sum(x1*x2, dim=1)
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
 
         inputs = get_dict_values(x, self._p.input_var, True)
         sample1 = get_dict_values(self._p.sample(inputs), self.var)[0]
@@ -57,7 +57,7 @@ class MultiModalContrastivenessLoss(Loss):
     def _sim(self, x1, x2):
         return torch.exp(-torch.norm(x1-x2, 2, dim=1) / 2)
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         inputs = get_dict_values(x, self._p.input_var, True)
         sample1 = self._p.sample_mean(inputs)
 

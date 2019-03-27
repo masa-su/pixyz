@@ -25,9 +25,9 @@ class KullbackLeibler(Loss):
     def loss_text(self):
         return "KL[{}||{}]".format(self._p.prob_text, self._q.prob_text)
 
-    def _get_estimated_value(self, x, **kwargs):
+    def _get_eval(self, x, **kwargs):
         if (not hasattr(self._p, 'DistributionTorch')) or (not hasattr(self._q, 'DistributionTorch')):
-            raise ValueError("Divergence between these two distributions cannot be estimated, "
+            raise ValueError("Divergence between these two distributions cannot be evaluated, "
                              "got %s and %s." % (self._p.distribution_name, self._q.distribution_name))
 
         inputs = get_dict_values(x, self._p.input_var, True)
