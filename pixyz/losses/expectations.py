@@ -1,62 +1,89 @@
-from .losses import Loss
+from .losses import Loss, SetLoss
 
 
-class CrossEntropy(Loss):
+class Expectation(Loss):
+    r"""
+    Expectation of a given function (Monte Carlo approximation).
+
+    .. math::
+
+        \mathbb{E}_{p(x)}[f(x)] \approx \frac{1}{L}\sum_{l=1}^L f(x_l),
+
+    where :math:`x_l \sim p(x)`.
+
+    Note that :math:`f` doesn't need to be able to sample, which is known as the law of the unconscious statistician
+     (LOTUS).
+
+    Therefore, in this class, :math:`f` is assumed to `pixyz.Loss`.
+    """
+
+    def __init__(self, p, f, input_var=None):
+
+        if input_var is None:
+            input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
+        self._f = f
+
+        super().__init__(p, input_var=input_var)
+
+    @property
+    def loss_text(self):
+        return "E_{}[{}]".format(self._p.prob_text, self._f.loss_text)
+
+    def _get_estimated_value(self, x={}, **kwargs):
+        samples_dict = self._p.sample(x, reparam=True, return_all=True)
+
+        # TODO: whether estimate or _get_estimate_value
+        loss, loss_sample_dict = self._f.estimate(samples_dict, return_dict=True, **kwargs)
+        samples_dict.update(loss_sample_dict)
+
+        return loss, samples_dict
+
+
+class CrossEntropy(SetLoss):
     r"""
     Cross entropy, a.k.a., the negative expected value of log-likelihood (Monte Carlo approximation).
 
     .. math::
 
-        -\mathbb{E}_{q(x)}[\log p(x)] \approx -\frac{1}{L}\sum_{l=1}^L \log p(x_l),
+        H[p||q] = -\mathbb{E}_{p(x)}[\log q(x)] \approx -\frac{1}{L}\sum_{l=1}^L \log q(x_l),
 
-    where :math:`x_l \sim q(x)`.
+    where :math:`x_l \sim p(x)`.
+
+    Note:
+        This class is a special case of the `Expectation` class.
     """
 
     def __init__(self, p, q, input_var=None):
         if input_var is None:
             input_var = list(set(p.input_var + q.var))
-        super().__init__(p, q, input_var=input_var)
 
-    @property
-    def loss_text(self):
-        return "-E_{}[log {}]".format(self._p.prob_text, self._q.prob_text)
-
-    def _get_estimated_value(self, x={}, **kwargs):
-        samples_dict = self._p.sample(x, reparam=True, return_all=True)
-        loss = -self._q.log_likelihood(samples_dict)
-        return loss, samples_dict
+        loss = -Expectation(p, q.log_prob(), input_var)
+        super().__init__(loss)
 
 
-class Entropy(Loss):
+class Entropy(SetLoss):
     r"""
     Entropy (Monte Carlo approximation).
 
     .. math::
 
-        -\mathbb{E}_{p(x)}[\log p(x)] \approx -\frac{1}{L}\sum_{l=1}^L \log p(x_l),
+        H[p] = -\mathbb{E}_{p(x)}[\log p(x)] \approx -\frac{1}{L}\sum_{l=1}^L \log p(x_l),
 
     where :math:`x_l \sim p(x)`.
 
     Note:
-        This class is a special case of the `CrossEntropy` class. You can get the same result with `CrossEntropy`.
+        This class is a special case of the `Expectation` class.
     """
 
     def __init__(self, p, input_var=None):
         if input_var is None:
             input_var = p.input_var
-        super().__init__(p, None, input_var=input_var)
 
-    @property
-    def loss_text(self):
-        return "-E_{}[log {}]".format(self._p.prob_text, self._p.prob_text)
-
-    def _get_estimated_value(self, x={}, **kwargs):
-        samples_dict = self._p.sample(x, reparam=True, return_all=True)
-        loss = self._p.log_likelihood(samples_dict)
-        return loss, samples_dict
+        loss = -Expectation(p, p.log_prob(), input_var)
+        super().__init__(loss)
 
 
-class StochasticReconstructionLoss(Loss):
+class StochasticReconstructionLoss(SetLoss):
     r"""
     Reconstruction Loss (Monte Carlo approximation).
 
@@ -67,7 +94,7 @@ class StochasticReconstructionLoss(Loss):
     where :math:`z_l \sim q(z|x)`.
 
     Note:
-        This class is a special case of the `CrossEntropy` class. You can get the same result with `CrossEntropy`.
+        This class is a special case of the `Expectation` class.
     """
 
     def __init__(self, encoder, decoder, input_var=None):
@@ -81,46 +108,5 @@ class StochasticReconstructionLoss(Loss):
                                                                          decoder.__class__.__name__,
                                                                          encoder.__class__.__name__))
 
-        super().__init__(encoder, decoder, input_var=input_var)
-
-    @property
-    def loss_text(self):
-        return "-E_{}[log {}]".format(self._p.prob_text, self._q.prob_text)
-
-    def _get_estimated_value(self, x={}, **kwargs):
-        samples_dict = self._p.sample(x, reparam=True, return_all=True)
-        loss = -self._q.log_likelihood(samples_dict)
-        return loss, samples_dict
-
-
-class Expectation(Loss):
-    r"""
-    Expectation of a given loss function (Monte Carlo approximation).
-
-    .. math::
-
-        \mathbb{E}_{p(x)}[loss(x)] \approx \frac{1}{L}\sum_{l=1}^L loss(x_l),
-
-    where :math:`x_l \sim p(x)`.
-    """
-
-    def __init__(self, p, loss, input_var=None):
-
-        if input_var is None:
-            input_var = list(set(p.input_var) | set(loss.input_var) - set(p.var))
-        self._loss = loss
-
-        super().__init__(p, input_var=input_var)
-
-    @property
-    def loss_text(self):
-        return "E_{}[{}]".format(self._p.prob_text, self._loss.loss_text)
-
-    def _get_estimated_value(self, x={}, **kwargs):
-        samples_dict = self._p.sample(x, reparam=True, return_all=True)
-
-        # TODO: whether estimate or _get_estimate_value
-        loss, loss_sample_dict = self._loss.estimate(samples_dict, return_dict=True, **kwargs)
-        samples_dict.update(loss_sample_dict)
-
-        return loss, samples_dict
+        loss = -Expectation(encoder, decoder.log_prob(), input_var)
+        super().__init__(loss)

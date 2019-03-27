@@ -1,14 +1,15 @@
+import abc
+
 import numbers
 from copy import deepcopy
 
 from ..utils import tolist
 
 
-class Loss(object):
+class Loss(object, metaclass=abc.ABCMeta):
     def __init__(self, p, q=None, input_var=None):
         self._p = p
         self._q = q
-        self._loss_text = None
 
         if input_var is not None:
             self._input_var = input_var
@@ -24,8 +25,9 @@ class Loss(object):
         return self._input_var
 
     @property
+    @abc.abstractmethod
     def loss_text(self):
-        return "loss({},{})".format(self._p.prob_text, self._q.prob_text)
+        raise NotImplementedError
 
     def __str__(self):
         return self.loss_text
@@ -77,20 +79,9 @@ class Loss(object):
 
         return loss
 
+    @abc.abstractmethod
     def _get_estimated_value(self, x, **kwargs):
-        return x, x
-
-    def train(self, x={}, **kwargs):
-        """
-        Train the implicit (adversarial) loss function.
-        """
-        return 0
-
-    def test(self, x={}, **kwargs):
-        """
-        Test the implicit (adversarial) loss function.
-        """
-        return 0
+        raise NotImplementedError
 
 
 class ValueLoss(Loss):
@@ -161,7 +152,7 @@ class LossOperator(Loss):
 
     @property
     def loss_text(self):
-        NotImplementedError
+        raise NotImplementedError
 
     def _get_estimated_value(self, x={}, **kwargs):
         if not isinstance(self._loss1, type(None)):
@@ -321,3 +312,19 @@ class BatchSum(LossSelfOperator):
     def _get_estimated_value(self, x={}, **kwargs):
         loss, x = self._loss1._get_estimated_value(x, **kwargs)
         return loss.sum(), x
+
+
+class SetLoss(Loss):
+    def __init__(self, loss):
+        self._loss = loss
+        self._input_var = loss._input_var
+
+    def __getattr__(self, name):
+        getattr(self._loss, name)
+
+    def _get_estimated_value(self, x, **kwargs):
+        return self._loss._get_estimated_value(x, **kwargs)
+
+    @property
+    def loss_text(self):
+        return self._loss.loss_text
