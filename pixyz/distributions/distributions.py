@@ -779,7 +779,9 @@ class MarginalizeVarDistribution(Distribution):
 
 def sum_samples(samples):
     dim = samples.dim()
-    if dim <= 4:
+    if dim == 1:
+        return samples
+    elif dim <= 4:
         dim_list = list(torch.arange(samples.dim()))
         samples = torch.sum(samples, dim=dim_list[1:])
         return samples

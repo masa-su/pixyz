@@ -1,3 +1,4 @@
+import torch
 from torch.distributions import Normal as NormalTorch
 from torch.distributions import Bernoulli as BernoulliTorch
 from torch.distributions import RelaxedBernoulli as RelaxedBernoulliTorch
@@ -51,7 +52,7 @@ class RelaxedBernoulli(DistributionBase):
     Relaxed (reparameterizable) Bernoulli distribution parameterized by :attr:`probs`.
     """
 
-    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
+    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = BernoulliTorch
         # use relaxed version only when sampling
@@ -117,7 +118,7 @@ class RelaxedCategorical(DistributionBase):
     Relaxed (reparameterizable) categorical distribution parameterized by :attr:`probs`.
     """
 
-    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None,
+    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", dim=None,
                  **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = CategoricalTorch
