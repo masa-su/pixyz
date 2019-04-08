@@ -213,6 +213,10 @@ class Distribution(nn.Module):
     def prob(self, sum_features=True, feature_dims=None):
         return Prob(self, sum_features=sum_features, feature_dims=feature_dims)
 
+    def log_likelihood(self, *args, **kwargs):
+        raise NotImplementedError("The `log_likelihood()` method  has been removed. "
+                                  "You should use `log_prob().eval()` instead.")
+
     def forward(self, *args, **kwargs):
         """
         When this class is inherited by DNNs, it is also intended that this method is overrided.

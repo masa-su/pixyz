@@ -79,6 +79,9 @@ class Loss(object, metaclass=abc.ABCMeta):
 
         return loss
 
+    def estimate(self, *args, **kwargs):
+        raise NotImplementedError("The `estimate()` method has been replaced to `eval()`.")
+
     @abc.abstractmethod
     def _get_eval(self, x, **kwargs):
         raise NotImplementedError
