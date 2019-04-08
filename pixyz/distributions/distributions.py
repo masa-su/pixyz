@@ -665,7 +665,21 @@ class ReplaceVarDistribution(Distribution):
         return x
 
     def get_log_prob(self, x_dict, **kwargs):
-        input_dict = replace_dict_keys(x_dict, self._replace_inv_dict)
+        """
+        Parameters
+        ----------
+        x_dict : dict
+
+        Returns
+        -------
+        torch.Tensor
+
+        In
+
+        """
+
+        input_dict = get_dict_values(x_dict, self.cond_var + self.var, return_dict=True)
+        input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
         return self._a.get_log_prob(input_dict, **kwargs)
 
     def sample_mean(self, x):
