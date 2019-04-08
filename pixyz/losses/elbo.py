@@ -1,7 +1,8 @@
+from .losses import SetLoss
 from .expectations import Expectation
 
 
-class ELBO(Expectation):
+class ELBO(SetLoss):
     r"""
     The evidence lower bound (Monte Carlo approximation).
 
@@ -15,7 +16,6 @@ class ELBO(Expectation):
         This class is a special case of the `Expectation` class.
     """
     def __init__(self, p, q, input_var=None):
-        if input_var is None:
-            input_var = q.input_var
 
-        super().__init__(q, p.log_prob() - q.log_prob(), input_var)
+        loss = Expectation(q, p.log_prob() - q.log_prob(), input_var)
+        super().__init__(loss)
