@@ -289,13 +289,15 @@ class DistributionBase(Distribution):
             else:
                 raise ValueError
 
-    def set_distribution(self, x={}):
+    def set_distribution(self, x={}, sampling=True):
         """
         Require self.params_keys and self.DistributionTorch
 
         Parameters
         ----------
         x : dict
+
+        sampling : bool
 
         Returns
         -------
@@ -352,7 +354,7 @@ class DistributionBase(Distribution):
         """
 
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self.set_distribution(_x_dict)
+        self.set_distribution(_x_dict, sampling=False)
 
         x_targets = get_dict_values(x_dict, self._var)
         log_prob = self.dist.log_prob(*x_targets)
