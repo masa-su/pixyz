@@ -1,10 +1,6 @@
 from .divergences import (
     KullbackLeibler,
 )
-from .similarities import (
-    SimilarityLoss,
-    MultiModalContrastivenessLoss,
-)
 
 from .entropy import (
     CrossEntropy,
