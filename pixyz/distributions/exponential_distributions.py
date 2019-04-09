@@ -141,6 +141,14 @@ class RelaxedCategorical(DistributionBase):
         else:
             self.dist = self.DistributionTorch(**params)
 
+    def sample_mean(self, x={}):
+        self.set_distribution(x, sampling=False)
+        return self.dist.mean
+
+    def sample_variance(self, x={}):
+        self.set_distribution(x, sampling=False)
+        return self.dist.variance
+
 
 class Dirichlet(DistributionBase):
     """
