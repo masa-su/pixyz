@@ -6,11 +6,10 @@ from .similarities import (
     MultiModalContrastivenessLoss,
 )
 
-from .expectations import (
+from .entropy import (
     CrossEntropy,
     Entropy,
     StochasticReconstructionLoss,
-    Expectation,
 )
 
 from .elbo import (
@@ -30,6 +29,7 @@ from .adversarial_loss import (
 
 from .losses import (
     Parameter,
+    Expectation,
 )
 
 from .autoregressive import (

@@ -79,7 +79,11 @@ class Loss(object, metaclass=abc.ABCMeta):
 
         return loss
 
+    def expectation(self, p, input_var=None):
+        return Expectation(p, self, input_var=input_var)
+
     def estimate(self, *args, **kwargs):
+        # This method is going to be removed in the next version.
         raise NotImplementedError("The `estimate()` method has been replaced to `eval()`.")
 
     @abc.abstractmethod
@@ -331,3 +335,41 @@ class SetLoss(Loss):
     @property
     def loss_text(self):
         return self._loss.loss_text
+
+
+class Expectation(Loss):
+    r"""
+    Expectation of a given function (Monte Carlo approximation).
+
+    .. math::
+
+        \mathbb{E}_{p(x)}[f(x)] \approx \frac{1}{L}\sum_{l=1}^L f(x_l),
+
+    where :math:`x_l \sim p(x)`.
+
+    Note that :math:`f` doesn't need to be able to sample, which is known as the law of the unconscious statistician
+     (LOTUS).
+
+    Therefore, in this class, :math:`f` is assumed to `pixyz.Loss`.
+    """
+
+    def __init__(self, p, f, input_var=None):
+
+        if input_var is None:
+            input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
+        self._f = f
+
+        super().__init__(p, input_var=input_var)
+
+    @property
+    def loss_text(self):
+        return "E_{}[{}]".format(self._p.prob_text, self._f.loss_text)
+
+    def _get_eval(self, x={}, **kwargs):
+        samples_dict = self._p.sample(x, reparam=True, return_all=True)
+
+        # TODO: whether eval or _get_eval
+        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)
+        samples_dict.update(loss_sample_dict)
+
+        return loss, samples_dict

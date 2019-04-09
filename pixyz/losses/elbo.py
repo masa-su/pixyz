@@ -1,5 +1,4 @@
 from .losses import SetLoss
-from .expectations import Expectation
 
 
 class ELBO(SetLoss):
@@ -17,5 +16,5 @@ class ELBO(SetLoss):
     """
     def __init__(self, p, q, input_var=None):
 
-        loss = Expectation(q, p.log_prob() - q.log_prob(), input_var)
+        loss = (p.log_prob() - q.log_prob()).expectation(q, input_var)
         super().__init__(loss)
