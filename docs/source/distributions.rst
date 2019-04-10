@@ -93,18 +93,24 @@ Gamma
 Complex distributions
 ---------------------
 
-MixtureModel
+ProductOfNormal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: MixtureModel
+.. autoclass:: ProductOfNormal
     :members:
     :undoc-members:
 
-
-NormalPoE
+ElementWiseProductOfNormal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: NormalPoE
+.. autoclass:: ElementWiseProductOfNormal
+    :members:
+    :undoc-members:
+
+ElementWiseProductOfNormal
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: ElementWiseProductOfNormal
     :members:
     :undoc-members:
        

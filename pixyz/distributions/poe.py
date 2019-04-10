@@ -6,20 +6,32 @@ from ..utils import tolist, get_dict_values
 from .exponential_distributions import Normal
 
 
-class NormalPoE(Normal):
-    """
+class ProductOfNormal(Normal):
+    """Product of normal distributions.
+
     :math:`p(z|x,y) \propto p(z)p(z|x)p(z|y)`
 
-    Parameters
+    In this model, p(z|x) and p(a|y) perform as `experts` and p(z) corresponds a prior of `experts`.
+
+    See [Vedantam+ 2017] and [Wu+ 2017] for details.
+
+    Attributes
     ----------
-    p : Distribution (Normal)
-        Other distributions.
-    prior : Distribution (Normal)
-        Prior distribution.
+    p : list of Normal
+        List of experts.
+    prior : Normal
+        A prior of experts.
+    name : str, default "p"
+        Name of this distribution.
+        This name is displayed in prob_text and prob_factorized_text.
+    dim : int, default 1
+        Number of dimensions of this distribution.
+        This might be ignored depending on the shape which is set in the sample method and on its parent distribution.
+        Moreover, this is not consider when this class is inherited by DNNs.
 
     Examples
     --------
-    >>> poe = NormalPoE(prior, [p_x, p_y])
+    >>> pon = ProductOfNormal(prior, [p_x, p_y])
 
     """
 
@@ -61,6 +73,19 @@ class NormalPoE(Normal):
         return prob_text
 
     def _get_expert_params(self, params_dict={}, **kwargs):
+        """Get the output parameters of all experts.
+
+        Parameters
+        ----------
+        params_dict : dict
+        **kwargs
+            Arbitrary keyword arguments.
+        Returns
+        -------
+        torch.Tensor
+
+        """
+
         loc = []
         scale = []
 
@@ -80,6 +105,7 @@ class NormalPoE(Normal):
         loc_all = []
         scale_all = []
 
+        # experts
         loc, scale = self._get_expert_params(params_dict, **kwargs)  # (n_batch, output_dim, n_expert)
         loc_all.append(loc)
         scale_all.append(scale)
@@ -99,36 +125,39 @@ class NormalPoE(Normal):
 
         return output_dict
 
-    def _compute_expert_params(self, loc, scale, eps=1e-8):
-        """
-        Compute parameters for the product of experts.
-        Is is assumed that the input dimensions corresponding to the unconsidered experts are excluded.
+    @staticmethod
+    def _compute_expert_params(loc, scale, eps=1e-8):
+        """Compute parameters for the product of experts.
+        Is is assumed that unspecified experts are excluded from inputs.
 
         Parameters
         ----------
-        loc : torch.tensor
-            (n_batch, n_expert)
+        loc : torch.Tensor (n_batch, n_expert)
+            Concatenation of mean vectors for specified experts.
 
-        scale : torch.tensor
-            (n_batch, n_expert)
+        scale : torch.Tensor (n_batch, n_expert)
+            Concatenation of the square root of a diagonal covariance matrix for specified experts.
 
-        eps :
+        eps : float, default 1e-8
+            A constant value for avoiding division by 0.
 
         Returns
         -------
-        output_loc :
+        output_loc : torch.Tensor (n_batch, output_dim)
+            Mean vectors for this distribution.
 
-        output_scale :
+        output_scale : torch.Tensor (n_batch, output_dim)
+            The square root of diagonal covariance matrices for this distribution.
         """
 
         # compute the diagonal precision matrix.
         prec = 1. / (scale**2 + eps)
 
-        # compute the diagonal co-variance matrix for the product of Gaussians.
+        # compute the square root of a diagonal covariance matrix for the product of distributions.
         output_prec = torch.sum(prec, dim=1)
         output_scale = torch.sqrt(1. / (output_prec + eps))
 
-        # compute the mean vector for the product of Gaussians.
+        # compute the mean vectors for the product of normal distributions.
         output_loc = torch.sum(prec * loc, dim=1) * output_scale**2
         output_loc = output_loc
 
@@ -144,21 +173,35 @@ class NormalPoE(Normal):
         raise NotImplementedError
 
 
-class ElementNormalPoE(NormalPoE):
-    """
+class ElementWiseProductOfNormal(ProductOfNormal):
+    """Product of normal distributions.
+
+    In this distribution, each element of the input vector on the given distribution is considered as
+     a different expert.
+
     :math:`p(z|x) = p(z|x_1, x_2) \propto p(z)p(z|x_1)p(z|x_2)`
 
-
-    Parameters
+    Attributes
     ----------
-    p : list
-        Other distributions (Normal).
-    prior : Distribution (Normal)
-        Prior distribution.
+    p : Normal
+        Each element of this input vector is considered as a different expert.
+        When some elements are 0, experts corresponding to these elements are considered not to be specified.
+
+        :math:`p(z|x) = p(z|x_1, 0) \propto p(z)p(z|x_1)`
+
+    prior : Normal
+        A prior of experts.
+    name : str, default "p"
+        Name of this distribution.
+        This name is displayed in prob_text and prob_factorized_text.
+    dim : int, default 1
+        Number of dimensions of this distribution.
+        This might be ignored depending on the shape which is set in the sample method and on its parent distribution.
+        Moreover, this is not consider when this class is inherited by DNNs.
 
     Examples
     --------
-    >>> poe = ElementNormalPoE(prior, p)
+    >>> pon = ElementWiseProductOfNormal(prior, p)
 
     """
 
@@ -168,16 +211,55 @@ class ElementNormalPoE(NormalPoE):
 
         super().__init__(prior=prior, p=p, name=name, dim=dim)
 
-    def _masking(self, inputs, index):
+    @staticmethod
+    def _masking(inputs, index):
+        """Apply a mask to the input to specify experts identified by index.
+
+        Parameters
+        ----------
+        inputs : torch.Tensor
+        index : int
+
+        Returns
+        -------
+        torch.Tensor
+
+        """
         mask = torch.zeros_like(inputs).type(inputs.dtype)
         mask[:, index] = 1
         return inputs * mask
 
     def _get_params_with_masking(self, inputs, index, **kwargs):
+        """Get the output parameters of experts specified by index.
+
+        Parameters
+        ----------
+        inputs : torch.Tensor
+        index : int
+        **kwargs
+            Arbitrary keyword arguments.
+        Returns
+        -------
+        torch.Tensor
+
+        """
         outputs = self.p.get_params({self.cond_var: self._masking(inputs, index)}, **kwargs)
         return torch.stack([outputs["loc"], outputs["scale"]])  # (n_batch, output_dim, 2)
 
     def _get_expert_params(self, params_dict={}, **kwargs):
+        """Get the output parameters of all experts.
+
+        Parameters
+        ----------
+        params_dict : dict
+        **kwargs
+            Arbitrary keyword arguments.
+        Returns
+        -------
+        torch.Tensor
+        torch.Tensor
+
+        """
         inputs = get_dict_values(params_dict, self.cond_var)[0]  # (n_batch, n_expert=input_dim)
 
         n_expert = inputs.size()[1]

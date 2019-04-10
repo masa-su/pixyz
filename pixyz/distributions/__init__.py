@@ -23,7 +23,7 @@ from .distributions import (
     MultiplyDistribution,
 )
 
-from .poe import NormalPoE
+from .poe import ProductOfNormal, ElementWiseProductOfNormal
 
 from .mixture_distributions import MixtureModel
 
@@ -43,6 +43,7 @@ __all__ = [
     'Gamma',
 
     'MultiplyDistribution',
-    'NormalPoE',
+    'ProductOfNormal',
+    'ElementWiseProductOfNormal',
     'MixtureModel',
 ]
