@@ -55,7 +55,7 @@ Entropy
 
 .. autoclass:: Entropy
     :members:
-    :undoc-members:       
+    :undoc-members:
 
 StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
