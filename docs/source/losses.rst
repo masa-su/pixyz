@@ -37,20 +37,10 @@ StochasticReconstructionLoss
     :members:
     :undoc-members:
 
-LossExpectation
+Expectation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: LossExpectation
-    :members:
-    :undoc-members:
-
-Negative log-likelihood
----------------------------------------------------
-       
-NLL
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: NLL
+.. autoclass:: Expectation
     :members:
     :undoc-members:
 
