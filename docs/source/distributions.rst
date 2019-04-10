@@ -93,17 +93,17 @@ Gamma
 Complex distributions
 ---------------------
 
+MixtureModel
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MixtureModel
+    :members:
+    :undoc-members:
+
 ProductOfNormal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: ProductOfNormal
-    :members:
-    :undoc-members:
-
-ElementWiseProductOfNormal
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: ElementWiseProductOfNormal
     :members:
     :undoc-members:
 
