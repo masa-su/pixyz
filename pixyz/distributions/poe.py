@@ -106,22 +106,29 @@ class ProductOfNormal(Normal):
         scale_all = []
 
         # experts
-        loc, scale = self._get_expert_params(params_dict, **kwargs)  # (n_batch, output_dim, n_expert)
+        if len(params_dict) > 0:
+            loc, scale = self._get_expert_params(params_dict, **kwargs)  # (n_expert, n_batch, output_dim)
+        else:
+            loc = torch.zeros(1)
+            scale = torch.zeros(1)
+
         loc_all.append(loc)
         scale_all.append(scale)
 
         # prior
         outputs = self.prior.get_params({}, **kwargs)
-        prior_loc = torch.ones_like(loc[0]).type(loc[0].dtype)
-        prior_scale = torch.ones_like(scale[0]).type(scale[0].dtype)
-        loc.append(outputs["loc"] * prior_loc)
-        scale.append(outputs["scale"] * prior_scale)
+        prior_loc = torch.ones_like(loc[:1]).type(loc[:1].dtype)
+        prior_scale = torch.ones_like(scale[:1]).type(scale[:1].dtype)
+        prior_loc = prior_loc * outputs["loc"]
+        prior_scale = prior_scale * outputs["scale"]
+        loc_all.append(prior_loc)
+        scale_all.append(prior_scale)
 
-        loc = torch.cat(loc, dim=1)
-        scale = torch.cat(scale, dim=1)
+        loc_all = torch.cat(loc_all, dim=0)
+        scale_all = torch.cat(scale_all, dim=0)
 
-        loc, scale = self._compute_expert_params(loc, scale)
-        output_dict = {"loc": loc, "scale": scale}
+        output_loc, output_scale = self._compute_expert_params(loc_all, scale_all)
+        output_dict = {"loc": output_loc, "scale": output_scale}
 
         return output_dict
 
@@ -132,10 +139,10 @@ class ProductOfNormal(Normal):
 
         Parameters
         ----------
-        loc : torch.Tensor (n_batch, n_expert)
+        loc : torch.Tensor (n_expert, n_batch, output_dim)
             Concatenation of mean vectors for specified experts.
 
-        scale : torch.Tensor (n_batch, n_expert)
+        scale : torch.Tensor (n_expert, n_batch, output_dim)
             Concatenation of the square root of a diagonal covariance matrix for specified experts.
 
         eps : float, default 1e-8
@@ -154,14 +161,35 @@ class ProductOfNormal(Normal):
         prec = 1. / (scale**2 + eps)
 
         # compute the square root of a diagonal covariance matrix for the product of distributions.
-        output_prec = torch.sum(prec, dim=1)
-        output_scale = torch.sqrt(1. / (output_prec + eps))
+        output_prec = torch.sum(prec, dim=0)
+        output_scale = torch.sqrt(1. / output_prec)
 
         # compute the mean vectors for the product of normal distributions.
-        output_loc = torch.sum(prec * loc, dim=1) * output_scale**2
+        output_loc = torch.sum(prec * loc, dim=0) * output_scale**2
         output_loc = output_loc
 
         return output_loc, output_scale
+
+    def _check_input(self, x, var=None):
+        if var is None:
+            var = self.input_var
+
+        if type(x) is torch.Tensor:
+            checked_x = {var[0]: x}
+
+        elif type(x) is list:
+            # TODO: we need to check if all the elements contained in this list are torch.Tensor.
+            checked_x = dict(zip(var, x))
+
+        elif type(x) is dict:
+            if not (set(list(x.keys())) <= set(var)):  # point of modification
+                raise ValueError("Input keys are not valid.")
+            checked_x = x
+
+        else:
+            raise ValueError("The type of input is not valid, got %s." % type(x))
+
+        return checked_x
 
     def log_prob(self, sum_features=True, feature_dims=None):
         raise NotImplementedError
@@ -175,7 +203,6 @@ class ProductOfNormal(Normal):
 
 class ElementWiseProductOfNormal(ProductOfNormal):
     """Product of normal distributions.
-
     In this distribution, each element of the input vector on the given distribution is considered as
      a different expert.
 
