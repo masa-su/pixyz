@@ -1,3 +1,4 @@
+import torch
 from torch.distributions import Normal as NormalTorch
 from torch.distributions import Bernoulli as BernoulliTorch
 from torch.distributions import RelaxedBernoulli as RelaxedBernoulliTorch
@@ -51,7 +52,7 @@ class RelaxedBernoulli(DistributionBase):
     Relaxed (reparameterizable) Bernoulli distribution parameterized by :attr:`probs`.
     """
 
-    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
+    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", dim=None, **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = BernoulliTorch
         # use relaxed version only when sampling
@@ -73,20 +74,6 @@ class RelaxedBernoulli(DistributionBase):
         else:
             self.dist = self.DistributionTorch(**params)
 
-    def log_likelihood(self, x):
-        # input : dict
-        # output : dict
-
-        if not set(list(x.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input keys are not valid.")
-
-        if len(self._cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self._cond_var, True)
-            self.set_distribution(_x, sampling=False)
-
-        log_like = self._get_log_like(x)
-        return sum_samples(log_like)
-
 
 class FactorizedBernoulli(Bernoulli):
     """
@@ -102,11 +89,12 @@ class FactorizedBernoulli(Bernoulli):
     def distribution_name(self):
         return "FactorizedBernoulli"
 
-    def _get_log_like(self, x):
-        log_like = super()._get_log_like(x)
+    def get_log_prob(self, x):
+        log_prob = super().get_log_prob(x, sum_features=False)
         [_x] = get_dict_values(x, self._var)
-        log_like[_x == 0] = 0
-        return log_like
+        log_prob[_x == 0] = 0
+        log_prob = sum_samples(log_prob)
+        return log_prob
 
 
 class Categorical(DistributionBase):
@@ -130,7 +118,7 @@ class RelaxedCategorical(DistributionBase):
     Relaxed (reparameterizable) categorical distribution parameterized by :attr:`probs`.
     """
 
-    def __init__(self, temperature, cond_var=[], var=["x"], name="p", dim=None,
+    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", dim=None,
                  **kwargs):
         self.params_keys = ["probs"]
         self.DistributionTorch = CategoricalTorch
@@ -153,19 +141,13 @@ class RelaxedCategorical(DistributionBase):
         else:
             self.dist = self.DistributionTorch(**params)
 
-    def log_likelihood(self, x):
-        # input : dict
-        # output : dict
+    def sample_mean(self, x={}):
+        self.set_distribution(x, sampling=False)
+        return self.dist.mean
 
-        if not set(list(x.keys())) >= set(self._cond_var + self._var):
-            raise ValueError("Input keys are not valid.")
-
-        if len(self._cond_var) > 0:  # conditional distribution
-            _x = get_dict_values(x, self._cond_var, True)
-            self.set_distribution(_x, sampling=False)
-
-        log_like = self._get_log_like(x)
-        return sum_samples(log_like)
+    def sample_variance(self, x={}):
+        self.set_distribution(x, sampling=False)
+        return self.dist.variance
 
 
 class Dirichlet(DistributionBase):

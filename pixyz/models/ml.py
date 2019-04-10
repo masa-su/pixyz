@@ -2,7 +2,6 @@ from torch import optim, nn
 
 from ..models.model import Model
 from ..utils import tolist
-from ..losses import NLL
 
 
 class ML(Model):
@@ -18,7 +17,7 @@ class ML(Model):
         distributions = [p] + tolist(other_distributions)
 
         # set losses
-        self.nll = NLL(p)
+        self.nll = -p.log_prob(sum_features=True)
         loss = self.nll.mean()
 
         super().__init__(loss, test_loss=loss,

@@ -1,24 +1,20 @@
 from .divergences import (
     KullbackLeibler,
 )
-from .similarities import (
-    SimilarityLoss,
-    MultiModalContrastivenessLoss,
-)
 
-from .expectations import (
+from .entropy import (
     CrossEntropy,
     Entropy,
     StochasticReconstructionLoss,
-    LossExpectation,
 )
 
 from .elbo import (
     ELBO,
 )
 
-from .nll import (
-    NLL,
+from .pdf import (
+    LogProb,
+    Prob,
 )
 
 from .adversarial_loss import (
@@ -29,6 +25,7 @@ from .adversarial_loss import (
 
 from .losses import (
     Parameter,
+    Expectation,
 )
 
 from .autoregressive import (
@@ -48,9 +45,10 @@ __all__ = [
     'CrossEntropy',
     'Entropy',
     'StochasticReconstructionLoss',
-    'LossExpectation',
+    'Expectation',
     'KullbackLeibler',
-    'NLL',
+    'LogProb',
+    'Prob',
     'ELBO',
     'SimilarityLoss',
     'MultiModalContrastivenessLoss',

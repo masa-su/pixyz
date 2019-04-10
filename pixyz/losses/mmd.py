@@ -50,7 +50,7 @@ class MMD(Loss):
     def _get_batch_size(self, x):
         return get_dict_values(x, self.input_dist.input_var[0])[0].shape[0]
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         batch_size = self._get_batch_size(x)
 
         # sample from distributions
