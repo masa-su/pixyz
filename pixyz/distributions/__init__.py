@@ -27,7 +27,7 @@ from .distributions import (
     ReplaceVarDistribution,
 )
 
-from .poe import NormalPoE
+from .poe import ProductOfNormal, ElementWiseProductOfNormal
 
 from .mixture_distributions import MixtureModel
 
@@ -49,8 +49,13 @@ __all__ = [
     'Gamma',
 
     'MultiplyDistribution',
+<<<<<<< HEAD
     'ReplaceVarDistribution',
     'MarginalizeVarDistribution',
     'NormalPoE',
+=======
+    'ProductOfNormal',
+    'ElementWiseProductOfNormal',
+>>>>>>> rename NormalPoE to ProductOfNormal
     'MixtureModel',
 ]

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch
 from torch import nn
 
@@ -6,14 +7,25 @@ from .exponential_distributions import Normal
 
 
 class ProductOfNormal(Normal):
-    r"""Product of normal distributions.
+    """Product of normal distributions.
 
-    .. math::
-        p(z|x,y) \propto p(z)p(z|x)p(z|y)
+    :math:`p(z|x,y) \propto p(z)p(z|x)p(z|y)`
 
-    In this model, :math:`p(z|x)` and :math:`p(a|y)` perform as `experts` and p(z) corresponds a prior of `experts`.
+    In this model, p(z|x) and p(a|y) perform as `experts` and p(z) corresponds a prior of `experts`.
 
     See [Vedantam+ 2017] and [Wu+ 2017] for details.
+
+    Attributes
+    ----------
+    p : list of Normal
+        List of experts.
+    name : str, default "p"
+        Name of this distribution.
+        This name is displayed in prob_text and prob_factorized_text.
+    dim : int, default 1
+        Number of dimensions of this distribution.
+        This might be ignored depending on the shape which is set in the sample method and on its parent distribution.
+        Moreover, this is not consider when this class is inherited by DNNs.
 
     Examples
     --------
@@ -57,25 +69,9 @@ class ProductOfNormal(Normal):
          [ 0.0299,  0.5148, -0.1001,  ...,  0.9938,  1.0689, -1.1902]])}
     >>> pon.sample()  # same as sampling from unit Gaussian.
     {'z': tensor(-0.4494)}
-
     """
 
     def __init__(self, p=[], name="p", dim=1):
-        """
-        Parameters
-        ----------
-        p : list
-            List of experts (normal distributions).
-        name : :obj:`str`, defaults to "p"
-            Name of this distribution.
-            This name is displayed in prob_text and prob_factorized_text.
-        dim : int, defaults to 1
-            Number of dimensions of this distribution.
-            This might be ignored depending on the shape which is set in the sample method and on its parent
-            distribution.
-            Moreover, this is not consider when this class is inherited by DNNs.
-
-        """
         p = tolist(p)
         if len(p) == 0:
             raise ValueError
@@ -161,19 +157,19 @@ class ProductOfNormal(Normal):
 
         Parameters
         ----------
-        loc : torch.Tensor
-            Concatenation of mean vectors for specified experts. (n_expert, n_batch, output_dim)
-        scale : torch.Tensor
+        loc : torch.Tensor (n_expert, n_batch, output_dim)
+            Concatenation of mean vectors for specified experts.
+
+        scale : torch.Tensor (n_expert, n_batch, output_dim)
             Concatenation of the square root of a diagonal covariance matrix for specified experts.
-            (n_expert, n_batch, output_dim)
 
         Returns
         -------
-        output_loc : torch.Tensor
-            Mean vectors for this distribution.  (n_batch, output_dim)
-        output_scale : torch.Tensor
-            The square root of diagonal covariance matrices for this distribution. (n_batch, output_dim)
+        output_loc : torch.Tensor (n_batch, output_dim)
+            Mean vectors for this distribution.
 
+        output_scale : torch.Tensor (n_batch, output_dim)
+            The square root of diagonal covariance matrices for this distribution.
         """
 
         # parameter for prior
@@ -224,12 +220,26 @@ class ProductOfNormal(Normal):
 
 
 class ElementWiseProductOfNormal(ProductOfNormal):
-    r"""Product of normal distributions.
+    """Product of normal distributions.
     In this distribution, each element of the input vector on the given distribution is considered as
      a different expert.
 
-    .. math::
-        p(z|x) = p(z|x_1, x_2) \propto p(z)p(z|x_1)p(z|x_2)
+    :math:`p(z|x) = p(z|x_1, x_2) \propto p(z)p(z|x_1)p(z|x_2)`
+
+    Attributes
+    ----------
+    p : Normal
+        Each element of this input vector is considered as a different expert.
+        When some elements are 0, experts corresponding to these elements are considered not to be specified.
+
+        :math:`p(z|x) = p(z|x_1, x_2=0) \propto p(z)p(z|x_1)`
+    name : str, default "p"
+        Name of this distribution.
+        This name is displayed in prob_text and prob_factorized_text.
+    dim : int, default 1
+        Number of dimensions of this distribution.
+        This might be ignored depending on the shape which is set in the sample method and on its parent distribution.
+        Moreover, this is not consider when this class is inherited by DNNs.
 
     Examples
     --------
@@ -273,26 +283,10 @@ class ElementWiseProductOfNormal(ProductOfNormal):
            1.0936, -1.3720,  0.9999,  1.3302, -0.8954, -0.5999,  2.3305,  0.5702,
           -1.0767, -0.2750, -0.3741, -0.7026, -1.5408,  0.0667,  1.2550, -0.5117]])}
 
+
     """
 
     def __init__(self, p, name="p", dim=1):
-        """
-        Parameters
-        ----------
-        p : Normal
-            Each element of this input vector is considered as a different expert.
-            When some elements are 0, experts corresponding to these elements are considered not to be specified.
-
-            :math:`p(z|x) = p(z|x_1, x_2=0) \propto p(z)p(z|x_1)`
-        name : str, default "p"
-            Name of this distribution.
-            This name is displayed in prob_text and prob_factorized_text.
-        dim : int, default 1
-            Number of dimensions of this distribution.
-            This might be ignored depending on the shape which is set in the sample method and on its parent distribution.
-            Moreover, this is not consider when this class is inherited by DNNs.
-
-        """
         if len(p.cond_var) != 1:
             raise ValueError
 
@@ -346,7 +340,6 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         index : int
         **kwargs
             Arbitrary keyword arguments.
-
         Returns
         -------
         outputs : torch.Tensor
@@ -374,7 +367,6 @@ class ElementWiseProductOfNormal(ProductOfNormal):
                 [[1, 1],
                  [1, 1]],  # scale
                ])
-
         """
         mask = self._get_mask(inputs, index)  # (n_batch, n_expert)
         outputs_dict = self.p.get_params({self.cond_var[0]: inputs * mask}, **kwargs)
