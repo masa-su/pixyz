@@ -5,4 +5,4 @@ install:
   - pip install pytest-cov
   - pip install pytest-flake8
 script:
-  - PYTHONPATH=$PWD:$PYTHONPATH py.test
+  - PYTHONPATH=$PWD:$PYTHONPATH py.tests
