@@ -96,12 +96,8 @@ class MixtureModel(Distribution):
     def distribution_name(self):
         return "Mixture Model"
 
-    def get_posterior_probs(self, x_dict):
-        # log p(z|x) = log p(x, z) - log p(x)
-        loglike = self.log_likelihood_all_hidden(x_dict) - self.log_likelihood(x_dict)
-
-        # p(z|x)
-        return torch.exp(loglike)  # (num_mix, batch_size)
+    def posterior(self, name=None):
+        return PosteriorMixtureModel(self, name=name)
 
     def sample(self, batch_size=1, return_hidden=False, **kwargs):
         hidden_output = []
@@ -122,61 +118,85 @@ class MixtureModel(Distribution):
 
         return output_dict
 
-    def log_likelihood_all_hidden(self, x_dict):
+    def get_log_prob(self, x_dict, return_hidden=False, **kwargs):
         """
-        Estimate joint log-likelihood, log p(x, z), where input is `x`.
+        Evaluate log-pdf, log p(x) (if return_hidden=False) or log p(x, z) (if return_hidden=True).
 
         Parameters
         ----------
         x_dict : dict
             Input variables (including `var`).
 
+        return_hidden : bool (False as default)
+
         Returns
         -------
-        loglike : torch.Tensor
-            dim=0 : the number of mixture
-            dim=1 : the size of batch
+        log_prob : torch.Tensor
+            The log-pdf value of x.
+
+            return_hidden = 0 :
+                dim=0 : the size of batch
+
+            return_hidden = 1 :
+                dim=0 : the number of mixture
+                dim=1 : the size of batch
         """
 
-        log_likelihood_all = []
+        log_prob_all = []
 
         _device = x_dict[self._var[0]].device
         eye_tensor = torch.eye(len(self._distributions)).to(_device)  # for prior
 
         for i, d in enumerate(self._distributions):
             # p(z=i)
-            prior_loglike = self._prior.log_likelihood({self._hidden_var[0]: eye_tensor[i]})
+            prior_log_prob = self._prior.log_prob().eval({self._hidden_var[0]: eye_tensor[i]})
             # p(x|z=i)
-            loglike = d.log_likelihood(x_dict)
+            log_prob = d.log_prob().eval(x_dict)
             # p(x, z=i)
-            log_likelihood_all.append(loglike + prior_loglike)
+            log_prob_all.append(log_prob + prior_log_prob)
 
-        return torch.stack(log_likelihood_all, dim=0)  # (num_mix, batch_size)
+        log_prob_all = torch.stack(log_prob_all, dim=0)  # (num_mix, batch_size)
 
-    def log_likelihood(self, x_dict):
-        """
-        Estimate log-likelihood, log p(x).
+        if return_hidden:
+            return log_prob_all
 
-        Parameters
-        ----------
-        x_dict : dict
-            Input variables (including `var`).
+        return torch.logsumexp(log_prob_all, 0)
 
-        Returns
-        -------
-        loglike : torch.Tensor
-            The log-likelihood value of x.
-        """
 
-        loglike = self.log_likelihood_all_hidden(x_dict)
-        return torch.logsumexp(loglike, 0)
+class PosteriorMixtureModel(Distribution):
+    def __init__(self, p, name=None):
+        if name is None:
+            name = p.name
+        super().__init__(var=p.var, name=name)
 
-    def _log_likelihood_given_hidden(self, x_dict):
-        # log p(x, z)
-        visible_dict = get_dict_values(x_dict, self._var, return_dict=True)
-        loglike_all_hidden = self.log_likelihood_all_hidden(visible_dict)
+        self._p = p
+        self._hidden_var = p._hidden_var
 
-        hidden_sample_idx = get_dict_values(x_dict, self._hidden_var, return_dict=False)[0].argmax(dim=-1)
-        loglike = loglike_all_hidden[hidden_sample_idx, torch.arange(len(hidden_sample_idx))]
+    @property
+    def prob_text(self):
+        _prob_text = "{}({}|{})".format(
+            self._name, self._hidden_var[0], self._var[0]
+        )
 
-        return loglike
+        return _prob_text
+
+    @property
+    def prob_factorized_text(self):
+        _prob_text = "{}({},{})/{}({})".format(
+            self._name, self._hidden_var[0], self._var[0],
+            self._name, self._var[0])
+
+        return _prob_text
+
+    @property
+    def distribution_name(self):
+        return "Mixture Model (Posterior)"
+
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
+               reparam=False):
+        raise NotImplementedError
+
+    def get_log_prob(self, x_dict, **kwargs):
+        # log p(z|x) = log p(x, z) - log p(x)
+        log_prob = self._p.get_log_prob(x_dict, return_hidden=True) - self._p.get_log_prob(x_dict)
+        return log_prob  # (num_mix, batch_size)

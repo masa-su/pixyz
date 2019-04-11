@@ -39,7 +39,7 @@ class AdversarialLoss(Loss):
         self.d.train()
 
         self.d_optimizer.zero_grad()
-        loss = self.estimate(train_x, discriminator=True)
+        loss = self.eval(train_x, discriminator=True)
 
         # backprop
         loss.backward()
@@ -53,7 +53,7 @@ class AdversarialLoss(Loss):
         self.d.eval()
 
         with torch.no_grad():
-            loss = self.estimate(test_x, discriminator=True)
+            loss = self.eval(test_x, discriminator=True)
 
         return loss
 
@@ -84,7 +84,7 @@ class AdversarialJensenShannon(AdversarialLoss):
         return "mean(AdversarialJS[{}||{}])".format(self._p.prob_text,
                                                     self._q.prob_text)
 
-    def _get_estimated_value(self, x, discriminator=False, **kwargs):
+    def _get_eval(self, x, discriminator=False, **kwargs):
         batch_size = self._get_batch_size(x)
 
         # sample x_p from p
@@ -161,7 +161,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         return "mean(AdversarialKL[{}||{}])".format(self._p.prob_text,
                                                     self._q.prob_text)
 
-    def _get_estimated_value(self, x, discriminator=False, **kwargs):
+    def _get_eval(self, x, discriminator=False, **kwargs):
         batch_size = self._get_batch_size(x)
 
         # sample x_p from p

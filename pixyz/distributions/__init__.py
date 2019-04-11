@@ -23,14 +23,6 @@ from .distributions import (
     MultiplyDistribution,
 )
 
-from .flows import (
-    PlanarFlow,
-)
-
-from .real_nvp import (
-    RealNVP,
-)
-
 from .poe import NormalPoE
 
 from .mixture_distributions import MixtureModel
@@ -51,8 +43,6 @@ __all__ = [
     'Gamma',
 
     'MultiplyDistribution',
-    'PlanarFlow',
-    'RealNVP',
     'NormalPoE',
     'MixtureModel',
 ]

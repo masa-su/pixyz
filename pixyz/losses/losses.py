@@ -1,14 +1,15 @@
+import abc
+
 import numbers
 from copy import deepcopy
 
 from ..utils import tolist
 
 
-class Loss(object):
+class Loss(object, metaclass=abc.ABCMeta):
     def __init__(self, p, q=None, input_var=None):
         self._p = p
         self._q = q
-        self._loss_text = None
 
         if input_var is not None:
             self._input_var = input_var
@@ -24,8 +25,9 @@ class Loss(object):
         return self._input_var
 
     @property
+    @abc.abstractmethod
     def loss_text(self):
-        return "loss({},{})".format(self._p.prob_text, self._q.prob_text)
+        raise NotImplementedError
 
     def __str__(self):
         return self.loss_text
@@ -66,31 +68,27 @@ class Loss(object):
     def sum(self):
         return BatchSum(self)
 
-    def estimate(self, x={}, return_dict=False, **kwargs):
+    def eval(self, x={}, return_dict=False, **kwargs):
         if not(set(list(x.keys())) >= set(self._input_var)):
             raise ValueError("Input keys are not valid, got {}.".format(list(x.keys())))
 
-        loss, x = self._get_estimated_value(x, **kwargs)
+        loss, x = self._get_eval(x, **kwargs)
 
         if return_dict:
             return loss, x
 
         return loss
 
-    def _get_estimated_value(self, x, **kwargs):
-        return x, x
+    def expectation(self, p, input_var=None):
+        return Expectation(p, self, input_var=input_var)
 
-    def train(self, x={}, **kwargs):
-        """
-        Train the implicit (adversarial) loss function.
-        """
-        return 0
+    def estimate(self, *args, **kwargs):
+        # This method is going to be removed in the next version.
+        raise NotImplementedError("The `estimate()` method has been replaced to `eval()`.")
 
-    def test(self, x={}, **kwargs):
-        """
-        Test the implicit (adversarial) loss function.
-        """
-        return 0
+    @abc.abstractmethod
+    def _get_eval(self, x, **kwargs):
+        raise NotImplementedError
 
 
 class ValueLoss(Loss):
@@ -98,7 +96,7 @@ class ValueLoss(Loss):
         self._loss1 = loss1
         self._input_var = []
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         return self._loss1, x
 
     @property
@@ -112,7 +110,7 @@ class Parameter(Loss):
             raise ValueError
         self._input_var = tolist(input_var)
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         return x[self._input_var[0]], x
 
     @property
@@ -161,17 +159,17 @@ class LossOperator(Loss):
 
     @property
     def loss_text(self):
-        NotImplementedError
+        raise NotImplementedError
 
-    def _get_estimated_value(self, x={}, **kwargs):
+    def _get_eval(self, x={}, **kwargs):
         if not isinstance(self._loss1, type(None)):
-            loss1, x1 = self._loss1._get_estimated_value(x, **kwargs)
+            loss1, x1 = self._loss1._get_eval(x, **kwargs)
         else:
             loss1 = 0
             x1 = {}
 
         if not isinstance(self._loss2, type(None)):
-            loss2, x2 = self._loss2._get_estimated_value(x, **kwargs)
+            loss2, x2 = self._loss2._get_eval(x, **kwargs)
         else:
             loss2 = 0
             x2 = {}
@@ -204,8 +202,8 @@ class AddLoss(LossOperator):
     def loss_text(self):
         return " + ".join(self._loss_text_list)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_eval(x, **kwargs)
         return loss1 + loss2, x
 
 
@@ -214,8 +212,8 @@ class SubLoss(LossOperator):
     def loss_text(self):
         return " - ".join(self._loss_text_list)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_eval(x, **kwargs)
         return loss1 - loss2, x
 
 
@@ -224,8 +222,8 @@ class MulLoss(LossOperator):
     def loss_text(self):
         return " * ".join(self._loss_text_list)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_eval(x, **kwargs)
         return loss1 * loss2, x
 
 
@@ -234,8 +232,8 @@ class DivLoss(LossOperator):
     def loss_text(self):
         return " / ".join(self._loss_text_list)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss1, loss2, x = super()._get_eval(x, **kwargs)
         return loss1 / loss2, x
 
 
@@ -268,8 +266,8 @@ class NegLoss(LossSelfOperator):
     def loss_text(self):
         return "-({})".format(self._loss1.loss_text)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1._get_eval(x, **kwargs)
         return -loss, x
 
 
@@ -278,8 +276,8 @@ class AbsLoss(LossSelfOperator):
     def loss_text(self):
         return "|{}|".format(self._loss1.loss_text)
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1._get_eval(x, **kwargs)
         return loss.abs(), x
 
 
@@ -298,8 +296,8 @@ class BatchMean(LossSelfOperator):
     def loss_text(self):
         return "mean({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1._get_eval(x, **kwargs)
         return loss.mean(), x
 
 
@@ -318,6 +316,60 @@ class BatchSum(LossSelfOperator):
     def loss_text(self):
         return "sum({})".format(self._loss1.loss_text)  # TODO: fix it
 
-    def _get_estimated_value(self, x={}, **kwargs):
-        loss, x = self._loss1._get_estimated_value(x, **kwargs)
+    def _get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1._get_eval(x, **kwargs)
         return loss.sum(), x
+
+
+class SetLoss(Loss):
+    def __init__(self, loss):
+        self._loss = loss
+        self._input_var = loss._input_var
+
+    def __getattr__(self, name):
+        getattr(self._loss, name)
+
+    def _get_eval(self, x, **kwargs):
+        return self._loss._get_eval(x, **kwargs)
+
+    @property
+    def loss_text(self):
+        return self._loss.loss_text
+
+
+class Expectation(Loss):
+    r"""
+    Expectation of a given function (Monte Carlo approximation).
+
+    .. math::
+
+        \mathbb{E}_{p(x)}[f(x)] \approx \frac{1}{L}\sum_{l=1}^L f(x_l),
+
+    where :math:`x_l \sim p(x)`.
+
+    Note that :math:`f` doesn't need to be able to sample, which is known as the law of the unconscious statistician
+     (LOTUS).
+
+    Therefore, in this class, :math:`f` is assumed to `pixyz.Loss`.
+    """
+
+    def __init__(self, p, f, input_var=None):
+
+        if input_var is None:
+            input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
+        self._f = f
+
+        super().__init__(p, input_var=input_var)
+
+    @property
+    def loss_text(self):
+        return "E_{}[{}]".format(self._p.prob_text, self._f.loss_text)
+
+    def _get_eval(self, x={}, **kwargs):
+        samples_dict = self._p.sample(x, reparam=True, return_all=True)
+
+        # TODO: whether eval or _get_eval
+        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)
+        samples_dict.update(loss_sample_dict)
+
+        return loss, samples_dict

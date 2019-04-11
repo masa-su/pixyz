@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 from .losses import Loss
-from .expectations import LossExpectation
 from ..utils import get_dict_values
 
 
@@ -25,7 +24,7 @@ class IterativeLoss(Loss):
 
         self.slice_step = slice_step
         if self.slice_step:
-            self.step_loss = LossExpectation(self.slice_step, self.step_loss)
+            self.step_loss = self.step_loss.expectation(self.slice_step)
 
         if input_var is not None:
             self._input_var = input_var
@@ -50,7 +49,7 @@ class IterativeLoss(Loss):
     def slice_step_fn(self, t, x):
         return {k: v[t] for k, v in x.items()}
 
-    def _get_estimated_value(self, x, **kwargs):
+    def _get_eval(self, x, **kwargs):
         series_x = get_dict_values(x, self.series_var, return_dict=True)
         step_loss_sum = 0
 
@@ -69,8 +68,8 @@ class IterativeLoss(Loss):
                 # update series inputs & use slice_step_fn
                 x.update(self.slice_step_fn(t, series_x))
 
-            # estimate
-            step_loss, samples = self.step_loss.estimate(x, return_dict=True)
+            # evaluate
+            step_loss, samples = self.step_loss.eval(x, return_dict=True)
             x.update(samples)
             if mask is not None: step_loss *= mask[t]
             step_loss_sum += step_loss
