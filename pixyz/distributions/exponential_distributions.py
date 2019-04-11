@@ -5,6 +5,7 @@ from torch.distributions \
     import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
 from torch.distributions.one_hot_categorical\
     import OneHotCategorical as CategoricalTorch
+from torch.distributions import Multinomial as MultinomialTorch
 from torch.distributions import Dirichlet as DirichletTorch
 from torch.distributions import Beta as BetaTorch
 from torch.distributions import Laplace as LaplaceTorch
@@ -167,6 +168,21 @@ class RelaxedCategorical(DistributionBase):
         log_like = self._get_log_like(x)
         return sum_samples(log_like)
 
+class Multinomial(DistributionBase):
+    """
+    Multinomial distribution parameterized by :attr:`total_count` and :attr:`probs`.
+    """
+
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
+        self.params_keys = ["total_count", "probs"]
+        self.DistributionTorch = MultinomialTorch
+
+        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+
+    @property
+    def distribution_name(self):
+        return "Multinomial"
+
 
 class Dirichlet(DistributionBase):
     """
@@ -230,4 +246,3 @@ class Gamma(DistributionBase):
     @property
     def distribution_name(self):
         return "Gamma"
-
