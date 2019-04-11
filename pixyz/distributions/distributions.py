@@ -5,8 +5,8 @@ import re
 from torch import nn
 from copy import deepcopy
 
-from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist
-from ..losses import LogProb, Prob
+from pixyz.utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist
+from pixyz.losses import LogProb, Prob
 
 
 class Distribution(nn.Module):
@@ -160,14 +160,23 @@ class Distribution(nn.Module):
 
         Examples
         --------
+        >>> from pixyz.distributions import Normal
+        >>> dist_1 = Normal(loc=0, scale=1, var=["x"], dim=1)
         >>> print(dist_1.prob_text, dist_1.distribution_name)
         p(x) Normal
         >>> dist_1.get_params()
-        {"loc": 0, "scale": 1}
+        {'loc': 0, 'scale': 1}
+        >>> class P(Normal):
+        ...     def  __init__(self):
+        ...         super().__init__(cond_var=["z"], var=["x"])
+        ...         # For simplicity, the definition of networks are omitted in this example.
+        ...     def forward(self, x):
+        ...         return {"loc": 0, "scale": x}
+        >>> dist_2 = P()
         >>> print(dist_2.prob_text, dist_2.distribution_name)
         p(x|z) Normal
-        >>> dist_1.get_params({"z": 1})
-        {"loc": 0, "scale": 1}
+        >>> dist_2.get_params({"z": 1})
+        {'loc': 0, 'scale': 1}
         """
 
         raise NotImplementedError
@@ -807,3 +816,8 @@ def sum_samples(samples):
         return samples
     raise ValueError("The dim of samples must be any of 1, 2, 3, or 4, "
                      "got dim %s." % dim)
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
