@@ -166,17 +166,11 @@ class Distribution(nn.Module):
         p(x) Normal
         >>> dist_1.get_params()
         {'loc': 0, 'scale': 1}
-        >>> class P(Normal):
-        ...     def  __init__(self):
-        ...         super().__init__(cond_var=["z"], var=["x"])
-        ...         # For simplicity, the definition of networks are omitted in this example.
-        ...     def forward(self, x):
-        ...         return {"loc": 0, "scale": x}
-        >>> dist_2 = P()
+        >>> dist_2 = Normal(loc=0, scale="z", cond_var=["z"], var=["x"])
         >>> print(dist_2.prob_text, dist_2.distribution_name)
         p(x|z) Normal
         >>> dist_2.get_params({"z": 1})
-        {'loc': 0, 'scale': 1}
+        {'scale': 1, 'loc': 0}
         """
 
         raise NotImplementedError
@@ -203,7 +197,7 @@ class Distribution(nn.Module):
             Choose whether the output contains input variables.
 
         reparam : bool
-            Choose whether we sample variables with reparameterized trick.
+            Choose whether we sample variables with re-parameterized trick.
 
         Returns
         -------
@@ -392,11 +386,11 @@ class DistributionBase(Distribution):
 
         Examples
         --------
-        >>> replace_dict
-        {"a": "loc"}
-        >>> x = {"a": 0, "b": 1}
-        >>> distribution._replace_vars_to_params(x, replace_dict)
-        {"loc": 0}, {"b": 1}
+        >>> replace_dict = {'a': 'loc'}
+        >>> x = {'a': 0, 'b': 1}
+        >>> dist = DistributionBase()
+        >>> print(dist._replace_vars_to_params(x, replace_dict))
+        ({'loc': 0}, {'b': 1})
         """
 
         params_dict = {replace_dict[key]: value for key, value in vars_dict.items()
@@ -487,8 +481,11 @@ class MultiplyDistribution(Distribution):
 
     Examples
     --------
-    >>> p_multi = MultipleDistribution([a, b])
-    >>> p_multi = a * b
+    >>> a = DistributionBase(var=["x"], cond_var=["z"])
+    >>> b = DistributionBase(var=["y"], cond_var=["z"])
+    >>> p_multi = MultiplyDistribution(a, b)
+    >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
+    p(x,y|z) p(x|z)p(y|z)
     """
 
     def __init__(self, a, b):
@@ -610,8 +607,7 @@ class MultiplyDistribution(Distribution):
 
 
 class ReplaceVarDistribution(Distribution):
-    """
-    Replace names of variables in Distribution.
+    """Replace names of variables in Distribution.
 
     Attributes
     ----------
@@ -620,6 +616,16 @@ class ReplaceVarDistribution(Distribution):
 
     replace_dict : dict
         Dictionary.
+
+    Examples
+    --------
+    >>> a = DistributionBase(var=["x"], cond_var=["z"])
+    >>> print(a.prob_text)
+    p(x|z)
+    >>> replace_dict = {'x': 'y'}
+    >>> p_repl = ReplaceVarDistribution(a, replace_dict)
+    >>> print(p_repl.prob_text)
+    p(y|z)
     """
 
     def __init__(self, a, replace_dict):
@@ -731,6 +737,17 @@ class MarginalizeVarDistribution(Distribution):
 
     marginalize_list : list
         Variables to marginalize.
+
+    Examples
+    --------
+    >>> a = DistributionBase(var=["x"], cond_var=["z"])
+    >>> b = DistributionBase(var=["y"], cond_var=["z"])
+    >>> p_multi = a * b
+    >>> print(p_multi.prob_text)
+    p(x,y|z)
+    >>> p_marg = MarginalizeVarDistribution(p_multi, ["y"])
+    >>> print(p_marg.prob_text, p_marg.prob_factorized_text)
+    p(x|z) ∫p(x|z)p(y|z)dy
     """
 
     def __init__(self, a, marginalize_list):
@@ -753,7 +770,7 @@ class MarginalizeVarDistribution(Distribution):
             raise ValueError()
 
         if len(marginalize_list) == 0:
-            raise ValueError("Length of `marginalize_list` must be at least 1, got %d." % len(marginalize_list))
+            raise ValueError("Length of `marginalize_list` must be at least 1, got 0.")
 
         _var = [var for var in _var if var not in marginalize_list]
 
@@ -817,7 +834,3 @@ def sum_samples(samples):
     raise ValueError("The dim of samples must be any of 1, 2, 3, or 4, "
                      "got dim %s." % dim)
 
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
