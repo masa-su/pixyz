@@ -168,6 +168,7 @@ class RelaxedCategorical(DistributionBase):
         log_like = self._get_log_like(x)
         return sum_samples(log_like)
 
+
 class Multinomial(DistributionBase):
     """
     Multinomial distribution parameterized by :attr:`total_count` and :attr:`probs`.
