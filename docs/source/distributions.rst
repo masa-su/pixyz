@@ -107,6 +107,13 @@ NormalPoE
 .. autoclass:: NormalPoE
     :members:
     :undoc-members:
+
+NormalPoE
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: NormalPoE
+    :members:
+    :undoc-members:
        
 Special distributions
 ---------------------
@@ -125,10 +132,10 @@ DataDistribution
     :members:
     :undoc-members:
 
-CustomLikelihoodDistribution
+CustomPDF
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: CustomLikelihoodDistribution
+.. autoclass:: CustomPDF
     :members:
     :undoc-members:
 

@@ -348,9 +348,9 @@ class Expectation(Loss):
     where :math:`x_l \sim p(x)`.
 
     Note that :math:`f` doesn't need to be able to sample, which is known as the law of the unconscious statistician
-     (LOTUS).
+    (LOTUS).
 
-    Therefore, in this class, :math:`f` is assumed to `pixyz.Loss`.
+    Therefore, in this class, :math:`f` is assumed to :attr:`pixyz.Loss`.
     """
 
     def __init__(self, p, f, input_var=None):

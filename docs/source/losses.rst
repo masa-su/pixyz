@@ -12,13 +12,40 @@ Loss
     :members:
     :undoc-members:
 
-Negative expected value of log-likelihood (entropy)
----------------------------------------------------
+Probability density function
+----------------------------
+
+LogProb
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses
+.. autoclass:: LogProb
+    :members:
+    :undoc-members:
+
+Prob
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Prob
+    :members:
+    :undoc-members:
+
+Expected value
+--------------
+
+Expectation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Expectation
+    :members:
+    :undoc-members:
+
+Entropy
+--------
 
 CrossEntropy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pixyz.losses
 .. autoclass:: CrossEntropy
     :members:
     :undoc-members:
@@ -34,23 +61,6 @@ StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: StochasticReconstructionLoss
-    :members:
-    :undoc-members:
-
-LossExpectation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: LossExpectation
-    :members:
-    :undoc-members:
-
-Negative log-likelihood
----------------------------------------------------
-       
-NLL
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: NLL
     :members:
     :undoc-members:
 
@@ -132,6 +142,13 @@ Parameter
 
 .. currentmodule:: pixyz.losses.losses
 .. autoclass:: Parameter
+    :members:
+    :undoc-members:
+
+SetLoss
+~~~~~~~~~~~
+
+.. autoclass:: SetLoss
     :members:
     :undoc-members:
 

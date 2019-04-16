@@ -76,7 +76,7 @@ class Distribution(nn.Module):
     @property
     def input_var(self):
         """
-        Normally, `input_var` has same values as `cond_var`.
+        Normally, :attr:`input_var` has same values as :attr:`cond_var`.
         """
         return self._cond_var
 
@@ -100,7 +100,7 @@ class Distribution(nn.Module):
     def _check_input(self, x, var=None):
         """
         Check the type of given input.
-        If the input type is `dictionary`, this method checks whether the input keys contains the `var` list.
+        If the input type is `dictionary`, this method checks whether the input keys contains the :attr:`var` list.
         In case that its type is `list` or `tensor`, it returns the output formatted in `dictionary`.
 
         Parameters
@@ -179,7 +179,7 @@ class Distribution(nn.Module):
                reparam=False):
         """
         Sample variables of this distribution.
-        If `cond_var` is not empty, we should set inputs as a dictionary format.
+        If :attr:`cond_var` is not empty, we should set inputs as a dictionary format.
 
         Parameters
         ----------
@@ -274,8 +274,8 @@ class DistributionBase(Distribution):
         params_dict : dict
             Constant parameters of this distribution set at initialization.
             If the values of these dictionaries contain parameters which are named as strings, which means that
-            these parameters are set as "variables", the correspondences between these values and the true name of
-            these parameters are stored as a dictionary format (`replace_params_dict`).
+            these parameters are set as `variables`, the correspondences between these values and the true name of
+            these parameters are stored as a dictionary format (:attr:`replace_params_dict`).
         """
 
         self.replace_params_dict = {}
@@ -292,22 +292,27 @@ class DistributionBase(Distribution):
             else:
                 raise ValueError
 
-    def set_distribution(self, x={}, sampling=True):
+    def set_distribution(self, x={}, sampling=True, **kwargs):
         """
         Require self.params_keys and self.DistributionTorch
 
         Parameters
         ----------
         x : dict
+            Input variables.
 
         sampling : bool
+            Whether this distribution is sampled.
+
+        **kwargs : dict
+            Arbitrary keyword arguments.
 
         Returns
         -------
 
         """
 
-        params = self.get_params(x)
+        params = self.get_params(x, **kwargs)
         if set(self.params_keys) != set(params.keys()):
             raise ValueError
 
@@ -332,7 +337,7 @@ class DistributionBase(Distribution):
             try:
                 _samples = self.dist.rsample(sample_shape=sample_shape)
             except NotImplementedError:
-                print("We can not use the reparameterization trick "
+                print("We can not use the re-parameterization trick "
                       "for this distribution.")
         else:
             _samples = self.dist.sample(sample_shape=sample_shape)
@@ -342,13 +347,17 @@ class DistributionBase(Distribution):
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         """
+
         Parameters
         ----------
         x_dict : dict
+            Input variables.
 
         sum_features : bool
+            Whether the output is summed over some axises (dimensions) which are specified by :attr:`feature_dims`.
 
         feature_dims : None or list
+            Set axises to sum over the output.
 
         Returns
         -------

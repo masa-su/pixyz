@@ -32,7 +32,7 @@ class Prob(LogProb):
 
     .. math::
 
-        p(x) = \exp^{\log p(x)}
+        p(x) = \exp(\log p(x))
     """
 
     @property
