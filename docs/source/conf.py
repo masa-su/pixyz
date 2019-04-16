@@ -14,11 +14,10 @@
 #
 import os
 import sys
+import sphinx_rtd_theme
+
 # sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../..'))
-
-
-
 
 # -- Project information -----------------------------------------------------
 
@@ -83,7 +82,6 @@ pygments_style = 'sphinx'
 #
 # html_theme = 'alabaster'
 
-import sphinx_rtd_theme
 html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
@@ -166,4 +164,4 @@ texinfo_documents = [
 ]
 
 autodoc_member_order = 'bysource'
-autodoc_default_flags =  ['show-inheritance']
+autodoc_default_flags = ['show-inheritance']

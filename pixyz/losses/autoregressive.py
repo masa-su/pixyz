@@ -12,7 +12,9 @@ class IterativeLoss(Loss):
 
     .. math::
 
-        \mathcal{L} = \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t), where x_t = f_{slice_step}(x, t)
+        \mathcal{L} = \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t),
+
+    where :math:`x_t = f_{slice_step}(x, t)`.
     """
 
     def __init__(self, step_loss, max_iter=1,

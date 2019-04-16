@@ -12,7 +12,7 @@ class Entropy(SetLoss):
     where :math:`x_l \sim p(x)`.
 
     Note:
-        This class is a special case of the `Expectation` class.
+        This class is a special case of the :attr:`Expectation` class.
     """
 
     def __init__(self, p, input_var=None):
@@ -34,7 +34,7 @@ class CrossEntropy(SetLoss):
     where :math:`x_l \sim p(x)`.
 
     Note:
-        This class is a special case of the `Expectation` class.
+        This class is a special case of the :attr:`Expectation` class.
     """
 
     def __init__(self, p, q, input_var=None):
@@ -56,7 +56,7 @@ class StochasticReconstructionLoss(SetLoss):
     where :math:`z_l \sim q(z|x)`.
 
     Note:
-        This class is a special case of the `Expectation` class.
+        This class is a special case of the :attr:`Expectation` class.
     """
 
     def __init__(self, encoder, decoder, input_var=None):

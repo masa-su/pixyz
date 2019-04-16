@@ -12,7 +12,7 @@ class ELBO(SetLoss):
     where :math:`z_l \sim q(z|x)`.
 
     Note:
-        This class is a special case of the `Expectation` class.
+        This class is a special case of the :attr:`Expectation` class.
     """
     def __init__(self, p, q, input_var=None):
 

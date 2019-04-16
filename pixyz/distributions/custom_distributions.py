@@ -17,7 +17,7 @@ class CustomPDF(Distribution):
     @property
     def input_var(self):
         """
-        In CustomPDF, `input_var` is same as `var`.
+        In CustomPDF, :attr:`input_var` is same as :attr:`var`.
         """
 
         return self.var

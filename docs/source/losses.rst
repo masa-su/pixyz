@@ -99,8 +99,8 @@ MMD
     :undoc-members:
 
 
-Adversarial statistical distance (GAN loss)
--------------------------------------------
+Adversarial statistical distance
+--------------------------------
 
 AdversarialJensenShannon
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

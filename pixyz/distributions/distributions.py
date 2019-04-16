@@ -188,7 +188,7 @@ class Distribution(nn.Module):
 
         shape : tuple
             Shape of samples.
-            If set, `batch_size` and `dim` are ignored.
+            If set, :attr:`batch_size` is ignored.
 
         batch_size : int
             Batch size of samples. This is set to 1 by default.
@@ -354,14 +354,15 @@ class DistributionBase(Distribution):
             Input variables.
 
         sum_features : bool
-            Whether the output is summed over some axises (dimensions) which are specified by :attr:`feature_dims`.
+            Whether the output is summed across some axes (dimensions) which are specified by :attr:`feature_dims`.
 
         feature_dims : None or list
-            Set axises to sum over the output.
+            Set axes to sum across the output.
 
         Returns
         -------
         log_prob : torch.Tensor
+            Log-PDF.
 
         """
 
@@ -689,19 +690,6 @@ class ReplaceVarDistribution(Distribution):
         return x
 
     def get_log_prob(self, x_dict, **kwargs):
-        """
-        Parameters
-        ----------
-        x_dict : dict
-
-        Returns
-        -------
-        torch.Tensor
-
-        In
-
-        """
-
         input_dict = get_dict_values(x_dict, self.cond_var + self.var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
         return self._a.get_log_prob(input_dict, **kwargs)
@@ -833,6 +821,32 @@ class MarginalizeVarDistribution(Distribution):
 
 
 def sum_samples(samples):
+    """Sum a given sample across the axes.
+
+    Parameters
+    ----------
+    samples : torch.Tensor
+        Input sample. The number of this axes is assumed to be 4 or less.
+
+    Returns
+    -------
+    torch.Tensor
+        Sum over all axes except the first axis.
+
+
+    Examples
+    --------
+    >>> a = torch.ones([2])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    >>> a = torch.ones([2, 3])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    >>> a = torch.ones([2, 3, 4])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    """
+
     dim = samples.dim()
     if dim == 1:
         return samples
@@ -840,5 +854,5 @@ def sum_samples(samples):
         dim_list = list(torch.arange(samples.dim()))
         samples = torch.sum(samples, dim=dim_list[1:])
         return samples
-    raise ValueError("The dim of samples must be any of 1, 2, 3, or 4, "
-                     "got dim %s." % dim)
+    raise ValueError("The number of sample axes must be any of 1, 2, 3, or 4, "
+                     "got %s." % dim)
