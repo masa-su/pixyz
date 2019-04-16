@@ -5,8 +5,8 @@ import re
 from torch import nn
 from copy import deepcopy
 
-from pixyz.utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist
-from pixyz.losses import LogProb, Prob
+from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist
+from ..losses import LogProb, Prob
 
 
 class Distribution(nn.Module):

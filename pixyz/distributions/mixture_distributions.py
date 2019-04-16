@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from pixyz.distributions.distributions import Distribution
+from ..distributions.distributions import Distribution
 
 
 class MixtureModel(Distribution):
