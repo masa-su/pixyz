@@ -41,4 +41,3 @@ class GAN(Model):
             d_loss = self.loss_cls.test(test_x, **kwargs)
             return loss, d_loss
         return loss
-

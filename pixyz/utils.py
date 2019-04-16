@@ -1,4 +1,3 @@
-from unittest import mock
 _EPSILON = 1e-07
 
 
@@ -14,6 +13,7 @@ def set_epsilon(eps):
 
     Examples
     --------
+    >>> from unittest import mock
     >>> with mock.patch('pixyz.utils._EPSILON', 1e-07):
     ...     set_epsilon(1e-06)
     ...     epsilon()
@@ -32,6 +32,7 @@ def epsilon():
 
     Examples
     --------
+    >>> from unittest import mock
     >>> with mock.patch('pixyz.utils._EPSILON', 1e-07):
     ...     epsilon()
     1e-07

@@ -1,4 +1,4 @@
-from torch import optim, nn
+from torch import optim
 
 from ..models.model import Model
 from ..utils import tolist
@@ -29,4 +29,3 @@ class ML(Model):
 
     def test(self, test_x={}, **kwargs):
         return super().test(test_x, **kwargs)
-
