@@ -20,8 +20,13 @@ class NormalPoE(nn.Module):
 
     Examples
     --------
+    >>> from pixyz.distributions import Normal
+    >>> a = Normal(loc="x", scale=1, var=["z"], cond_var=["x"])
+    >>> b = Normal(loc="y", scale=1, var=["z"], cond_var=["y"])
+    >>> c = Normal(loc=0, scale=1, var=["z"])
     >>> poe = NormalPoE(c, [a, b])
-
+    >>> print(poe.prob_text)
+    p(z|x,y)
     """
 
     def __init__(self, prior, dists=[], **kwargs):

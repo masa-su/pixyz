@@ -12,7 +12,7 @@ from .exponential_distributions import (
     Gamma,
 )
 from .custom_distributions import (
-    CustomLikelihoodDistribution,
+    CustomPDF,
 )
 
 from .special_distributions import (
@@ -29,7 +29,7 @@ from .poe import NormalPoE
 from .mixture_distributions import MixtureModel
 
 __all__ = [
-    'CustomLikelihoodDistribution',
+    'CustomPDF',
     'Deterministic',
     'DataDistribution',
     'Normal',

@@ -107,8 +107,7 @@ class MixtureModel(Distribution):
             _hidden_output = self._prior.sample()[self._hidden_var[0]]
             hidden_output.append(_hidden_output)
 
-            var_output.append(self._distributions[
-                                      _hidden_output.argmax(dim=-1)].sample()[self._var[0]])
+            var_output.append(self._distributions[_hidden_output.argmax(dim=-1)].sample()[self._var[0]])
 
         output_dict = {self._var[0]: torch.cat(var_output, 0)}
 

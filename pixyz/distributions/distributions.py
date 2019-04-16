@@ -808,7 +808,7 @@ class MarginalizeVarDistribution(Distribution):
     @property
     def prob_factorized_text(self):
         integral_symbol = len(self._marginalize_list) * "∫"
-        integral_variables = ["d"+str(var) for var in self._marginalize_list]
+        integral_variables = ["d" + str(var) for var in self._marginalize_list]
         integral_variables = "".join(integral_variables)
 
         return "{}{}{}".format(integral_symbol, self._a.prob_factorized_text, integral_variables)
@@ -833,4 +833,3 @@ def sum_samples(samples):
         return samples
     raise ValueError("The dim of samples must be any of 1, 2, 3, or 4, "
                      "got dim %s." % dim)
-

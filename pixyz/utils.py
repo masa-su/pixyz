@@ -14,8 +14,6 @@ def set_epsilon(eps):
 
     Examples
     --------
-    >>> epsilon()
-    1e-07
     >>> with mock.patch('pixyz.utils._EPSILON', 1e-07):
     ...     set_epsilon(1e-06)
     ...     epsilon()

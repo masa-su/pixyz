@@ -61,4 +61,3 @@ class DataDistribution(Distribution):
         """
 
         return self.var
-
