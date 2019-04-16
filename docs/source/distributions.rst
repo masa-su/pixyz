@@ -164,7 +164,6 @@ Operators
 ReplaceVarDistribution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pixyz.distributions.distributions
 .. autoclass:: ReplaceVarDistribution
     :members:
     :undoc-members:

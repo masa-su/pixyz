@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'Pixyz'
-copyright = '2018, masa-su'
+copyright = '2019, masa-su'
 author = 'masa-su'
 
 # The short X.Y version
@@ -42,6 +42,7 @@ release = ''
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx.ext.todo',
     'sphinx.ext.imgmath',
@@ -165,3 +166,6 @@ texinfo_documents = [
 
 autodoc_member_order = 'bysource'
 autodoc_default_flags = ['show-inheritance']
+
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True

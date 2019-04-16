@@ -22,6 +22,8 @@ from .special_distributions import (
 
 from .distributions import (
     MultiplyDistribution,
+    MarginalizeVarDistribution,
+    ReplaceVarDistribution,
 )
 
 from .poe import NormalPoE
@@ -45,6 +47,8 @@ __all__ = [
     'Gamma',
 
     'MultiplyDistribution',
+    'ReplaceVarDistribution',
+    'MarginalizeVarDistribution',
     'NormalPoE',
     'MixtureModel',
 ]
