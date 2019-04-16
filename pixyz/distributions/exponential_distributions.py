@@ -174,8 +174,8 @@ class Multinomial(DistributionBase):
     Multinomial distribution parameterized by :attr:`total_count` and :attr:`probs`.
     """
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["total_count", "probs"]
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, total_count=1, **kwargs):
+        self.params_keys = ["probs"]
         self.DistributionTorch = MultinomialTorch
 
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
