@@ -1,8 +1,7 @@
 import torch
 from torch import nn
 
-from ..utils import get_dict_values
-from .distributions import Distribution
+from pixyz.distributions.distributions import Distribution
 
 
 class MixtureModel(Distribution):
@@ -24,20 +23,20 @@ class MixtureModel(Distribution):
     --------
     >>> from pixyz.distributions import Normal, Categorical
     >>> from pixyz.distributions.mixture_distributions import MixtureModel
-    >>>
     >>> z_dim = 3  # the number of mixture
     >>> x_dim = 2  # the input dimension.
-    >>>
     >>> distributions = []  # the list of distributions
     >>> for i in range(z_dim):
-    >>>     loc = torch.randn(x_dim)  # initialize the value of location (mean)
-    >>>     scale = torch.empty(x_dim).fill_(1.)  # initialize the value of scale (variance)
-    >>>     distributions.append(Normal(loc=loc, scale=scale, var=["x"], name="p_%d" %i))
-    >>>
+    ...     loc = torch.randn(x_dim)  # initialize the value of location (mean)
+    ...     scale = torch.empty(x_dim).fill_(1.)  # initialize the value of scale (variance)
+    ...     distributions.append(Normal(loc=loc, scale=scale, var=["x"], name="p_%d" %i))
     >>> probs = torch.empty(z_dim).fill_(1. / z_dim)  # initialize the value of probabilities
     >>> prior = Categorical(probs=probs, var=["z"], name="prior")
-    >>>
     >>> p = MixtureModel(distributions=distributions, prior=prior)
+    >>> print(p.prob_text)
+    p(x)
+    >>> print(p.prob_factorized_text)
+    p_0(x|z=0)prior(z=0) + p_1(x|z=1)prior(z=1) + p_2(x|z=2)prior(z=2)
     """
 
     def __init__(self, distributions, prior, name="p"):
