@@ -1,3 +1,5 @@
+import torch
+
 _EPSILON = 1e-07
 
 
@@ -155,3 +157,41 @@ def tolist(a):
     if type(a) is list:
         return a
     return [a]
+
+
+def sum_samples(samples):
+    """Sum a given sample across the axes.
+
+    Parameters
+    ----------
+    samples : torch.Tensor
+        Input sample. The number of this axes is assumed to be 4 or less.
+
+    Returns
+    -------
+    torch.Tensor
+        Sum over all axes except the first axis.
+
+
+    Examples
+    --------
+    >>> a = torch.ones([2])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    >>> a = torch.ones([2, 3])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    >>> a = torch.ones([2, 3, 4])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    """
+
+    dim = samples.dim()
+    if dim == 1:
+        return samples
+    elif dim <= 4:
+        dim_list = list(torch.arange(samples.dim()))
+        samples = torch.sum(samples, dim=dim_list[1:])
+        return samples
+    raise ValueError("The number of sample axes must be any of 1, 2, 3, or 4, "
+                     "got %s." % dim)

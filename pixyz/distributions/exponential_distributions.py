@@ -10,8 +10,8 @@ from torch.distributions import Beta as BetaTorch
 from torch.distributions import Laplace as LaplaceTorch
 from torch.distributions import Gamma as GammaTorch
 
-from ..utils import get_dict_values
-from .distributions import DistributionBase, sum_samples
+from ..utils import get_dict_values, sum_samples
+from .distributions import DistributionBase
 
 
 class Normal(DistributionBase):
