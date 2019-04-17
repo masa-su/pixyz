@@ -5,7 +5,7 @@ import re
 from torch import nn
 from copy import deepcopy
 
-from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist
+from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist, sum_samples
 from ..losses import LogProb, Prob
 
 
