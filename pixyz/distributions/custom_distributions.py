@@ -23,7 +23,7 @@ class CustomPDF(Distribution):
     def __init__(self, pdf, var, distribution_name="Custom PDF",
                  **kwargs):
         self.pdf = pdf
-        self.DistributionTorch = None
+        self.distribution_torch_class = None
         self._distribution_name = distribution_name
 
         super().__init__(var=var, cond_var=[], **kwargs)

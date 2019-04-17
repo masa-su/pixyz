@@ -57,11 +57,11 @@ class NormalPoE(nn.Module):
         self.prob_factorized_text = self.prob_text
 
         self.distribution_name = "Normal"
-        self.DistributionTorch = NormalTorch
+        self.distribution_torch_class = NormalTorch
 
-    def set_distribution(self, x={}, **kwargs):
+    def set_dist(self, x={}, **kwargs):
         params = self.get_params(x, **kwargs)
-        self.dist = self.DistributionTorch(**params)
+        self.dist = self.distribution_torch_class(**params)
 
     def _get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
@@ -112,7 +112,7 @@ class NormalPoE(nn.Module):
         # input : tensor, list or dict
         # output : dict
 
-        self.set_distribution(x, **kwargs)
+        self.set_dist(x, **kwargs)
         output = {self.var[0]: self._get_sample(**kwargs)}
 
         if return_all:

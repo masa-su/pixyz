@@ -15,7 +15,7 @@ class KullbackLeibler(Loss):
 
     TODO:
         This class seems to be slightly slower than this previous implementation
-        (perhaps because of :attr:`set_distribution`).
+        (perhaps because of :attr:`set_dist`).
     """
 
     def __init__(self, p, q, input_var=None, dim=None):
@@ -27,15 +27,15 @@ class KullbackLeibler(Loss):
         return "KL[{}||{}]".format(self._p.prob_text, self._q.prob_text)
 
     def _get_eval(self, x, **kwargs):
-        if (not hasattr(self._p, 'DistributionTorch')) or (not hasattr(self._q, 'DistributionTorch')):
+        if (not hasattr(self._p, 'distribution_torch_class')) or (not hasattr(self._q, 'distribution_torch_class')):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "
                              "got %s and %s." % (self._p.distribution_name, self._q.distribution_name))
 
         inputs = get_dict_values(x, self._p.input_var, True)
-        self._p.set_distribution(inputs)
+        self._p.set_dist(inputs)
 
         inputs = get_dict_values(x, self._q.input_var, True)
-        self._q.set_distribution(inputs)
+        self._q.set_dist(inputs)
 
         divergence = kl_divergence(self._p.dist, self._q.dist)
 
@@ -62,7 +62,7 @@ class KullbackLeibler(Loss):
                                             self._p2.distribution_name))
 
         #inputs = get_dict_values(x, self._p2.input_var, True)
-        #self._p2.set_distribution(inputs)
+        #self._p2.set_dist(inputs)
 
         #divergence = kl_divergence(self._p1.dist, self._p2.dist)
 

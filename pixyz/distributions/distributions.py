@@ -50,7 +50,7 @@ class Distribution(nn.Module):
     @property
     def distribution_name(self):
         """str: Name of this distribution class."""
-        return None
+        raise NotImplementedError
 
     @property
     def name(self):
@@ -131,8 +131,8 @@ class Distribution(nn.Module):
         ------
         ValueError
             Raises `ValueError` if the type of input is neither :obj:`torch.Tensor`, :obj:`list`, nor :obj:`dict.
-        """
 
+        """
         if var is None:
             var = self.input_var
 
@@ -181,8 +181,8 @@ class Distribution(nn.Module):
         p(x|z) Normal
         >>> dist_2.get_params({"z": 1})
         {'scale': 1, 'loc': 0}
-        """
 
+        """
         raise NotImplementedError
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
@@ -268,6 +268,7 @@ class Distribution(nn.Module):
         -------
         pixyz.losses.Prob
             An instance of :class:`pixyz.losses.Prob`
+
         """
 
         return Prob(self, sum_features=sum_features, feature_dims=feature_dims)
@@ -295,6 +296,7 @@ class Distribution(nn.Module):
         -------
         pixyz.distributions.ReplaceVarDistribution
             An instance of :class:`pixyz.distributions.ReplaceVarDistribution`
+
         """
 
         return ReplaceVarDistribution(self, replace_dict)
@@ -311,6 +313,7 @@ class Distribution(nn.Module):
         -------
         pixyz.distributions.MarginalizeVarDistribution
             An instance of :class:`pixyz.distributions.MarginalizeVarDistribution`
+
         """
 
         marginalize_list = tolist(marginalize_list)
@@ -335,11 +338,15 @@ class Distribution(nn.Module):
 
 
 class DistributionBase(Distribution):
+    """
+    Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class.
 
+    """
     def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim)
 
         self._set_constant_params(**kwargs)
+        self._dist = None
 
     def _set_constant_params(self, **params_dict):
         """Format constant parameters of this distribution.
@@ -368,16 +375,28 @@ class DistributionBase(Distribution):
             else:
                 raise ValueError
 
-    def set_distribution(self, x={}, sampling=True, **kwargs):
-        """
-        Require self.params_keys and self.DistributionTorch
+    @property
+    def params_keys(self):
+        raise NotImplementedError
+
+    @property
+    def distribution_torch_class(self):
+        raise NotImplementedError
+
+    @property
+    def dist(self):
+        return self._dist
+
+    @dist.setter
+    def set_dist(self, x={}, **kwargs):
+        """Set :attr:`dist` as PyTorch distributions given parameters.
+
+        This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
 
         Parameters
         ----------
         x : dict
-            Input variables.
-        sampling : bool
-            Whether this distribution can be sampled.
+            Parameters of this distribution.
         **kwargs
             Arbitrary keyword arguments.
 
@@ -390,7 +409,7 @@ class DistributionBase(Distribution):
         if set(self.params_keys) != set(params.keys()):
             raise ValueError
 
-        self.dist = self.DistributionTorch(**params)
+        self._dist = self.distribution_torch_class(**params)
 
     def _get_sample(self, reparam=False,
                     sample_shape=torch.Size()):
@@ -421,7 +440,7 @@ class DistributionBase(Distribution):
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self.set_distribution(_x_dict, sampling=False)
+        self.set_dist(_x_dict, sampling=False)
 
         x_targets = get_dict_values(x_dict, self._var)
         log_prob = self.dist.log_prob(*x_targets)
@@ -430,7 +449,8 @@ class DistributionBase(Distribution):
 
         return log_prob
 
-    def _replace_vars_to_params(self, vars_dict, replace_dict):
+    @staticmethod
+    def _replace_vars_to_params(vars_dict, replace_dict):
         """
         Replace variables in input keys to parameters of this distribution according to
         these correspondences which is formatted in a dictionary and set in `_initialize_constant_params`.
@@ -491,7 +511,7 @@ class DistributionBase(Distribution):
                 else:
                     sample_shape = (batch_size, self.dim)
 
-            self.set_distribution()
+            self.set_dist()
             output_dict = self._get_sample(reparam=reparam,
                                            sample_shape=sample_shape)
 
@@ -499,7 +519,7 @@ class DistributionBase(Distribution):
         else:
             # remove redundant variables from x_dict.
             _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
-            self.set_distribution(_x_dict)
+            self.set_dist(_x_dict)
             output_dict = self._get_sample(reparam=reparam)
 
         if return_all:
@@ -509,11 +529,11 @@ class DistributionBase(Distribution):
         return output_dict
 
     def sample_mean(self, x={}):
-        self.set_distribution(x)
+        self.set_dist(x)
         return self.dist.mean
 
     def sample_variance(self, x={}):
-        self.set_distribution(x)
+        self.set_dist(x)
         return self.dist.variance
 
     def forward(self, **params):
