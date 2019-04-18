@@ -530,10 +530,20 @@ class MultiplyDistribution(Distribution):
     Examples
     --------
     >>> a = DistributionBase(var=["x"], cond_var=["z"])
+    >>> b = DistributionBase(var=["z"], cond_var=["y"])
+    >>> p_multi = MultiplyDistribution(a, b)
+    >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
+    p(x,z|y) p(x|z)p(z|y)
+    >>> a = DistributionBase(var=["x"], cond_var=["z"])
     >>> b = DistributionBase(var=["y"], cond_var=["z"])
     >>> p_multi = MultiplyDistribution(a, b)
     >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
     p(x,y|z) p(x|z)p(y|z)
+    >>> a = DistributionBase(var=["x"], cond_var=["z"])
+    >>> b = DistributionBase(var=["y"], cond_var=["a"])
+    >>> p_multi = MultiplyDistribution(a, b)
+    >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
+    p(x,y|z,a) p(x|z)p(y|a)
 
     """
 
