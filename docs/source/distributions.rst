@@ -100,18 +100,17 @@ MixtureModel
     :members:
     :undoc-members:
 
-
-NormalPoE
+ProductOfNormal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: NormalPoE
+.. autoclass:: ProductOfNormal
     :members:
     :undoc-members:
 
-NormalPoE
+ElementWiseProductOfNormal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: NormalPoE
+.. autoclass:: ElementWiseProductOfNormal
     :members:
     :undoc-members:
        
@@ -181,5 +180,3 @@ MultiplyDistribution
 .. autoclass:: MultiplyDistribution
     :members:
     :undoc-members:
-
-
