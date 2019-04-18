@@ -174,24 +174,6 @@ class LossOperator(Loss):
 
         return loss1, loss2, x1
 
-    def train(self, x, **kwargs):
-        """
-        TODO: Fix
-        """
-        loss1 = self._loss1.train(x, **kwargs)
-        loss2 = self._loss2.train(x, **kwargs)
-
-        return loss1 + loss2
-
-    def test(self, x, **kwargs):
-        """
-        TODO: Fix
-        """
-        loss1 = self._loss1.test(x, **kwargs)
-        loss2 = self._loss2.test(x, **kwargs)
-
-        return loss1 + loss2
-
 
 class AddLoss(LossOperator):
     @property
