@@ -256,7 +256,7 @@ class Distribution(nn.Module):
 
         Parameters
         ----------
-        sum_features : :obj:`bool`, defaults to True.
+        sum_features : :obj:`bool`, defaults to True
             Whether the output is summed across some axes (dimensions) which are specified by :attr:`feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
             Set axes to sum across the output.
