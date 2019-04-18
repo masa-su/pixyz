@@ -3,10 +3,10 @@
 ![logo](https://user-images.githubusercontent.com/11865486/47983581-31c08c80-e117-11e8-8d9d-1efbd920718c.png)
 
 
-[![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
-[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz)
+[![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
+[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=develop-v0.1.0)](https://docs.pixyz.io/en/develop-v0.1.0/)
-[![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=develop%2Fv0.1.0)](https://github.com/masa-su/pixyz)
+[![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=develop%2Fv0.1.0)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
 
 - [What is Pixyz?](#what-is-pixyz)
 - [Installation](#installation)
