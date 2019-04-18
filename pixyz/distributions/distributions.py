@@ -384,7 +384,7 @@ class DistributionBase(Distribution):
 
     @property
     def params_keys(self):
-        """list: Return the list of parameter names for thi distribution."""
+        """list: Return the list of parameter names for this distribution."""
         raise NotImplementedError
 
     @property
@@ -397,7 +397,7 @@ class DistributionBase(Distribution):
         """Return the instance of PyTorch distribution."""
         return self._dist
 
-    def set_dist(self, x={}, **kwargs):
+    def set_dist(self, x={}, sampling=False, **kwargs):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
         This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
@@ -406,6 +406,8 @@ class DistributionBase(Distribution):
         ----------
         x : :obj:`dict`, defaults to {}.
             Parameters of this distribution.
+        sampling : :obj:`bool`, defaults to False.
+            Choose whether to use relaxed_* in PyTorch distribution.
         **kwargs
             Arbitrary keyword arguments.
 
@@ -593,7 +595,6 @@ class MultiplyDistribution(Distribution):
 
         super().__init__(cond_var=_cond_var, var=_var)
 
-        self._inh_var = _inh_var
         self._parent = _parent
         self._child = _child
 
@@ -601,10 +602,6 @@ class MultiplyDistribution(Distribution):
         _input_var = [var for var in self._child.input_var if var not in _inh_var]
         _input_var += self._parent.input_var
         self._input_var = sorted(set(_input_var), key=_input_var.index)
-
-    @property
-    def inh_var(self):
-        return self._inh_var
 
     @property
     def input_var(self):
