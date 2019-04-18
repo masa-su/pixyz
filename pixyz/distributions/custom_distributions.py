@@ -7,33 +7,34 @@ class CustomPDF(Distribution):
 
     Note that this distribution cannot perform sampling.
 
-    Attributes
-    ----------
-    pdf : function
-        User-defined probability density function.
-    var : list
-        Variables of this distribution.
-    distribution_name : :obj:`str`, optional
-        Name of this distribution.
-    +*kwargs :
-        Arbitrary keyword arguments.
-
     """
 
-    def __init__(self, pdf, var, distribution_name="Custom PDF",
-                 **kwargs):
-        self.pdf = pdf
-        self.distribution_torch_class = None
+    def __init__(self, pdf, var, distribution_name="Custom PDF", **kwargs):
+        """
+        Parameters
+        ----------
+        pdf : function
+            User-defined probability density function.
+        var : list
+            Variables of this distribution.
+        distribution_name : :obj:`str`, optional
+            Name of this distribution.
+        +*kwargs :
+            Arbitrary keyword arguments.
+
+        """
+        self._pdf = pdf
         self._distribution_name = distribution_name
 
         super().__init__(var=var, cond_var=[], **kwargs)
 
     @property
-    def input_var(self):
-        """
-        In CustomPDF, :attr:`input_var` is same as :attr:`var`.
-        """
+    def pdf(self):
+        """User-defined probability density function."""
+        return self._pdf
 
+    @property
+    def input_var(self):
         return self.var
 
     @property
