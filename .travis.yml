@@ -1,7 +1,6 @@
 language: python
-nstall:
+install:
   - pip install pytest-cov
   - pip install pytest-flake8
-  - pip install torch
 script:
   - PYTHONPATH=$PWD:$PYTHONPATH py.test
