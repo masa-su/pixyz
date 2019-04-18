@@ -279,7 +279,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
     """
 
     def __init__(self, p, name="p", dim=1):
-        """
+        r"""
         Parameters
         ----------
         p : pixyz.distributions.Normal
