@@ -113,13 +113,6 @@ ElementWiseProductOfNormal
 .. autoclass:: ElementWiseProductOfNormal
     :members:
     :undoc-members:
-
-NormalPoE
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: NormalPoE
-    :members:
-    :undoc-members:
        
 Special distributions
 ---------------------
