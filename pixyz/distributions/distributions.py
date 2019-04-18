@@ -214,7 +214,7 @@ class Distribution(nn.Module):
 
         Parameters
         ----------
-        x : :obj:`dict`, defaults to {}.
+        x : :obj:`dict`, defaults to {}
             Parameters of this distribution.
 
         """
@@ -225,7 +225,7 @@ class Distribution(nn.Module):
 
         Parameters
         ----------
-        x : :obj:`dict`, defaults to {}.
+        x : :obj:`dict`, defaults to {}
             Parameters of this distribution.
 
         """
