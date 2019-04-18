@@ -8,7 +8,7 @@ from .distributions import MultiplyDistribution
 
 
 class NormalPoE(nn.Module):
-    """
+    r"""
     :math:`p(z|x,y) \propto p(z)p(z|x)p(z|y)`
 
     Parameters
