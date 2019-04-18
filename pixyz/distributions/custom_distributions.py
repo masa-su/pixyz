@@ -1,39 +1,46 @@
-import torch
-
 from ..utils import get_dict_values
 from .distributions import Distribution
 
 
-class CustomLikelihoodDistribution(Distribution):
+class CustomPDF(Distribution):
+    """This distribution is constructed by user-defined probability density function.
 
-    def __init__(self, var=["x"],  likelihood=None,
-                 **kwargs):
-        if likelihood is None:
-            raise ValueError("You should set the likelihood"
-                             " of this distribution.")
-        self.likelihood = likelihood
-        self.DistributionTorch = None
+    Note that this distribution cannot perform sampling.
+
+    """
+
+    def __init__(self, pdf, var, distribution_name="Custom PDF", **kwargs):
+        """
+        Parameters
+        ----------
+        pdf : function
+            User-defined probability density function.
+        var : list
+            Variables of this distribution.
+        distribution_name : :obj:`str`, optional
+            Name of this distribution.
+        +*kwargs :
+            Arbitrary keyword arguments.
+
+        """
+        self._pdf = pdf
+        self._distribution_name = distribution_name
 
         super().__init__(var=var, cond_var=[], **kwargs)
 
     @property
-    def input_var(self):
-        """
-        In CustomLikelihoodDistribution, `input_var` is same as `var`.
-        """
+    def pdf(self):
+        """User-defined probability density function."""
+        return self._pdf
 
+    @property
+    def input_var(self):
         return self.var
 
     @property
     def distribution_name(self):
-        return "Custom Distribution"
+        return self._distribution_name
 
-    def log_likelihood(self, x_dict):
-
-        if not set(list(x_dict.keys())) >= set(self._var):
-            raise ValueError("Input's keys are not valid.")
-
-        _x_dict = get_dict_values(x_dict, self._var)
-        log_like = torch.log(self.likelihood(_x_dict[0]))
-        # log_like = sum_samples(log_like)
-        return log_like
+    def get_log_prob(self, x_dict, sum_features=False, feature_dims=None):
+        x = get_dict_values(x_dict, self._var)
+        return self.pdf(x)

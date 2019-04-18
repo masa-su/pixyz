@@ -12,7 +12,7 @@ from .exponential_distributions import (
     Gamma,
 )
 from .custom_distributions import (
-    CustomLikelihoodDistribution,
+    CustomPDF,
 )
 
 from .special_distributions import (
@@ -21,7 +21,10 @@ from .special_distributions import (
 )
 
 from .distributions import (
+    Distribution,
     MultiplyDistribution,
+    MarginalizeVarDistribution,
+    ReplaceVarDistribution,
 )
 
 from .poe import NormalPoE
@@ -29,7 +32,8 @@ from .poe import NormalPoE
 from .mixture_distributions import MixtureModel
 
 __all__ = [
-    'CustomLikelihoodDistribution',
+    'Distribution',
+    'CustomPDF',
     'Deterministic',
     'DataDistribution',
     'Normal',
@@ -45,6 +49,8 @@ __all__ = [
     'Gamma',
 
     'MultiplyDistribution',
+    'ReplaceVarDistribution',
+    'MarginalizeVarDistribution',
     'NormalPoE',
     'MixtureModel',
 ]

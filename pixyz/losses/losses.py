@@ -82,10 +82,6 @@ class Loss(object, metaclass=abc.ABCMeta):
     def expectation(self, p, input_var=None):
         return Expectation(p, self, input_var=input_var)
 
-    def estimate(self, *args, **kwargs):
-        # This method is going to be removed in the next version.
-        raise NotImplementedError("The `estimate()` method has been replaced to `eval()`.")
-
     @abc.abstractmethod
     def _get_eval(self, x, **kwargs):
         raise NotImplementedError
@@ -177,24 +173,6 @@ class LossOperator(Loss):
         x1.update(x2)
 
         return loss1, loss2, x1
-
-    def train(self, x, **kwargs):
-        """
-        TODO: Fix
-        """
-        loss1 = self._loss1.train(x, **kwargs)
-        loss2 = self._loss2.train(x, **kwargs)
-
-        return loss1 + loss2
-
-    def test(self, x, **kwargs):
-        """
-        TODO: Fix
-        """
-        loss1 = self._loss1.test(x, **kwargs)
-        loss2 = self._loss2.test(x, **kwargs)
-
-        return loss1 + loss2
 
 
 class AddLoss(LossOperator):
@@ -348,9 +326,9 @@ class Expectation(Loss):
     where :math:`x_l \sim p(x)`.
 
     Note that :math:`f` doesn't need to be able to sample, which is known as the law of the unconscious statistician
-     (LOTUS).
+    (LOTUS).
 
-    Therefore, in this class, :math:`f` is assumed to `pixyz.Loss`.
+    Therefore, in this class, :math:`f` is assumed to :attr:`pixyz.Loss`.
     """
 
     def __init__(self, p, f, input_var=None):

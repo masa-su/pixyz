@@ -1,4 +1,4 @@
-from torch import optim, nn
+from torch import optim
 
 from ..models.model import Model
 from ..utils import tolist

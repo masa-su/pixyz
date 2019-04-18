@@ -149,7 +149,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
 
     where :math:`d^*(x) = \arg\max_{d} \mathbb{E}_{q(x)}[\log d(x)] + \mathbb{E}_{p(x)}[\log (1-d(x))]`.
 
-    Note that this divergence is minimized to close p to q.
+    Note that this divergence is minimized to close :math:`p` to :math:`q`.
     """
 
     def __init__(self, p, q, discriminator, **kwargs):

@@ -1,4 +1,5 @@
-from unittest import mock
+import torch
+
 _EPSILON = 1e-07
 
 
@@ -14,8 +15,7 @@ def set_epsilon(eps):
 
     Examples
     --------
-    >>> epsilon()
-    1e-07
+    >>> from unittest import mock
     >>> with mock.patch('pixyz.utils._EPSILON', 1e-07):
     ...     set_epsilon(1e-06)
     ...     epsilon()
@@ -34,6 +34,7 @@ def epsilon():
 
     Examples
     --------
+    >>> from unittest import mock
     >>> with mock.patch('pixyz.utils._EPSILON', 1e-07):
     ...     epsilon()
     1e-07
@@ -114,11 +115,14 @@ def replace_dict_keys(dicts, replace_list_dict):
     Parameters
     ----------
     dicts : dict
+        Dictionary.
     replace_list_dict : dict
+        Dictionary.
 
     Returns
     -------
     replaced_dicts : dict
+        Dictionary.
 
     Examples
     --------
@@ -131,6 +135,42 @@ def replace_dict_keys(dicts, replace_list_dict):
                            else (key, value) for key, value in dicts.items()])
 
     return replaced_dicts
+
+
+def replace_dict_keys_split(dicts, replace_list_dict):
+    """ Replace values in `dicts` according to :attr:`replace_list_dict`.
+
+    Replaced dict is splitted by :attr:`replaced_dict` and :attr:`remain_dict`.
+
+    Parameters
+    ----------
+    dicts : dict
+        Dictionary.
+    replace_list_dict : dict
+        Dictionary.
+
+    Returns
+    -------
+    replaced_dict : dict
+        Dictionary.
+    remain_dict : dict
+        Dictionary.
+
+    Examples
+    --------
+    >>> replace_list_dict = {'a': 'loc'}
+    >>> x = {'a': 0, 'b': 1}
+    >>> print(replace_dict_keys_split(x, replace_list_dict))
+    ({'loc': 0}, {'b': 1})
+
+    """
+    replaced_dict = {replace_list_dict[key]: value for key, value in dicts.items()
+                     if key in list(replace_list_dict.keys())}
+
+    remain_dict = {key: value for key, value in dicts.items()
+                   if key not in list(replace_list_dict.keys())}
+
+    return replaced_dict, remain_dict
 
 
 def tolist(a):
@@ -156,3 +196,41 @@ def tolist(a):
     if type(a) is list:
         return a
     return [a]
+
+
+def sum_samples(samples):
+    """Sum a given sample across the axes.
+
+    Parameters
+    ----------
+    samples : torch.Tensor
+        Input sample. The number of this axes is assumed to be 4 or less.
+
+    Returns
+    -------
+    torch.Tensor
+        Sum over all axes except the first axis.
+
+
+    Examples
+    --------
+    >>> a = torch.ones([2])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    >>> a = torch.ones([2, 3])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    >>> a = torch.ones([2, 3, 4])
+    >>> sum_samples(a).size()
+    torch.Size([2])
+    """
+
+    dim = samples.dim()
+    if dim == 1:
+        return samples
+    elif dim <= 4:
+        dim_list = list(torch.arange(samples.dim()))
+        samples = torch.sum(samples, dim=dim_list[1:])
+        return samples
+    raise ValueError("The number of sample axes must be any of 1, 2, 3, or 4, "
+                     "got %s." % dim)

@@ -8,7 +8,7 @@ from .distributions import MultiplyDistribution
 
 
 class NormalPoE(nn.Module):
-    """
+    r"""
     :math:`p(z|x,y) \propto p(z)p(z|x)p(z|y)`
 
     Parameters
@@ -20,8 +20,13 @@ class NormalPoE(nn.Module):
 
     Examples
     --------
+    >>> from pixyz.distributions import Normal
+    >>> a = Normal(loc="x", scale=1, var=["z"], cond_var=["x"])
+    >>> b = Normal(loc="y", scale=1, var=["z"], cond_var=["y"])
+    >>> c = Normal(loc=0, scale=1, var=["z"])
     >>> poe = NormalPoE(c, [a, b])
-
+    >>> print(poe.prob_text)
+    p(z|x,y)
     """
 
     def __init__(self, prior, dists=[], **kwargs):
@@ -52,14 +57,13 @@ class NormalPoE(nn.Module):
         self.prob_factorized_text = self.prob_text
 
         self.distribution_name = "Normal"
-        self.DistributionTorch = NormalTorch
+        self.distribution_torch_class = NormalTorch
 
-    def set_distribution(self, x={}, **kwargs):
+    def set_dist(self, x={}, **kwargs):
         params = self.get_params(x, **kwargs)
-        self.dist = self.DistributionTorch(**params)
+        self.dist = self.distribution_torch_class(**params)
 
-    def _get_sample(self, reparam=True,
-                    sample_shape=torch.Size()):
+    def get_sample(self, reparam=True, sample_shape=torch.Size()):
 
         if reparam:
             try:
@@ -107,8 +111,8 @@ class NormalPoE(nn.Module):
         # input : tensor, list or dict
         # output : dict
 
-        self.set_distribution(x, **kwargs)
-        output = {self.var[0]: self._get_sample(**kwargs)}
+        self.set_dist(x, **kwargs)
+        output = {self.var[0]: self.get_sample(**kwargs)}
 
         if return_all:
             output.update(x)

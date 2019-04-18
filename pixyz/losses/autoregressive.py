@@ -12,7 +12,9 @@ class IterativeLoss(Loss):
 
     .. math::
 
-        \mathcal{L} = \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t), where x_t = f_{slice_step}(x, t)
+        \mathcal{L} = \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t),
+
+    where :math:`x_t = f_{slice_step}(x, t)`.
     """
 
     def __init__(self, step_loss, max_iter=1,
@@ -55,12 +57,14 @@ class IterativeLoss(Loss):
 
         if "max_iter" in kwargs.keys():
             max_iter = kwargs["max_iter"]
-        else: max_iter = self.max_iter
+        else:
+            max_iter = self.max_iter
 
         if "mask" in kwargs.keys():
             mask = kwargs["mask"].float()
-        else: mask = None
-        
+        else:
+            mask = None
+
         for t in range(max_iter):
             if self.slice_step:
                 x.update({self.timestep_var[0]: t})
@@ -71,7 +75,8 @@ class IterativeLoss(Loss):
             # evaluate
             step_loss, samples = self.step_loss.eval(x, return_dict=True)
             x.update(samples)
-            if mask is not None: step_loss *= mask[t]
+            if mask is not None:
+                step_loss *= mask[t]
             step_loss_sum += step_loss
 
             # update

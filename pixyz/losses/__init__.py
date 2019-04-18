@@ -50,8 +50,6 @@ __all__ = [
     'LogProb',
     'Prob',
     'ELBO',
-    'SimilarityLoss',
-    'MultiModalContrastivenessLoss',
     'AdversarialJensenShannon',
     'AdversarialKullbackLeibler',
     'AdversarialWassersteinDistance',

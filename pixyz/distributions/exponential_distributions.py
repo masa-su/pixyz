@@ -2,30 +2,28 @@ import torch
 from torch.distributions import Normal as NormalTorch
 from torch.distributions import Bernoulli as BernoulliTorch
 from torch.distributions import RelaxedBernoulli as RelaxedBernoulliTorch
-from torch.distributions \
-    import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
-from torch.distributions.one_hot_categorical\
-    import OneHotCategorical as CategoricalTorch
+from torch.distributions import RelaxedOneHotCategorical as RelaxedOneHotCategoricalTorch
+from torch.distributions.one_hot_categorical import OneHotCategorical as CategoricalTorch
 from torch.distributions import Multinomial as MultinomialTorch
 from torch.distributions import Dirichlet as DirichletTorch
 from torch.distributions import Beta as BetaTorch
 from torch.distributions import Laplace as LaplaceTorch
 from torch.distributions import Gamma as GammaTorch
 
-from ..utils import get_dict_values
-from .distributions import DistributionBase, sum_samples
+from ..utils import get_dict_values, sum_samples
+from .distributions import DistributionBase
 
 
 class Normal(DistributionBase):
-    """
-    Normal distribution parameterized by :attr:`loc` and :attr:`scale`.
-    """
+    """Normal distribution parameterized by :attr:`loc` and :attr:`scale`. """
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["loc", "scale"]
-        self.DistributionTorch = NormalTorch
+    @property
+    def params_keys(self):
+        return ["loc", "scale"]
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+    @property
+    def distribution_torch_class(self):
+        return NormalTorch
 
     @property
     def distribution_name(self):
@@ -33,47 +31,54 @@ class Normal(DistributionBase):
 
 
 class Bernoulli(DistributionBase):
-    """
-    Bernoulli distribution parameterized by :attr:`probs`.
-    """
+    """Bernoulli distribution parameterized by :attr:`probs`."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["probs"]
-        self.DistributionTorch = BernoulliTorch
+    @property
+    def params_keys(self):
+        return ["probs"]
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+    @property
+    def distribution_torch_class(self):
+        return BernoulliTorch
 
     @property
     def distribution_name(self):
         return "Bernoulli"
 
 
-class RelaxedBernoulli(DistributionBase):
-    """
-    Relaxed (reparameterizable) Bernoulli distribution parameterized by :attr:`probs`.
-    """
+class RelaxedBernoulli(Bernoulli):
+    """Relaxed (re-parameterizable) Bernoulli distribution parameterized by :attr:`probs`."""
 
     def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["probs"]
-        self.DistributionTorch = BernoulliTorch
-        # use relaxed version only when sampling
-        self.RelaxedDistributionTorch = RelaxedBernoulliTorch
-        self.temperature = temperature
+        self._temperature = temperature
 
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+    @property
+    def distribution_torch_class(self):
+        return BernoulliTorch
+
+    @property
+    def relaxed_distribution_torch_class(self):
+        """Use relaxed version only when sampling"""
+        return RelaxedBernoulliTorch
 
     @property
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def set_distribution(self, x={}, sampling=True, **kwargs):
+    def set_dist(self, x={}, sampling=True, **kwargs):
         params = self.get_params(x, **kwargs)
         if sampling is True:
-            self.dist =\
-                self.RelaxedDistributionTorch(temperature=self.temperature,
-                                              **params)
+            self._dist =\
+                self.relaxed_distribution_torch_class(temperature=self.temperature,
+                                                      **params)
         else:
-            self.dist = self.DistributionTorch(**params)
+            self._dist = self.distribution_torch_class(**params)
 
 
 class FactorizedBernoulli(Bernoulli):
@@ -81,10 +86,8 @@ class FactorizedBernoulli(Bernoulli):
     Factorized Bernoulli distribution parameterized by :attr:`probs`.
 
     See `Generative Models of Visually Grounded Imagination`
-    """
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+    """
 
     @property
     def distribution_name(self):
@@ -99,68 +102,84 @@ class FactorizedBernoulli(Bernoulli):
 
 
 class Categorical(DistributionBase):
-    """
-    Categorical distribution parameterized by :attr:`probs`.
-    """
+    """Categorical distribution parameterized by :attr:`probs`."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["probs"]
-        self.DistributionTorch = CategoricalTorch
+    @property
+    def params_keys(self):
+        return ["probs"]
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+    @property
+    def distribution_torch_class(self):
+        return CategoricalTorch
 
     @property
     def distribution_name(self):
         return "Categorical"
 
 
-class RelaxedCategorical(DistributionBase):
-    """
-    Relaxed (reparameterizable) categorical distribution parameterized by :attr:`probs`.
-    """
+class RelaxedCategorical(Categorical):
+    """Relaxed (re-parameterizable) categorical distribution parameterized by :attr:`probs`."""
 
     def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", dim=None,
                  **kwargs):
-        self.params_keys = ["probs"]
-        self.DistributionTorch = CategoricalTorch
-        # use relaxed version only when sampling
-        self.RelaxedDistributionTorch = RelaxedOneHotCategoricalTorch
-        self.temperature = temperature
+        self._temperature = temperature
 
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+    @property
+    def distribution_torch_class(self):
+        return CategoricalTorch
+
+    @property
+    def relaxed_distribution_torch_class(self):
+        """Use relaxed version only when sampling"""
+        return RelaxedOneHotCategoricalTorch
 
     @property
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def set_distribution(self, x={}, sampling=True, **kwargs):
+    def set_dist(self, x={}, sampling=True, **kwargs):
         params = self.get_params(x, **kwargs)
         if sampling is True:
-            self.dist =\
-                self.RelaxedDistributionTorch(temperature=self.temperature,
-                                              **params)
+            self._dist =\
+                self.relaxed_distribution_torch_class(temperature=self.temperature,
+                                                      **params)
         else:
-            self.dist = self.DistributionTorch(**params)
+            self._dist = self.distribution_torch_class(**params)
 
     def sample_mean(self, x={}):
-        self.set_distribution(x, sampling=False)
+        self.set_dist(x, sampling=False)
         return self.dist.mean
 
     def sample_variance(self, x={}):
-        self.set_distribution(x, sampling=False)
+        self.set_dist(x, sampling=False)
         return self.dist.variance
 
 
 class Multinomial(DistributionBase):
-    """
-    Multinomial distribution parameterized by :attr:`total_count` and :attr:`probs`.
-    """
+    """Multinomial distribution parameterized by :attr:`total_count` and :attr:`probs`."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["total_count", "probs"]
-        self.DistributionTorch = MultinomialTorch
+    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, total_count=1, **kwargs):
+        self._total_count = total_count
 
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+
+    @property
+    def total_count(self):
+        return self._total_count
+
+    @property
+    def params_keys(self):
+        return ["probs"]
+
+    @property
+    def distribution_torch_class(self):
+        return MultinomialTorch
 
     @property
     def distribution_name(self):
@@ -168,15 +187,15 @@ class Multinomial(DistributionBase):
 
 
 class Dirichlet(DistributionBase):
-    """
-    Dirichlet distribution parameterized by :attr:`concentration`.
-    """
+    """Dirichlet distribution parameterized by :attr:`concentration`."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["concentration"]
-        self.DistributionTorch = DirichletTorch
+    @property
+    def params_keys(self):
+        return ["concentration"]
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+    @property
+    def distribution_torch_class(self):
+        return DirichletTorch
 
     @property
     def distribution_name(self):
@@ -184,15 +203,15 @@ class Dirichlet(DistributionBase):
 
 
 class Beta(DistributionBase):
-    """
-    Beta distribution parameterized by :attr:`concentration1` and :attr:`concentration0`.
-    """
+    """Beta distribution parameterized by :attr:`concentration1` and :attr:`concentration0`."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["concentration1", "concentration0"]
-        self.DistributionTorch = BetaTorch
+    @property
+    def params_keys(self):
+        return ["concentration1", "concentration0"]
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+    @property
+    def distribution_torch_class(self):
+        return BetaTorch
 
     @property
     def distribution_name(self):
@@ -204,11 +223,13 @@ class Laplace(DistributionBase):
     Laplace distribution parameterized by :attr:`loc` and :attr:`scale`.
     """
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["loc", "scale"]
-        self.DistributionTorch = LaplaceTorch
+    @property
+    def params_keys(self):
+        return ["loc", "scale"]
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+    @property
+    def distribution_torch_class(self):
+        return LaplaceTorch
 
     @property
     def distribution_name(self):
@@ -220,11 +241,13 @@ class Gamma(DistributionBase):
     Gamma distribution parameterized by :attr:`concentration` and :attr:`rate`.
     """
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, **kwargs):
-        self.params_keys = ["concentration", "rate"]
-        self.DistributionTorch = GammaTorch
+    @property
+    def params_keys(self):
+        return ["concentration", "rate"]
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+    @property
+    def distribution_torch_class(self):
+        return GammaTorch
 
     @property
     def distribution_name(self):

@@ -24,11 +24,9 @@ def find_version(*file_paths):
 setup(
     name='pixyz',
     version=find_version("pixyz", "__init__.py"),
-    description='Deep generative model library',
+    description='Deep generative modeling library',
     author='Masahiro Suzuki',
-    install_requires=[
-        'torch',
-        'torchvision',
-        'tqdm'
-    ]
+    install_requires=["torch",
+                      "torchvision",
+                      "tqdm"]
 )
