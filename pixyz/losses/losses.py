@@ -82,10 +82,6 @@ class Loss(object, metaclass=abc.ABCMeta):
     def expectation(self, p, input_var=None):
         return Expectation(p, self, input_var=input_var)
 
-    def estimate(self, *args, **kwargs):
-        # This method is going to be removed in the next version.
-        raise NotImplementedError("The `estimate()` method has been replaced to `eval()`.")
-
     @abc.abstractmethod
     def _get_eval(self, x, **kwargs):
         raise NotImplementedError
