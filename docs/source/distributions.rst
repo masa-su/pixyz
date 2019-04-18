@@ -139,24 +139,24 @@ CustomPDF
     :members:
     :undoc-members:
 
-Flow-based
-------------------------
+..
+    Flow-based
+    ------------------------
+
+    PlanarFlow
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    .. autoclass:: PlanarFlow
+        :members:
+        :undoc-members:
 
 
-PlanarFlow
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-       
-.. autoclass:: PlanarFlow
-    :members:
-    :undoc-members:
+    RealNVP
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-RealNVP
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-       
-.. autoclass:: RealNVP
-    :members:
-    :undoc-members:
+    .. autoclass:: RealNVP
+        :members:
+        :undoc-members:
 
 Operators
 -------------------------------------
