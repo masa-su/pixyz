@@ -21,6 +21,7 @@ from .special_distributions import (
 )
 
 from .distributions import (
+    Distribution,
     MultiplyDistribution,
     MarginalizeVarDistribution,
     ReplaceVarDistribution,
@@ -31,6 +32,7 @@ from .poe import NormalPoE
 from .mixture_distributions import MixtureModel
 
 __all__ = [
+    'Distribution',
     'CustomPDF',
     'Deterministic',
     'DataDistribution',

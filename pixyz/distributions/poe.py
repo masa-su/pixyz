@@ -63,7 +63,7 @@ class NormalPoE(nn.Module):
         params = self.get_params(x, **kwargs)
         self.dist = self.distribution_torch_class(**params)
 
-    def _get_sample(self, reparam=True,
+    def get_sample(self, reparam=True,
                     sample_shape=torch.Size()):
 
         if reparam:
@@ -113,7 +113,7 @@ class NormalPoE(nn.Module):
         # output : dict
 
         self.set_dist(x, **kwargs)
-        output = {self.var[0]: self._get_sample(**kwargs)}
+        output = {self.var[0]: self.get_sample(**kwargs)}
 
         if return_all:
             output.update(x)

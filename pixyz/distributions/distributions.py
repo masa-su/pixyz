@@ -5,15 +5,13 @@ import re
 from torch import nn
 from copy import deepcopy
 
-from ..utils import get_dict_values, replace_dict_keys, delete_dict_values, tolist, sum_samples
+from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
+    tolist, sum_samples
 from ..losses import LogProb, Prob
 
 
 class Distribution(nn.Module):
-    """
-    Distribution class. In Pixyz, all distributions are required to inherit this class.
-
-    """
+    """Distribution class. In Pixyz, all distributions are required to inherit this class."""
 
     def __init__(self, var, cond_var=[], name="p", dim=1):
         """
@@ -29,12 +27,13 @@ class Distribution(nn.Module):
             This name is displayed in prob_text and prob_factorized_text.
         dim : :obj:`int`, defaults to 1
             Number of dimensions of this distribution.
-            This might be ignored depending on the shape which is set in the sample method and on its parent distribution.
+            This might be ignored depending on the shape which is set in the sample method and on its parent
+            distribution.
             Moreover, this is not consider when this class is inherited by DNNs.
 
         """
-
         super().__init__()
+
         _vars = cond_var + var
         if len(_vars) != len(set(_vars)):
             raise ValueError("There are conflicted variables.")
@@ -109,8 +108,7 @@ class Distribution(nn.Module):
         return self._dim
 
     def _check_input(self, x, var=None):
-        """
-        Check the type of given input.
+        """Check the type of given input.
         If the input type is :obj:`dict`, this method checks whether the input keys contains the :attr:`var` list.
         In case that its type is :obj:`list` or :obj:`tensor`, it returns the output formatted in :obj:`dict`.
 
@@ -154,9 +152,8 @@ class Distribution(nn.Module):
         return checked_x
 
     def get_params(self, params_dict={}):
-        """
-        This method aims to get parameters of this distributions from constant parameters set in
-        initialization and outputs of DNNs.
+        """This method aims to get parameters of this distributions from constant parameters set in initialization
+        and outputs of DNNs.
 
         Parameters
         ----------
@@ -187,9 +184,8 @@ class Distribution(nn.Module):
 
     def sample(self, x={}, shape=None, batch_size=1, return_all=True,
                reparam=False):
-        """
-        Sample variables of this distribution.
-        If :attr:`cond_var` is not empty, we should set inputs as :obj:`dict`.
+        """Sample variables of this distribution.
+        If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
 
         Parameters
         ----------
@@ -211,7 +207,28 @@ class Distribution(nn.Module):
             Samples of this distribution.
 
         """
+        raise NotImplementedError
 
+    def sample_mean(self, x={}):
+        """Return the mean of the distribution.
+
+        Parameters
+        ----------
+        x : :obj:`dict`, defaults to {}.
+            Parameters of this distribution.
+
+        """
+        raise NotImplementedError
+
+    def sample_variance(self, x={}):
+        """Return the variance of the distribution.
+
+        Parameters
+        ----------
+        x : :obj:`dict`, defaults to {}.
+            Parameters of this distribution.
+
+        """
         raise NotImplementedError
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
@@ -229,7 +246,7 @@ class Distribution(nn.Module):
         Returns
         -------
         log_prob : torch.Tensor
-            Values of log-pdf.
+            Values of log-probability density/mass function.
 
         """
         raise NotImplementedError
@@ -240,7 +257,7 @@ class Distribution(nn.Module):
         Parameters
         ----------
         sum_features : :obj:`bool`, defaults to True.
-            Whether the output is summed across some axes (dimensions) which are specified by `feature_dims`.
+            Whether the output is summed across some axes (dimensions) which are specified by :attr:`feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
             Set axes to sum across the output.
 
@@ -250,7 +267,6 @@ class Distribution(nn.Module):
             An instance of :class:`pixyz.losses.LogProb`
 
         """
-
         return LogProb(self, sum_features=sum_features, feature_dims=feature_dims)
 
     def prob(self, sum_features=True, feature_dims=None):
@@ -260,7 +276,7 @@ class Distribution(nn.Module):
         ----------
         sum_features : :obj:`bool`, defaults to True
             Choose whether the output is summed across some axes (dimensions)
-            which are specified by `feature_dims`.
+            which are specified by :attr:`feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
             Set axes to sum across the output.
 
@@ -270,18 +286,11 @@ class Distribution(nn.Module):
             An instance of :class:`pixyz.losses.Prob`
 
         """
-
         return Prob(self, sum_features=sum_features, feature_dims=feature_dims)
 
     def forward(self, *args, **kwargs):
         """When this class is inherited by DNNs, this method should be overrided."""
 
-        raise NotImplementedError
-
-    def sample_mean(self, x):
-        raise NotImplementedError
-
-    def sample_variance(self, x):
         raise NotImplementedError
 
     def replace_var(self, **replace_dict):
@@ -338,10 +347,8 @@ class Distribution(nn.Module):
 
 
 class DistributionBase(Distribution):
-    """
-    Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class.
+    """Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class."""
 
-    """
     def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim)
 
@@ -377,17 +384,19 @@ class DistributionBase(Distribution):
 
     @property
     def params_keys(self):
+        """list: Return the list of parameter names for thi distribution."""
         raise NotImplementedError
 
     @property
     def distribution_torch_class(self):
+        """Return the class of PyTorch distribution."""
         raise NotImplementedError
 
     @property
     def dist(self):
+        """Return the instance of PyTorch distribution."""
         return self._dist
 
-    @dist.setter
     def set_dist(self, x={}, **kwargs):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
@@ -395,7 +404,7 @@ class DistributionBase(Distribution):
 
         Parameters
         ----------
-        x : dict
+        x : :obj:`dict`, defaults to {}.
             Parameters of this distribution.
         **kwargs
             Arbitrary keyword arguments.
@@ -404,34 +413,34 @@ class DistributionBase(Distribution):
         -------
 
         """
-
         params = self.get_params(x, **kwargs)
         if set(self.params_keys) != set(params.keys()):
             raise ValueError
 
         self._dist = self.distribution_torch_class(**params)
 
-    def _get_sample(self, reparam=False,
-                    sample_shape=torch.Size()):
-        """
+    def get_sample(self, reparam=False, sample_shape=torch.Size()):
+        """Get a sample_shape shaped sample from :attr:`dist`.
+
         Parameters
         ----------
-        reparam : bool
+        reparam : :obj:`bool`, defaults to True.
+            Choose where to sample using re-parameterization trick.
 
-        sample_shape : tuple
+        sample_shape : :obj:`tuple` or :obj:`torch.Size`, defaults to torch.Size().
+            Set the shape of a generated sample.
 
         Returns
         -------
         samples_dict : dict
+            Generated sample formatted by :obj:`dict`.
 
         """
-
         if reparam:
             try:
                 _samples = self.dist.rsample(sample_shape=sample_shape)
             except NotImplementedError:
-                print("We can not use the re-parameterization trick "
-                      "for this distribution.")
+                print("You cannot use the re-parameterization trick for this distribution.")
         else:
             _samples = self.dist.sample(sample_shape=sample_shape)
         samples_dict = {self._var[0]: _samples}
@@ -449,44 +458,8 @@ class DistributionBase(Distribution):
 
         return log_prob
 
-    @staticmethod
-    def _replace_vars_to_params(vars_dict, replace_dict):
-        """
-        Replace variables in input keys to parameters of this distribution according to
-        these correspondences which is formatted in a dictionary and set in `_initialize_constant_params`.
-
-        Parameters
-        ----------
-        vars_dict : dict
-            Dictionary.
-
-        replace_dict : dict
-            Dictionary.
-
-        Returns
-        -------
-        params_dict : dict
-            Dictionary.
-
-        Examples
-        --------
-        >>> replace_dict = {'a': 'loc'}
-        >>> x = {'a': 0, 'b': 1}
-        >>> dist = DistributionBase()
-        >>> print(dist._replace_vars_to_params(x, replace_dict))
-        ({'loc': 0}, {'b': 1})
-        """
-
-        params_dict = {replace_dict[key]: value for key, value in vars_dict.items()
-                       if key in list(replace_dict.keys())}
-
-        vars_dict = {key: value for key, value in vars_dict.items()
-                     if key not in list(replace_dict.keys())}
-
-        return params_dict, vars_dict
-
     def get_params(self, params_dict={}):
-        params_dict, vars_dict = self._replace_vars_to_params(params_dict, self.replace_params_dict)
+        params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
 
         # append constant_params to dict
@@ -495,9 +468,7 @@ class DistributionBase(Distribution):
 
         return output_dict
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=False):
-
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
         # check whether the input is valid or convert it to valid dictionary.
         x_dict = self._check_input(x)
 
@@ -512,15 +483,15 @@ class DistributionBase(Distribution):
                     sample_shape = (batch_size, self.dim)
 
             self.set_dist()
-            output_dict = self._get_sample(reparam=reparam,
-                                           sample_shape=sample_shape)
+            output_dict = self.get_sample(reparam=reparam,
+                                          sample_shape=sample_shape)
 
         # conditioned
         else:
             # remove redundant variables from x_dict.
             _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
             self.set_dist(_x_dict)
-            output_dict = self._get_sample(reparam=reparam)
+            output_dict = self.get_sample(reparam=reparam)
 
         if return_all:
             x_dict.update(output_dict)
@@ -541,8 +512,7 @@ class DistributionBase(Distribution):
 
 
 class MultiplyDistribution(Distribution):
-    """
-    Multiply by given distributions, e.g, :math:`p(x,y|z) = p(x|z,y)p(y|z)`.
+    """Multiply by given distributions, e.g, :math:`p(x,y|z) = p(x|z,y)p(y|z)`.
     In this class, it is checked if two distributions can be multiplied.
 
     p(x|z)p(z|y) -> Valid
@@ -555,14 +525,6 @@ class MultiplyDistribution(Distribution):
 
     p(x|z)p(x|y) -> Invalid (conflict)
 
-    Parameters
-    ----------
-    a : pixyz.Distribution
-        Distribution.
-
-    b : pixyz.Distribution
-        Distribution.
-
     Examples
     --------
     >>> a = DistributionBase(var=["x"], cond_var=["z"])
@@ -570,9 +532,20 @@ class MultiplyDistribution(Distribution):
     >>> p_multi = MultiplyDistribution(a, b)
     >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
     p(x,y|z) p(x|z)p(y|z)
+
     """
 
     def __init__(self, a, b):
+        """
+        Parameters
+        ----------
+        a : pixyz.Distribution
+            Distribution.
+
+        b : pixyz.Distribution
+            Distribution.
+
+        """
         if not (isinstance(a, Distribution) and isinstance(b, Distribution)):
             raise ValueError("Given inputs should be `pixyz.Distribution`, got {} and {}.".format(type(a), type(b)))
 
@@ -641,9 +614,7 @@ class MultiplyDistribution(Distribution):
     def prob_factorized_text(self):
         return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=False):
-
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
         # sample from the parent distribution
         parents_x_dict = x
         child_x_dict = self._parent.sample(x=parents_x_dict,
@@ -693,14 +664,6 @@ class MultiplyDistribution(Distribution):
 class ReplaceVarDistribution(Distribution):
     """Replace names of variables in Distribution.
 
-    Attributes
-    ----------
-    a : pixyz.Distribution (not pixyz.MultiplyDistribution)
-        Distribution.
-
-    replace_dict : dict
-        Dictionary.
-
     Examples
     --------
     >>> a = DistributionBase(var=["x"], cond_var=["z"])
@@ -710,10 +673,20 @@ class ReplaceVarDistribution(Distribution):
     >>> p_repl = ReplaceVarDistribution(a, replace_dict)
     >>> print(p_repl.prob_text)
     p(y|z)
+
     """
 
     def __init__(self, a, replace_dict):
+        """
+        Parameters
+        ----------
+        a : pixyz.Distribution (not pixyz.MultiplyDistribution)
+            Distribution.
 
+        replace_dict : dict
+            Dictionary.
+
+        """
         if not isinstance(a, Distribution):
             raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(a)))
 
@@ -797,17 +770,8 @@ class ReplaceVarDistribution(Distribution):
 
 
 class MarginalizeVarDistribution(Distribution):
-    """
-    Marginalize variables in Distribution.
+    """Marginalize variables in Distribution.
     :math:`p(x) = \int p(x,z) dz`
-
-    Attributes
-    ----------
-    a : pixyz.Distribution (not pixyz.DistributionBase)
-        Distribution.
-
-    marginalize_list : list
-        Variables to marginalize.
 
     Examples
     --------
@@ -819,10 +783,20 @@ class MarginalizeVarDistribution(Distribution):
     >>> p_marg = MarginalizeVarDistribution(p_multi, ["y"])
     >>> print(p_marg.prob_text, p_marg.prob_factorized_text)
     p(x|z) ∫p(x|z)p(y|z)dy
+
     """
 
     def __init__(self, a, marginalize_list):
+        """
+        Parameters
+        ----------
+        a : pixyz.Distribution (not pixyz.DistributionBase)
+            Distribution.
 
+        marginalize_list : list
+            Variables to marginalize.
+
+        """
         marginalize_list = tolist(marginalize_list)
 
         if not isinstance(a, Distribution):
@@ -892,4 +866,3 @@ class MarginalizeVarDistribution(Distribution):
             return super().__getattr__(item)
         except AttributeError:
             return self._a.__getattribute__(item)
-

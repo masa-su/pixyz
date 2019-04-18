@@ -115,11 +115,14 @@ def replace_dict_keys(dicts, replace_list_dict):
     Parameters
     ----------
     dicts : dict
+        Dictionary.
     replace_list_dict : dict
+        Dictionary.
 
     Returns
     -------
     replaced_dicts : dict
+        Dictionary.
 
     Examples
     --------
@@ -132,6 +135,42 @@ def replace_dict_keys(dicts, replace_list_dict):
                            else (key, value) for key, value in dicts.items()])
 
     return replaced_dicts
+
+
+def replace_dict_keys_split(dicts, replace_list_dict):
+    """ Replace values in `dicts` according to :att:`replace_list_dict`.
+
+    Replaced dict is splitted by :att:`replaced_dict` and :att:`remain_dict`.
+
+    Parameters
+    ----------
+    dicts : dict
+        Dictionary.
+    replace_list_dict : dict
+        Dictionary.
+
+    Returns
+    -------
+    replaced_dict : dict
+        Dictionary.
+    remain_dict : dict
+        Dictionary.
+
+    Examples
+    --------
+    >>> replace_list_dict = {'a': 'loc'}
+    >>> x = {'a': 0, 'b': 1}
+    >>> print(replace_dict_keys_split(x, replace_list_dict))
+    ({'loc': 0}, {'b': 1})
+
+    """
+    replaced_dict = {replace_list_dict[key]: value for key, value in dicts.items()
+                     if key in list(replace_list_dict.keys())}
+
+    remain_dict = {key: value for key, value in dicts.items()
+                   if key not in list(replace_list_dict.keys())}
+
+    return replaced_dict, remain_dict
 
 
 def tolist(a):
