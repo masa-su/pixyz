@@ -39,6 +39,24 @@ class Flow(nn.Module):
         return self._logdet_jacobian
 
 
+class FlowList(Flow):
+
+    def __init__(self, flows):
+        super().__init__(flows[0].in_features)
+        self.flows = flows
+
+    def forward(self, x, inverse=False, conpute_jacobian=True):
+        logdet_jacobian = 0
+
+        for flow in self.flows:
+            x = flow(x, inverse, conpute_jacobian)
+            if logdet_jacobian:
+                logdet_jacobian += flow.logdet_jacobian
+
+        self._logdet_jacobian = logdet_jacobian
+        return x
+
+
 class PlanerFlow(Flow):
     """
     Planer flow.
