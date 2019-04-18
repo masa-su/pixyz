@@ -5,7 +5,8 @@
 
 [![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
 [![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz)
-[![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
+[![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=develop-v0.1.0)](https://docs.pixyz.io/en/develop-v0.1.0/)
+[![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=develop%2Fv0.1.0)](https://github.com/masa-su/pixyz)
 
 - [What is Pixyz?](#what-is-pixyz)
 - [Installation](#installation)
