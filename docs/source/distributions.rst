@@ -182,9 +182,4 @@ MultiplyDistribution
     :members:
     :undoc-members:
 
-Functions
-------------------------
-
-.. currentmodule:: pixyz.distributions.distributions
-.. autofunction:: sum_samples
 

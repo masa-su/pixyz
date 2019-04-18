@@ -24,7 +24,7 @@ class Distribution(nn.Module):
             In case that cond_var is not empty, we must set the corresponding inputs to sample variables.
         name : :obj:`str`, defaults to "p"
             Name of this distribution.
-            This name is displayed in prob_text and prob_factorized_text.
+            This name is displayed in :attr:`prob_text` and :attr:`prob_factorized_text`.
         dim : :obj:`int`, defaults to 1
             Number of dimensions of this distribution.
             This might be ignored depending on the shape which is set in the sample method and on its parent
@@ -534,12 +534,10 @@ class MultiplyDistribution(Distribution):
     >>> p_multi = MultiplyDistribution(a, b)
     >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
     p(x,z|y) p(x|z)p(z|y)
-    >>> a = DistributionBase(var=["x"], cond_var=["z"])
     >>> b = DistributionBase(var=["y"], cond_var=["z"])
     >>> p_multi = MultiplyDistribution(a, b)
     >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
     p(x,y|z) p(x|z)p(y|z)
-    >>> a = DistributionBase(var=["x"], cond_var=["z"])
     >>> b = DistributionBase(var=["y"], cond_var=["a"])
     >>> p_multi = MultiplyDistribution(a, b)
     >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
@@ -777,8 +775,10 @@ class ReplaceVarDistribution(Distribution):
 
 
 class MarginalizeVarDistribution(Distribution):
-    """Marginalize variables in Distribution.
-    :math:`p(x) = \int p(x,z) dz`
+    r"""Marginalize variables in Distribution.
+
+    .. math::
+        p(x) = \int p(x,z) dz
 
     Examples
     --------

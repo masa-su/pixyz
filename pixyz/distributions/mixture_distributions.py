@@ -5,19 +5,9 @@ from ..distributions.distributions import Distribution
 
 
 class MixtureModel(Distribution):
-    """
-    Mixture models.
-    :math:`p(x) = \sum_i p(x|z=i)p(z=i)`
-
-    Parameters
-    ----------
-    distributions : list
-        List of distributions.
-
-    prior : pixyz.Distribution.Categorical
-        Prior distribution of latent variable (i.e., the contribution rate).
-        This should be a categorical distribution and
-        the number of its category should be the same as the length of the distribution list.
+    r"""Mixture models.
+    .. math::
+        p(x) = \sum_i p(x|z=i)p(z=i)
 
     Examples
     --------
@@ -40,6 +30,20 @@ class MixtureModel(Distribution):
     """
 
     def __init__(self, distributions, prior, name="p"):
+        """
+        Parameters
+        ----------
+        distributions : list
+            List of distributions.
+        prior : pixyz.Distribution.Categorical
+            Prior distribution of latent variable (i.e., a contribution rate).
+            This should be a categorical distribution and
+            the number of its category should be the same as the length of :attr:`distributions`.
+        name : :obj:`str`, defaults to "p"
+            Name of this distribution.
+            This name is displayed in :attr:`prob_text` and :attr:`prob_factorized_text`.
+
+        """
         if not isinstance(distributions, list):
             raise ValueError
         else:
@@ -117,15 +121,14 @@ class MixtureModel(Distribution):
         return output_dict
 
     def get_log_prob(self, x_dict, return_hidden=False, **kwargs):
-        """
-        Evaluate log-pdf, log p(x) (if return_hidden=False) or log p(x, z) (if return_hidden=True).
+        """Evaluate log-pdf, log p(x) (if return_hidden=False) or log p(x, z) (if return_hidden=True).
 
         Parameters
         ----------
         x_dict : dict
             Input variables (including `var`).
 
-        return_hidden : bool (False as default)
+        return_hidden : :obj:`bool`, defaults to False
 
         Returns
         -------
@@ -137,7 +140,9 @@ class MixtureModel(Distribution):
 
             return_hidden = 1 :
                 dim=0 : the number of mixture
+
                 dim=1 : the size of batch
+
         """
 
         log_prob_all = []
@@ -190,8 +195,7 @@ class PosteriorMixtureModel(Distribution):
     def distribution_name(self):
         return "Mixture Model (Posterior)"
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
-               reparam=False):
+    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
         raise NotImplementedError
 
     def get_log_prob(self, x_dict, **kwargs):
