@@ -138,9 +138,9 @@ def replace_dict_keys(dicts, replace_list_dict):
 
 
 def replace_dict_keys_split(dicts, replace_list_dict):
-    """ Replace values in `dicts` according to :att:`replace_list_dict`.
+    """ Replace values in `dicts` according to :attr:`replace_list_dict`.
 
-    Replaced dict is splitted by :att:`replaced_dict` and :att:`remain_dict`.
+    Replaced dict is splitted by :attr:`replaced_dict` and :attr:`remain_dict`.
 
     Parameters
     ----------
