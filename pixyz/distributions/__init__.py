@@ -49,13 +49,9 @@ __all__ = [
     'Gamma',
 
     'MultiplyDistribution',
-<<<<<<< HEAD
     'ReplaceVarDistribution',
     'MarginalizeVarDistribution',
-    'NormalPoE',
-=======
     'ProductOfNormal',
     'ElementWiseProductOfNormal',
->>>>>>> rename NormalPoE to ProductOfNormal
     'MixtureModel',
 ]
