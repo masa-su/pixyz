@@ -2,6 +2,6 @@ language: python
 install:
   - pip install pytest-cov
   - pip install pytest-flake8
-  - python setup.py install
+  - pip install pixyz
 script:
   - pytest
