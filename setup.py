@@ -30,5 +30,7 @@ setup(
     version=find_version("pixyz", "__init__.py"),
     description='Deep generative modeling library',
     author='Masahiro Suzuki',
-    install_requires=required
+    install_requires=["torch",
+                      "torchvision",
+                      "tqdm"]
 )
