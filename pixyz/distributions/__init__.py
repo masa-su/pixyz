@@ -12,7 +12,7 @@ from .exponential_distributions import (
     Gamma,
 )
 from .custom_distributions import (
-    CustomPDF,
+    CustomProb,
 )
 
 from .special_distributions import (
@@ -33,7 +33,7 @@ from .mixture_distributions import MixtureModel
 
 __all__ = [
     'Distribution',
-    'CustomPDF',
+    'CustomProb',
     'Deterministic',
     'DataDistribution',
     'Normal',

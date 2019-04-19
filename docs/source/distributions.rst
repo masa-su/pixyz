@@ -131,10 +131,10 @@ DataDistribution
     :members:
     :undoc-members:
 
-CustomPDF
+CustomProb
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: CustomPDF
+.. autoclass:: CustomProb
     :members:
     :undoc-members:
 
