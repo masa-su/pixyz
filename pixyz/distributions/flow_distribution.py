@@ -2,7 +2,7 @@ from ..distributions import Distribution
 from ..utils import get_dict_values
 
 
-class FlowDistribution(Distribution):
+class TransformedDistribution(Distribution):
     """
     p(z)
     z = f(x), x~p(x)
@@ -58,7 +58,7 @@ class FlowDistribution(Distribution):
         return self.flows.forward(*args, **kwargs)
 
 
-class InverseFlowDistribution(Distribution):
+class InverseTransformedDistribution(Distribution):
     """
     p(x)
     x = f^-1(z), z~p(z)
