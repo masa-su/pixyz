@@ -22,11 +22,11 @@ class Flow(nn.Module):
     def in_features(self):
         return self._in_features
 
-    def forward(self, x, inverse=False, conpute_jacobian=True):
+    def forward(self, x, inverse=False, compute_jacobian=True):
         raise NotImplementedError
 
     def update_jacobian(self, x):
-        _ = self.forward(x, inverse=False, conpute_jacobian=True)
+        _ = self.forward(x, inverse=False, compute_jacobian=True)
 
     @property
     def logdet_jacobian(self):
@@ -43,13 +43,13 @@ class FlowList(Flow):
 
     def __init__(self, flows):
         super().__init__(flows[0].in_features)
-        self.flows = flows
+        self.flows = nn.ModuleList(flows)
 
-    def forward(self, x, inverse=False, conpute_jacobian=True):
+    def forward(self, x, inverse=False, compute_jacobian=True):
         logdet_jacobian = 0
 
         for flow in self.flows:
-            x = flow(x, inverse, conpute_jacobian)
+            x = flow(x, inverse, compute_jacobian)
             if logdet_jacobian:
                 logdet_jacobian += flow.logdet_jacobian
 
@@ -88,23 +88,27 @@ class PlanerFlow(Flow):
         self.b.data.uniform_(-std, std)
         self.u.data.uniform_(-std, std)
 
-    def forward(self, x, inverse=False, conpute_jacobian=True):
+    def forward(self, x, inverse=False, compute_jacobian=True):
         # modify :attr:`u` so that this flow can be invertible.
         wu = torch.sum(self.w * self.b, keepdim=True)
         m_wu = -1. + F.softplus(wu)
         w_normalized = self.w / torch.norm(self.w, keepdim=True)
         u_hat = self.u + ((m_wu - wu) * w_normalized)
 
-        # compute the flow transformation
-        linear_output = F.linear(x, self.w, self.b)
-        z = x + u_hat * self.h(linear_output)
+        if inverse is False:
+            # compute the flow transformation
+            linear_output = F.linear(x, self.w, self.b)
+            z = x + u_hat * self.h(linear_output)
 
-        if conpute_jacobian:
-            # compute the log-det Jacobian (logdet|dz/dx|)
-            psi = self.deriv_h(linear_output)
-            det_jacobian = 1. + torch.sum(psi * u_hat)
-            logdet_jacobian = torch.log(torch.abs(det_jacobian))
-            self._logdet_jacobian = logdet_jacobian
+            if compute_jacobian:
+                # compute the log-det Jacobian (logdet|dz/dx|)
+                psi = self.deriv_h(linear_output)
+                det_jacobian = 1. + torch.sum(psi * u_hat)
+                logdet_jacobian = torch.log(torch.abs(det_jacobian))
+                self._logdet_jacobian = logdet_jacobian
+
+        else:
+            raise NotImplementedError
 
         return z
 
