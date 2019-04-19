@@ -28,9 +28,6 @@ class Flow(nn.Module):
     def inverse(self, z):
         raise NotImplementedError
 
-    def update_jacobian(self, x):
-        _ = self.forward(x, inverse=False, compute_jacobian=True)
-
     @property
     def logdet_jacobian(self):
         """

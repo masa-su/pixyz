@@ -25,7 +25,7 @@ class TransformedDistribution(Distribution):
         """Get log-determinant Jacobian."""
         return self.flow.logdet_jacobian
 
-    def sample(self, x_dict={}, return_all=True, compute_jacobian=True):
+    def sample(self, x_dict={}, return_all=True, compute_jacobian=True, **kwargs):
         # sample from the prior
         sample_dict = self.prior.sample(x_dict, return_all=True)
 
@@ -40,11 +40,14 @@ class TransformedDistribution(Distribution):
 
         return output_dict
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, compute_jacobian=False):
         # prior
         log_prob = self.prior.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
 
         # flow
+        if compute_jacobian:
+            _ = self.sample(x_dict, return_all=False, compute_jacobian=True)
+
         log_prob -= self.logdet_jacobian
 
         return log_prob
