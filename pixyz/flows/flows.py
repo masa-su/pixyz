@@ -22,7 +22,10 @@ class Flow(nn.Module):
     def in_features(self):
         return self._in_features
 
-    def forward(self, x, inverse=False, compute_jacobian=True):
+    def forward(self, x, compute_jacobian=True):
+        raise NotImplementedError
+
+    def inverse(self, z):
         raise NotImplementedError
 
     def update_jacobian(self, x):
@@ -88,27 +91,23 @@ class PlanerFlow(Flow):
         self.b.data.uniform_(-std, std)
         self.u.data.uniform_(-std, std)
 
-    def forward(self, x, inverse=False, compute_jacobian=True):
+    def forward(self, x, compute_jacobian=True):
         # modify :attr:`u` so that this flow can be invertible.
         wu = torch.sum(self.w * self.b, keepdim=True)
         m_wu = -1. + F.softplus(wu)
         w_normalized = self.w / torch.norm(self.w, keepdim=True)
         u_hat = self.u + ((m_wu - wu) * w_normalized)
 
-        if inverse is False:
-            # compute the flow transformation
-            linear_output = F.linear(x, self.w, self.b)
-            z = x + u_hat * self.h(linear_output)
+        # compute the flow transformation
+        linear_output = F.linear(x, self.w, self.b)
+        z = x + u_hat * self.h(linear_output)
 
-            if compute_jacobian:
-                # compute the log-det Jacobian (logdet|dz/dx|)
-                psi = self.deriv_h(linear_output)
-                det_jacobian = 1. + torch.sum(psi * u_hat)
-                logdet_jacobian = torch.log(torch.abs(det_jacobian))
-                self._logdet_jacobian = logdet_jacobian
-
-        else:
-            raise NotImplementedError
+        if compute_jacobian:
+            # compute the log-det Jacobian (logdet|dz/dx|)
+            psi = self.deriv_h(linear_output)
+            det_jacobian = 1. + torch.sum(psi * u_hat)
+            logdet_jacobian = torch.log(torch.abs(det_jacobian))
+            self._logdet_jacobian = logdet_jacobian
 
         return z
 
