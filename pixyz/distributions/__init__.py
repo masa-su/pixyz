@@ -31,6 +31,8 @@ from .poe import ProductOfNormal, ElementWiseProductOfNormal
 
 from .mixture_distributions import MixtureModel
 
+from .flow_distribution import TransformedDistribution, InverseTransformedDistribution
+
 __all__ = [
     'Distribution',
     'CustomProb',
@@ -54,4 +56,7 @@ __all__ = [
     'ProductOfNormal',
     'ElementWiseProductOfNormal',
     'MixtureModel',
+
+    'TransformedDistribution',
+    'InverseTransformedDistribution',
 ]
