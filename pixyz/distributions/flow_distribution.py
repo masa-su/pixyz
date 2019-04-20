@@ -10,11 +10,15 @@ class TransformedDistribution(Distribution):
 
     def __init__(self, prior, flow, var, name="p"):
 
-        super().__init__(var, cond_var=prior.cond_var, name=name, dim=flow[-1].in_features)
+        super().__init__(var=var, cond_var=prior.cond_var, name=name, dim=flow.in_features)
         self.prior = prior
         self.flow = flow  # FlowList
 
         self._flow_input_var = prior.var
+
+    @property
+    def distribution_name(self):
+        return "TransformedDistribution"
 
     @property
     def flow_input_var(self):
@@ -25,12 +29,12 @@ class TransformedDistribution(Distribution):
         """Get log-determinant Jacobian."""
         return self.flow.logdet_jacobian
 
-    def sample(self, x_dict={}, return_all=True, compute_jacobian=True, **kwargs):
+    def sample(self, x_dict={}, shape=None, batch_size=1, return_all=True, compute_jacobian=True, **kwargs):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, return_all=True)
+        sample_dict = self.prior.sample(x_dict, shape=shape, batch_size=batch_size, return_all=True, **kwargs)
 
         # flow transformation
-        _x = get_dict_values(sample_dict, self.input_var)
+        _x = get_dict_values(sample_dict, self.flow_input_var)[0]
         z = self.forward(_x, compute_jacobian=compute_jacobian)
         output_dict = {self.var[0]: z}
 
@@ -67,11 +71,15 @@ class InverseTransformedDistribution(Distribution):
 
     def __init__(self, prior, flow, var, name="p"):
 
-        super().__init__(var, cond_var=[], name=name, dim=flow[0].in_features)
+        super().__init__(var, cond_var=[], name=name, dim=flow.in_features)
         self.prior = prior
         self.flow = flow  # FlowList
 
         self._flow_output_var = prior.var
+
+    @property
+    def distribution_name(self):
+        return "InverseTransformedDistribution"
 
     @property
     def flow_output_var(self):
@@ -82,12 +90,12 @@ class InverseTransformedDistribution(Distribution):
         """Get log-determinant Jacobian."""
         return self.flow.logdet_jacobian
 
-    def sample(self, z_dict={}, return_all=True, **kwargs):
+    def sample(self, z_dict={}, shape=None, batch_size=1, return_all=True, **kwargs):
         # sample from the prior
-        sample_dict = self.prior.sample(z_dict, return_all=True)
+        sample_dict = self.prior.sample(z_dict,  shape=shape, batch_size=batch_size, return_all=True, **kwargs)
 
         # inverse flow transformation
-        _z = get_dict_values(sample_dict, self.flow_output_var)
+        _z = get_dict_values(sample_dict, self.flow_output_var)[0]
         x = self.inverse(_z)
         output_dict = {self.var[0]: x}
 
@@ -99,7 +107,7 @@ class InverseTransformedDistribution(Distribution):
 
     def inference(self, x_dict, return_all=True, compute_jacobian=False):
         # flow transformation
-        _x = get_dict_values(x_dict, self.input_var)
+        _x = get_dict_values(x_dict, self.input_var)[0]
         z = self.forward(_x, compute_jacobian=compute_jacobian)
         output_dict = {self.flow_output_var[0]: z}
 

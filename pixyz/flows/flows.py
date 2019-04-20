@@ -42,20 +42,31 @@ class Flow(nn.Module):
 
 class FlowList(Flow):
 
-    def __init__(self, flows):
-        super().__init__(flows[0].in_features)
-        self.flows = nn.ModuleList(flows)
+    def __init__(self, flow_list):
+        """
+        Parameters
+        ----------
+        flow_list : list
+        """
 
-    def forward(self, x, inverse=False, compute_jacobian=True):
+        super().__init__(flow_list[0].in_features)
+        self.flow_list = nn.ModuleList(flow_list)
+
+    def forward(self, x, compute_jacobian=True):
         logdet_jacobian = 0
 
-        for flow in self.flows:
-            x = flow(x, inverse, compute_jacobian)
-            if logdet_jacobian:
+        for flow in self.flow_list:
+            x = flow.forward(x, compute_jacobian)
+            if compute_jacobian:
                 logdet_jacobian += flow.logdet_jacobian
+                self._logdet_jacobian = logdet_jacobian
 
-        self._logdet_jacobian = logdet_jacobian
         return x
+
+    def inverse(self, z):
+        for flow in self.flow_list[::-1]:
+            z = flow.inverse(z)
+        return z
 
 
 class PlanerFlow(Flow):
@@ -111,6 +122,6 @@ class PlanerFlow(Flow):
 
     def extra_repr(self):
         return 'in_features={}, w={}, b={}, u={}'.format(
-            self.in_features, self.w, self.b, self.u is not None
+            self.in_features, self.w, self.b, self.u
         )
 
