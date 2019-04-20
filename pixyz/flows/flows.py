@@ -15,6 +15,7 @@ class Flow(nn.Module):
             Size of each input sample
 
         """
+        super().__init__()
         self._in_features = in_features
         self._logdet_jacobian = None
 
@@ -76,7 +77,7 @@ class PlanerFlow(Flow):
         self.reset_parameters()
 
     def h(self, x):
-        return F.tanh(x)
+        return torch.tanh(x)
 
     def deriv_h(self, x):
         return 1 - self.h(x) ** 2
@@ -90,13 +91,13 @@ class PlanerFlow(Flow):
 
     def forward(self, x, compute_jacobian=True):
         # modify :attr:`u` so that this flow can be invertible.
-        wu = torch.sum(self.w * self.b, keepdim=True)
+        wu = torch.sum(self.w * self.b, -1, keepdim=True)  # (1, 1)
         m_wu = -1. + F.softplus(wu)
         w_normalized = self.w / torch.norm(self.w, keepdim=True)
-        u_hat = self.u + ((m_wu - wu) * w_normalized)
+        u_hat = self.u + ((m_wu - wu) * w_normalized)  # (1, in_features)
 
         # compute the flow transformation
-        linear_output = F.linear(x, self.w, self.b)
+        linear_output = F.linear(x, self.w, self.b)  # (n_batch, 1)
         z = x + u_hat * self.h(linear_output)
 
         if compute_jacobian:
