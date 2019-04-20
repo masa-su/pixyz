@@ -79,8 +79,8 @@ class Loss(object, metaclass=abc.ABCMeta):
 
         return loss
 
-    def expectation(self, p, input_var=None):
-        return Expectation(p, self, input_var=input_var)
+    def expectation(self, p, input_var=None, shape=None, batch_size=1, reparam=True):
+        return Expectation(p, self, input_var=input_var, shape=shape, batch_size=batch_size, reparam=reparam)
 
     @abc.abstractmethod
     def _get_eval(self, x, **kwargs):
@@ -331,11 +331,14 @@ class Expectation(Loss):
     Therefore, in this class, :math:`f` is assumed to :attr:`pixyz.Loss`.
     """
 
-    def __init__(self, p, f, input_var=None):
+    def __init__(self, p, f, input_var=None, shape=None, batch_size=1, reparam=True):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
         self._f = f
+        self._shape = shape
+        self._batch_size = batch_size
+        self._reparam = reparam
 
         super().__init__(p, input_var=input_var)
 
@@ -344,7 +347,8 @@ class Expectation(Loss):
         return "E_{}[{}]".format(self._p.prob_text, self._f.loss_text)
 
     def _get_eval(self, x={}, **kwargs):
-        samples_dict = self._p.sample(x, reparam=True, return_all=True)
+        samples_dict = self._p.sample(x, shape=self._shape, batch_size=self._batch_size,
+                                      reparam=self._reparam, return_all=True)
 
         # TODO: whether eval or _get_eval
         loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)
