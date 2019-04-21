@@ -2,6 +2,7 @@ import math
 import torch
 from torch import nn
 from torch.nn import functional as F
+from ..utils import epsilon
 
 
 class Flow(nn.Module):
@@ -59,7 +60,9 @@ class FlowList(Flow):
             x = flow.forward(x, compute_jacobian)
             if compute_jacobian:
                 logdet_jacobian += flow.logdet_jacobian
-                self._logdet_jacobian = logdet_jacobian
+
+        if compute_jacobian:
+            self._logdet_jacobian = logdet_jacobian
 
         return x
 
@@ -87,11 +90,8 @@ class PlanerFlow(Flow):
 
         self.reset_parameters()
 
-    def h(self, x):
-        return torch.tanh(x)
-
-    def deriv_h(self, x):
-        return 1 - self.h(x) ** 2
+    def deriv_tanh(self, x):
+        return 1 - torch.tanh(x) ** 2
 
     def reset_parameters(self):
         std = 1. / math.sqrt(self.w.size(1))
@@ -102,20 +102,20 @@ class PlanerFlow(Flow):
 
     def forward(self, x, compute_jacobian=True):
         # modify :attr:`u` so that this flow can be invertible.
-        wu = torch.sum(self.w * self.b, -1, keepdim=True)  # (1, 1)
+        wu = torch.mm(self.w, self.u.t())  # (1, 1)
         m_wu = -1. + F.softplus(wu)
         w_normalized = self.w / torch.norm(self.w, keepdim=True)
-        u_hat = self.u + ((m_wu - wu) * w_normalized)  # (1, in_features)
+        u_hat = self.u  # + ((m_wu - wu) * w_normalized)  # (1, in_features)
 
         # compute the flow transformation
         linear_output = F.linear(x, self.w, self.b)  # (n_batch, 1)
-        z = x + u_hat * self.h(linear_output)
+        z = x + u_hat * torch.tanh(linear_output)
 
         if compute_jacobian:
             # compute the log-det Jacobian (logdet|dz/dx|)
-            psi = self.deriv_h(linear_output)
-            det_jacobian = 1. + torch.sum(psi * u_hat)
-            logdet_jacobian = torch.log(torch.abs(det_jacobian))
+            psi = self.deriv_tanh(linear_output) * self.w  # (n_batch, in_features)
+            det_jacobian = 1. + torch.mm(psi, u_hat.t()).squeeze()  # (n_batch, 1) -> (n_batch)
+            logdet_jacobian = torch.log(torch.abs(det_jacobian) + 1e-7)
             self._logdet_jacobian = logdet_jacobian
 
         return z
@@ -125,3 +125,6 @@ class PlanerFlow(Flow):
             self.in_features, self.w, self.b, self.u
         )
 
+
+def isnan(x):
+    return torch.sum(x == x).cpu().numpy() == 0
