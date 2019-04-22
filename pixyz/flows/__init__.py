@@ -3,9 +3,13 @@ from .flows import (
     FlowList,
     PlanarFlow,
 )
+from .coupling import (
+    AffineCouplingLayer,
+)
 
 __all__ = [
     'Flow',
     'FlowList',
     'PlanarFlow',
+    'AffineCouplingLayer',
 ]

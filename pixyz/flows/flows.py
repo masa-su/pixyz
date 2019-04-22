@@ -72,6 +72,7 @@ class FlowList(Flow):
         return z
 
     def __repr__(self):
+        # rename "ModuleList" to "FlowList"
         flow_list_repr = self.flow_list.__repr__()[10:]
         flow_list_repr = "FlowList" + flow_list_repr
         return flow_list_repr
