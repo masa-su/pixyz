@@ -1,11 +1,11 @@
 from .flows import (
     Flow,
     FlowList,
-    PlanerFlow,
+    PlanarFlow,
 )
 
 __all__ = [
     'Flow',
     'FlowList',
-    'PlanerFlow',
+    'PlanarFlow',
 ]
