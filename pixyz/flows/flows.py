@@ -25,10 +25,33 @@ class Flow(nn.Module):
         return self._in_features
 
     def forward(self, x, compute_jacobian=True):
-        raise NotImplementedError
+        """
+        Parameters
+        ----------
+        x : torch.Tensor
+        compute_jacobian : bool
+
+        Returns
+        -------
+        z : torch.Tensor
+
+        """
+        z = x
+        return z
 
     def inverse(self, z):
-        raise NotImplementedError
+        """
+        Parameters
+        ----------
+        z : torch.Tensor
+
+        Returns
+        -------
+        x : torch.Tensor
+
+        """
+        x = z
+        return x
 
     @property
     def logdet_jacobian(self):
@@ -83,7 +106,7 @@ class PlanarFlow(Flow):
     Planar flow.
 
     .. math::
-        f(x) = x + u h( w^T x + b)
+        f(\mathbf{x}) = \mathbf{x} + \mathbf{u} h( \mathbf{w}^T \mathbf{x} + \mathbf{b})
 
     """
 

@@ -5,8 +5,16 @@ from .resnet import ResNet
 
 
 class AffineCouplingLayer(Flow):
-    """
+    r"""
     Affine coupling layer
+
+    .. math::
+        :nowrap:
+
+        \begin{eqnarray*}
+        \mathbf{y}_{1:d} &=& \mathbf{x}_{1:d} \\
+        \mathbf{y}_{d+1:D} &=& \mathbf{x}_{d+1:D} \odot \exp(s(\mathbf{x}_{1:d})+t(\mathbf{x}_{1:d}))
+        \end{eqnarray*}
 
     """
 
@@ -89,7 +97,7 @@ class AffineCouplingLayer(Flow):
         Returns
         -------
         s : torch.tensor
-        t ; torch.tensor
+        t : torch.tensor
         x_masked : tensor.torch
         x_inverse_masked : tensor.torch
 

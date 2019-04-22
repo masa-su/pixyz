@@ -15,7 +15,7 @@ Flow
     :members:
     :undoc-members:
 
-Normalizing Flow
+Normalizing flow
 ----------------------------
 
 PlanarFlow
@@ -26,7 +26,7 @@ PlanarFlow
     :undoc-members:
 
 
-CouplingLayer
+Coupling layer
 ----------------------------
 
 AffineCouplingLayer
