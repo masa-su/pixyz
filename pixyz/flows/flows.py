@@ -72,9 +72,9 @@ class FlowList(Flow):
         return z
 
 
-class PlanerFlow(Flow):
+class PlanarFlow(Flow):
     """
-    Planer flow.
+    Planar flow.
 
     .. math::
         f(x) = x + u h( w^T x + b)
@@ -105,7 +105,7 @@ class PlanerFlow(Flow):
         wu = torch.mm(self.w, self.u.t())  # (1, 1)
         m_wu = -1. + F.softplus(wu)
         w_normalized = self.w / torch.norm(self.w, keepdim=True)
-        u_hat = self.u  # + ((m_wu - wu) * w_normalized)  # (1, in_features)
+        u_hat = self.u + ((m_wu - wu) * w_normalized)  # (1, in_features)
 
         # compute the flow transformation
         linear_output = F.linear(x, self.w, self.b)  # (n_batch, 1)
@@ -115,7 +115,7 @@ class PlanerFlow(Flow):
             # compute the log-det Jacobian (logdet|dz/dx|)
             psi = self.deriv_tanh(linear_output) * self.w  # (n_batch, in_features)
             det_jacobian = 1. + torch.mm(psi, u_hat.t()).squeeze()  # (n_batch, 1) -> (n_batch)
-            logdet_jacobian = torch.log(torch.abs(det_jacobian) + 1e-7)
+            logdet_jacobian = torch.log(torch.abs(det_jacobian) + epsilon)
             self._logdet_jacobian = logdet_jacobian
 
         return z
