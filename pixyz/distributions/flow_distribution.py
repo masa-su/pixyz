@@ -50,7 +50,7 @@ class TransformedDistribution(Distribution):
 
         # flow
         if compute_jacobian:
-            _ = self.sample(x_dict, return_all=False, compute_jacobian=True)
+            self.sample(x_dict, return_all=False, compute_jacobian=True)
 
         log_prob -= self.logdet_jacobian
 
@@ -92,7 +92,7 @@ class InverseTransformedDistribution(Distribution):
 
     def sample(self, z_dict={}, shape=None, batch_size=1, return_all=True, **kwargs):
         # sample from the prior
-        sample_dict = self.prior.sample(z_dict,  shape=shape, batch_size=batch_size, return_all=True, **kwargs)
+        sample_dict = self.prior.sample(z_dict, shape=shape, batch_size=batch_size, return_all=True, **kwargs)
 
         # inverse flow transformation
         _z = get_dict_values(sample_dict, self.flow_output_var)[0]

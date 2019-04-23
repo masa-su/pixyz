@@ -35,3 +35,13 @@ AffineCouplingLayer
 .. autoclass:: AffineCouplingLayer
     :members:
     :undoc-members:
+
+Operation layer
+---------------
+
+AffineCouplingLayer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AffineCouplingLayer
+    :members:
+    :undoc-members:

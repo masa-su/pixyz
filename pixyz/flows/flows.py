@@ -157,7 +157,3 @@ class PlanarFlow(Flow):
         return 'in_features={}, constraint_u={}'.format(
             self.in_features, self.constraint_u
         )
-
-
-def isnan(x):
-    return torch.sum(x == x).cpu().numpy() == 0
