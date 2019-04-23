@@ -3,7 +3,7 @@ from torch import nn
 import numpy as np
 
 from .flows import Flow
-from ..utils import epsilon, sum_samples
+from ..utils import epsilon
 
 
 class SqueezeLayer(Flow):
