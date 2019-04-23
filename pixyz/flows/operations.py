@@ -1,5 +1,9 @@
+import torch
+from torch import nn
 import numpy as np
+
 from .flows import Flow
+from ..utils import epsilon, sum_samples
 
 
 class SqueezeLayer(Flow):
@@ -196,3 +200,73 @@ class ReverseLayer(PermutationLayer):
     def __init__(self, in_channels):
         permute_indices = np.array(np.arange(0, in_channels)[::-1])
         super().__init__(permute_indices)
+
+
+class BatchNormFlow(Flow):
+    """
+    An batch normalization with the inverse transformation.
+
+    https://github.com/ikostrikov/pytorch-flows/blob/master/flows.py#L205
+
+    Examples
+    --------
+    >>> x = torch.randn(20, 100, 35, 45)
+    >>> f = BatchNormFlow(100)
+    >>> # transformation
+    >>> z = f(x)
+    >>> # reconstruction
+    >>> _x = f.inverse(f(x))
+    >>> # check this reconstruction
+    >>> diff = torch.sum(torch.abs(_x-x)).data
+    >>> diff < 0.1
+    tensor(1, dtype=torch.uint8)
+    """
+    def __init__(self, in_channels, momentum=0.0):
+        super().__init__(in_channels)
+        self.log_gamma = nn.Parameter(torch.zeros(in_channels, 1, 1))
+        self.beta = nn.Parameter(torch.zeros(in_channels, 1, 1))
+        self.momentum = momentum
+
+        self._running_mean = torch.zeros(in_channels, 1, 1)
+        self._running_var = torch.ones(in_channels, 1, 1)
+        self._batch_mean = torch.zeros(in_channels, 1, 1)
+        self._batch_var = torch.ones(in_channels, 1, 1)
+
+    def forward(self, x, compute_jacobian=True):
+        if self.training:
+            self._batch_mean = x.mean(0)
+            self._batch_var = (x - self._batch_mean).pow(2).mean(0) + epsilon()
+
+            self._running_mean = self._running_mean * self.momentum
+            self._running_var = self._running_var * self.momentum
+
+            self._running_mean = self._running_mean + self._batch_mean * (1 - self.momentum)
+            self._running_var = self._running_var + self._batch_var * (1 - self.momentum)
+
+            mean = self._batch_mean
+            var = self._batch_var
+        else:
+            mean = self._running_mean
+            var = self._running_var
+
+        x_hat = (x - mean) / var.sqrt()
+        z = torch.exp(self.log_gamma) * x_hat + self.beta
+
+        if compute_jacobian:
+            self._logdet_jacobian = sum_samples(self.log_gamma - 0.5 * torch.log(var))
+
+        return z
+
+    def inverse(self, z):
+        if self.training:
+            mean = self._batch_mean
+            var = self._batch_var
+        else:
+            mean = self._running_mean
+            var = self._running_var
+
+        z_hat = (z - self.beta) / torch.exp(self.log_gamma)
+
+        x = z_hat * var.sqrt() + mean
+
+        return x
