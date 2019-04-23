@@ -1,7 +1,9 @@
 import torch
 import numpy as np
+
 from .flows import Flow
 from .resnet import ResNet
+from ..utils import sum_samples
 
 
 class AffineCouplingLayer(Flow):
@@ -80,13 +82,22 @@ class AffineCouplingLayer(Flow):
                   [0., 1., 0., 1., 0.]]]])
 
         """
-        [_, channels, height, width] = x.shape
-        if self.mask_type == "checkerboard":
-            mask = checkerboard_mask(height, width, self.inverse_mask)
-            return torch.from_numpy(mask).view(1, 1, height, width).to(x.device)
-        else:
-            mask = channel_wise_mask(channels, self.inverse_mask)
-            return torch.from_numpy(mask).view(1, channels, 1, 1).to(x.device)
+        if x.dim() == 4:
+            [_, channels, height, width] = x.shape
+            if self.mask_type == "checkerboard":
+                mask = checkerboard_mask(height, width, self.inverse_mask)
+                return torch.from_numpy(mask).view(1, 1, height, width).to(x.device)
+            else:
+                mask = channel_wise_mask(channels, self.inverse_mask)
+                return torch.from_numpy(mask).view(1, channels, 1, 1).to(x.device)
+
+        elif x.dim() == 2:
+            [_, n_features] = x.shape
+            if self.mask_type != "checkerboard":
+                mask = channel_wise_mask(n_features, self.inverse_mask)
+                return torch.from_numpy(mask).view(1, n_features).to(x.device)
+
+        raise ValueError
 
     def get_parameters(self, x):
         """
@@ -141,7 +152,7 @@ class AffineCouplingLayer(Flow):
         s, t, x_masked, x_reverse_masked = self.get_parameters(x)
         z = x_masked + (x_reverse_masked * torch.exp(s) + t)
         if compute_jacobian:
-            self._logdet_jacobian = s.view(s.shape(0), -1).sum(-1)
+            self._logdet_jacobian = sum_samples(s)
 
         return z
 

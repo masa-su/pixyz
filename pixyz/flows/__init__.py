@@ -13,7 +13,8 @@ from .operations import (
     PermutationLayer,
     ShuffleLayer,
     ReverseLayer,
-    BatchNormFlow,
+    BatchNorm1dFlow,
+    BatchNorm2dFlow,
 )
 
 __all__ = [
@@ -26,5 +27,6 @@ __all__ = [
     'PermutationLayer',
     'ShuffleLayer',
     'ReverseLayer',
-    'BatchNormFlow',
+    'BatchNorm1dFlow',
+    'BatchNorm2dFlow',
 ]

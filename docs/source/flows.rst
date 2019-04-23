@@ -39,9 +39,51 @@ AffineCouplingLayer
 Operation layer
 ---------------
 
-AffineCouplingLayer
+SqueezeLayer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: AffineCouplingLayer
+.. autoclass:: SqueezeLayer
+    :members:
+    :undoc-members:
+
+UnsqueezeLayer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: UnsqueezeLayer
+    :members:
+    :undoc-members:
+
+PermutationLayer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: PermutationLayer
+    :members:
+    :undoc-members:
+
+ShuffleLayer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: ShuffleLayer
+    :members:
+    :undoc-members:
+
+ReverseLayer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: ReverseLayer
+    :members:
+    :undoc-members:
+
+BatchNorm1dFlow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: BatchNorm1dFlow
+    :members:
+    :undoc-members:
+
+BatchNorm2dFlow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: BatchNorm2dFlow
     :members:
     :undoc-members:

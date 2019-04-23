@@ -107,7 +107,7 @@ class InverseTransformedDistribution(Distribution):
 
     def inference(self, x_dict, return_all=True, compute_jacobian=False):
         # flow transformation
-        _x = get_dict_values(x_dict, self.input_var)[0]
+        _x = get_dict_values(x_dict, self.var)[0]
         z = self.forward(_x, compute_jacobian=compute_jacobian)
         output_dict = {self.flow_output_var[0]: z}
 
