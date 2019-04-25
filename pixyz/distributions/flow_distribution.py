@@ -1,7 +1,7 @@
 from ..distributions import Distribution
 from ..utils import get_dict_values
 
-
+import math
 class TransformedDistribution(Distribution):
     """
     p(z)
@@ -46,15 +46,13 @@ class TransformedDistribution(Distribution):
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, compute_jacobian=False):
         # prior
-        log_prob = self.prior.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
+        log_prob_prior = self.prior.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
 
         # flow
         if compute_jacobian:
             self.sample(x_dict, return_all=False, compute_jacobian=True)
 
-        log_prob -= self.logdet_jacobian
-
-        return log_prob
+        return log_prob_prior - self.logdet_jacobian
 
     def forward(self, *args, **kwargs):
         return self.flow.forward(*args, **kwargs)
@@ -119,12 +117,11 @@ class InverseTransformedDistribution(Distribution):
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         # flow
         output_dict = self.inference(x_dict, return_all=True, compute_jacobian=True)
-        log_prob = self.logdet_jacobian
 
         # prior
-        log_prob += self.prior.get_log_prob(output_dict, sum_features=sum_features, feature_dims=feature_dims)
+        log_prob_prior = self.prior.get_log_prob(output_dict, sum_features=sum_features, feature_dims=feature_dims)
 
-        return log_prob
+        return log_prob_prior + self.logdet_jacobian
 
     def forward(self, *args, **kwargs):
         return self.flow.forward(*args, **kwargs)

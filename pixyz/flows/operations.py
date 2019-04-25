@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 import numpy as np
 
 from .flows import Flow
@@ -184,10 +185,18 @@ class PermutationLayer(Flow):
         self._logdet_jacobian = 0
 
     def forward(self, x, compute_jacobian=True):
-        return x[:, self.permute_indices, :, :]
+        if x.dim() == 2:
+            return x[:, self.permute_indices]
+        elif x.dim() == 4:
+            return x[:, self.permute_indices, :, :]
+        raise ValueError
 
     def inverse(self, z):
-        return z[:, self.inv_permute_indices, :, :]
+        if z.dim() == 2:
+            return z[:, self.inv_permute_indices]
+        elif z.dim() == 4:
+            return z[:, self.inv_permute_indices, :, :]
+        raise ValueError
 
 
 class ShuffleLayer(PermutationLayer):
@@ -223,48 +232,51 @@ class BatchNorm1dFlow(Flow):
     """
     def __init__(self, in_features, momentum=0.0):
         super().__init__(in_features)
+
         self.log_gamma = nn.Parameter(torch.zeros(in_features))
         self.beta = nn.Parameter(torch.zeros(in_features))
         self.momentum = momentum
 
-        self.register_buffer('_running_mean', torch.zeros(in_features))
-        self.register_buffer('_running_var', torch.ones(in_features))
-        self.register_buffer('_batch_mean', torch.zeros(in_features))
-        self.register_buffer('_batch_var', torch.ones(in_features))
+        self.register_buffer('running_mean', torch.zeros(in_features))
+        self.register_buffer('running_var', torch.ones(in_features))
 
     def forward(self, x, compute_jacobian=True):
         if self.training:
-            self._batch_mean = x.mean(0)
-            self._batch_var = (x - self._batch_mean).pow(2).mean(0) + epsilon()
+            self.batch_mean = x.mean(0)
+            self.batch_var = (x - self.batch_mean).pow(2).mean(0) + epsilon()
 
-            self._running_mean = self._running_mean * self.momentum + self._batch_mean * (1 - self.momentum)
-            self._running_var = self._running_var * self.momentum + self._batch_var * (1 - self.momentum)
+            self.running_mean.mul_(self.momentum)
+            self.running_var.mul_(self.momentum)
 
-            mean = self._batch_mean
-            var = self._batch_var
+            self.running_mean.add_(self.batch_mean.data * (1 - self.momentum))
+            self.running_var.add_(self.batch_var.data * (1 - self.momentum))
+
+            mean = self.batch_mean
+            var = self.batch_var
+
         else:
-            mean = self._running_mean
-            var = self._running_var
+            mean = self.running_mean
+            var = self.running_var
 
         x_hat = (x - mean) / var.sqrt()
         z = torch.exp(self.log_gamma) * x_hat + self.beta
 
         if compute_jacobian:
-            self._logdet_jacobian = torch.sum(self.log_gamma - 0.5 * torch.log(var))
+            self._logdet_jacobian = (self.log_gamma - 0.5 * torch.log(var)).sum(-1)
 
         return z
 
     def inverse(self, z):
         if self.training:
-            mean = self._batch_mean
-            var = self._batch_var
+            mean = self.batch_mean
+            var = self.batch_var
         else:
-            mean = self._running_mean
-            var = self._running_var
+            mean = self.running_mean
+            var = self.running_var
 
-        z_hat = (z - self.beta) / torch.exp(self.log_gamma)
+        x_hat = (z - self.beta) / torch.exp(self.log_gamma)
 
-        x = z_hat * var.sqrt() + mean
+        x = x_hat * var.sqrt() + mean
 
         return x
 
@@ -300,3 +312,47 @@ class BatchNorm2dFlow(BatchNorm1dFlow):
 
     def _unsqueeze(self, x):
         return x.unsqueeze(1).unsqueeze(2)
+
+
+class Flatten(Flow):
+    def __init__(self, in_size=None):
+        super().__init__(None)
+        self.in_size = in_size
+        self._logdet_jacobian = 0
+
+    def forward(self, x, compute_jacobian=True):
+        self.in_size = x.shape[1:]
+        return x.view(x.size(0), -1)
+
+    def inverse(self, z):
+        if self.in_size is None:
+            raise ValueError
+        return z.view(z.size(0), self.in_size[0], self.in_size[1], self.in_size[2])
+
+
+class PreProcess(Flow):
+    def __init__(self):
+        super().__init__(None)
+        self.register_buffer('data_constraint', torch.tensor([0.95], dtype=torch.float32))
+
+    @staticmethod
+    def logit(x):
+        return x.log() - (1. - x).log()
+
+    def forward(self, x, compute_jacobian=True):
+        # add noise to pixels to dequantize them.
+        x = (x * 255. + torch.rand_like(x)) / 256.
+
+        # Transform pixel values with logit to be unconstrained.
+        x = (1 + (2 * x - 1) * self.data_constraint) / 2.
+        z = self.logit(x)
+
+        if compute_jacobian:
+            logdet_jacobian = F.softplus(z) + F.softplus(-z) \
+                              - F.softplus((1. - self.data_constraint).log() - self.data_constraint.log())
+            self._logdet_jacobian = logdet_jacobian.view(logdet_jacobian.size(0), -1).sum(-1)
+
+        return z
+
+    def inverse(self, z):
+        return torch.sigmoid(z)

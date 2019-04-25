@@ -15,6 +15,8 @@ from .operations import (
     ReverseLayer,
     BatchNorm1dFlow,
     BatchNorm2dFlow,
+    Flatten,
+    PreProcess,
 )
 
 __all__ = [
@@ -29,4 +31,6 @@ __all__ = [
     'ReverseLayer',
     'BatchNorm1dFlow',
     'BatchNorm2dFlow',
+    'Flatten',
+    'PreProcess',
 ]

@@ -82,7 +82,7 @@ class FlowList(Flow):
         for flow in self.flow_list:
             x = flow.forward(x, compute_jacobian)
             if compute_jacobian:
-                logdet_jacobian += flow.logdet_jacobian
+                logdet_jacobian = logdet_jacobian + flow.logdet_jacobian
 
         if compute_jacobian:
             self._logdet_jacobian = logdet_jacobian

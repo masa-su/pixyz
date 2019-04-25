@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import numpy as np
 
 from .flows import Flow
@@ -49,6 +50,8 @@ class AffineCouplingLayer(Flow):
                     ResNet(in_channels, 64, 2 * in_channels,
                            num_blocks=8, kernel_size=3, padding=1,
                            double_after_norm=(self.mask_type == "checkerboard"))
+
+        self.scale_weight = nn.Parameter(torch.randn(1))
 
     def build_mask(self, x):
         """
@@ -109,23 +112,21 @@ class AffineCouplingLayer(Flow):
         -------
         s : torch.tensor
         t : torch.tensor
-        x_masked : tensor.torch
-        x_inverse_masked : tensor.torch
 
         Examples
         --------
         >>> # Channel-wise mask
         >>> f1 = AffineCouplingLayer(4, mask_type="channel_wise", inverse_mask=False)
         >>> x1 = torch.randn([1,4,3,3])
-        >>> s, t, x_masked, x_inverse_masked = f1.get_parameters(x1)
-        >>> print(torch.sum(s[:, :2, :, :]).data)
+        >>> log_s, t, x_masked, x_inverse_masked = f1.get_parameters(x1)
+        >>> print(torch.sum(log_s[:, :2, :, :]).data)
         tensor(0.)
         >>> print(torch.sum(x_masked[:, 2:, :, :]).data)
         tensor(0.)
         >>> # Checkerboard mask
         >>> f2 = AffineCouplingLayer(2, mask_type="checkerboard", inverse_mask=True)
         >>> x2 = torch.randn([1,2,5,5])
-        >>> s, t, x_masked, x_inverse_masked = f2.get_parameters(x2)
+        >>> log_s, t, x_masked, x_inverse_masked = f2.get_parameters(x2)
         >>> print(torch.sum(x_masked[:,:,::2, ::2]).data)
         tensor(0.)
         >>> print(torch.sum(x_masked[:,:,1::2, 1::2]).data)
@@ -134,31 +135,30 @@ class AffineCouplingLayer(Flow):
         """
         mask = self.build_mask(x)
         x_masked = mask * x
-        x_inverse_masked = (1 - mask) * x
 
         if self.scale_translate_net:
             s_t = self.scale_translate_net(x_masked)
-            s, t = s_t.chunk(2, dim=1)
+            log_s, t = s_t.chunk(2, dim=1)
         else:
-            s = self.scale_net(x_masked)
+            log_s = self.scale_net(x_masked)
             t = self.translate_net(x_masked)
 
-        s = s * (1 - mask)
+        log_s = (self.scale_weight * torch.tanh(log_s)) * (1 - mask)
         t = t * (1 - mask)
 
-        return s, t, x_masked, x_inverse_masked
+        return log_s, t
 
     def forward(self, x, compute_jacobian=True):
-        s, t, x_masked, x_reverse_masked = self.get_parameters(x)
-        z = x_masked + (x_reverse_masked * torch.exp(s) + t)
+        log_s, t = self.get_parameters(x)
+        z = (x + t) * torch.exp(log_s)
         if compute_jacobian:
-            self._logdet_jacobian = sum_samples(s)
+            self._logdet_jacobian = sum_samples(log_s)
 
         return z
 
     def inverse(self, z):
-        s, t, z_masked, z_reverse_masked = self.get_parameters(z)
-        x = z_masked + (z_reverse_masked - t) * torch.exp(-s)
+        log_s, t = self.get_parameters(z)
+        x = z * torch.exp(-log_s) - t
 
         return x
 
