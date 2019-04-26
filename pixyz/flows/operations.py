@@ -245,11 +245,11 @@ class BatchNorm1dFlow(Flow):
             self.batch_mean = x.mean(0)
             self.batch_var = (x - self.batch_mean).pow(2).mean(0) + epsilon()
 
-            self.running_mean.mul_(self.momentum)
-            self.running_var.mul_(self.momentum)
+            self.running_mean = self.running_mean * self.momentum
+            self.running_var = self.running_var * self.momentum
 
-            self.running_mean.add_(self.batch_mean.data * (1 - self.momentum))
-            self.running_var.add_(self.batch_var.data * (1 - self.momentum))
+            self.running_mean = self.running_mean + (self.batch_mean.data * (1 - self.momentum))
+            self.running_var = self.running_var + (self.batch_var.data * (1 - self.momentum))
 
             mean = self.batch_mean
             var = self.batch_var
@@ -305,8 +305,8 @@ class BatchNorm2dFlow(BatchNorm1dFlow):
         self.log_gamma = nn.Parameter(self._unsqueeze(self.log_gamma.data))
         self.beta = nn.Parameter(self._unsqueeze(self.beta.data))
 
-        self.register_buffer('running_mean', self._unsqueeze(self._running_mean))
-        self.register_buffer('running_var', self._unsqueeze(self._running_mean))
+        self.register_buffer('running_mean', self._unsqueeze(self.running_mean))
+        self.register_buffer('running_var', self._unsqueeze(self.running_var))
 
     def _unsqueeze(self, x):
         return x.unsqueeze(1).unsqueeze(2)
@@ -347,7 +347,7 @@ class PreProcess(Flow):
 
         if compute_jacobian:
             logdet_jacobian = F.softplus(z) + F.softplus(-z) \
-                              - F.softplus((1. - self.data_constraint).log() - self.data_constraint.log())
+                - F.softplus((1. - self.data_constraint).log() - self.data_constraint.log())
 
             logdet_jacobian = logdet_jacobian.view(logdet_jacobian.size(0), -1).sum(-1)
             logdet_jacobian = logdet_jacobian - np.log(256.) * np.prod(z.size()[1:])
