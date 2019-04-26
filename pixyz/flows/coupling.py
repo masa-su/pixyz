@@ -213,7 +213,7 @@ def channel_wise_mask(channels, inverse_mask=False):
     Examples
     --------
     >>> channel_wise_mask(6, False)
-    array([1., 1., 1., 0., 0., 0.], dtype=float32)
+    array([ 1.,  1.,  1.,  0.,  0.,  0.], dtype=float32)
     >>> channel_wise_mask(6, True)
     array([0., 0., 0., 1., 1., 1.], dtype=float32)
 
