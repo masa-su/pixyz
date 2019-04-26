@@ -1,7 +1,7 @@
 from ..distributions import Distribution
 from ..utils import get_dict_values
 
-import math
+
 class TransformedDistribution(Distribution):
     """
     p(z)
@@ -67,9 +67,9 @@ class InverseTransformedDistribution(Distribution):
     x = f^-1(z), z~p(z)
     """
 
-    def __init__(self, prior, flow, var, name="p"):
+    def __init__(self, prior, flow, var, cond_var=[], name="p"):
 
-        super().__init__(var, cond_var=[], name=name, dim=flow.in_features)
+        super().__init__(var, cond_var=cond_var, name=name, dim=flow.in_features)
         self.prior = prior
         self.flow = flow  # FlowList
 
@@ -93,8 +93,14 @@ class InverseTransformedDistribution(Distribution):
         sample_dict = self.prior.sample(z_dict, shape=shape, batch_size=batch_size, return_all=True, **kwargs)
 
         # inverse flow transformation
-        _z = get_dict_values(sample_dict, self.flow_output_var)[0]
-        x = self.inverse(_z)
+        _z = get_dict_values(sample_dict, self.flow_output_var)
+        _y = get_dict_values(sample_dict, self.cond_var)
+
+        if len(_y) == 0:
+            x = self.inverse(_z[0])
+        else:
+            x = self.inverse(_z[0], y=_y[0])
+
         output_dict = {self.var[0]: x}
 
         if return_all:
@@ -105,8 +111,14 @@ class InverseTransformedDistribution(Distribution):
 
     def inference(self, x_dict, return_all=True, compute_jacobian=False):
         # flow transformation
-        _x = get_dict_values(x_dict, self.var)[0]
-        z = self.forward(_x, compute_jacobian=compute_jacobian)
+        _x = get_dict_values(x_dict, self.var)
+        _y = get_dict_values(x_dict, self.cond_var)
+
+        if len(_y) == 0:
+            z = self.forward(_x[0], compute_jacobian=compute_jacobian)
+        else:
+            z = self.forward(_x[0], y=_y[0], compute_jacobian=compute_jacobian)
+
         output_dict = {self.flow_output_var[0]: z}
 
         if return_all:

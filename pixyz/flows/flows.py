@@ -24,11 +24,12 @@ class Flow(nn.Module):
     def in_features(self):
         return self._in_features
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         """
         Parameters
         ----------
         x : torch.Tensor
+        y : torch.Tensor
         compute_jacobian : bool
 
         Returns
@@ -39,11 +40,12 @@ class Flow(nn.Module):
         z = x
         return z
 
-    def inverse(self, z):
+    def inverse(self, z, y=None):
         """
         Parameters
         ----------
         z : torch.Tensor
+        y : torch.Tensor
 
         Returns
         -------
@@ -76,11 +78,11 @@ class FlowList(Flow):
         super().__init__(flow_list[0].in_features)
         self.flow_list = nn.ModuleList(flow_list)
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         logdet_jacobian = 0
 
         for flow in self.flow_list:
-            x = flow.forward(x, compute_jacobian)
+            x = flow.forward(x, y, compute_jacobian)
             if compute_jacobian:
                 logdet_jacobian = logdet_jacobian + flow.logdet_jacobian
 
@@ -89,9 +91,9 @@ class FlowList(Flow):
 
         return x
 
-    def inverse(self, z):
+    def inverse(self, z, y=None):
         for flow in self.flow_list[::-1]:
-            z = flow.inverse(z)
+            z = flow.inverse(z, y)
         return z
 
     def __repr__(self):
@@ -130,7 +132,7 @@ class PlanarFlow(Flow):
         self.b.data.uniform_(-std, std)
         self.u.data.uniform_(-std, std)
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         if self.constraint_u:
             # modify :attr:`u` so that this flow can be invertible.
             wu = torch.mm(self.w, self.u.t())  # (1, 1)

@@ -48,7 +48,7 @@ class SqueezeLayer(Flow):
         super().__init__(None)
         self._logdet_jacobian = 0
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         [_, channels, height, width] = x.shape
 
         if height % 2 != 0 or width % 2 != 0:
@@ -64,7 +64,7 @@ class SqueezeLayer(Flow):
 
         return z
 
-    def inverse(self, z):
+    def inverse(self, z, y=None):
         [_, channels, height, width] = z.shape
 
         if channels % 4 != 0:
@@ -124,10 +124,10 @@ class UnsqueezeLayer(SqueezeLayer):
 
     """
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         return super().inverse(x)
 
-    def inverse(self, z):
+    def inverse(self, z, y=None):
         return super().forward(z)
 
 
@@ -184,14 +184,14 @@ class PermutationLayer(Flow):
         self.inv_permute_indices = np.argsort(self.permute_indices)
         self._logdet_jacobian = 0
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         if x.dim() == 2:
             return x[:, self.permute_indices]
         elif x.dim() == 4:
             return x[:, self.permute_indices, :, :]
         raise ValueError
 
-    def inverse(self, z):
+    def inverse(self, z, y=None):
         if z.dim() == 2:
             return z[:, self.inv_permute_indices]
         elif z.dim() == 4:
@@ -240,7 +240,7 @@ class BatchNorm1dFlow(Flow):
         self.register_buffer('running_mean', torch.zeros(in_features))
         self.register_buffer('running_var', torch.ones(in_features))
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         if self.training:
             self.batch_mean = x.mean(0)
             self.batch_var = (x - self.batch_mean).pow(2).mean(0) + epsilon()
@@ -266,7 +266,7 @@ class BatchNorm1dFlow(Flow):
 
         return z
 
-    def inverse(self, z):
+    def inverse(self, z, y=None):
         if self.training:
             mean = self.batch_mean
             var = self.batch_var
@@ -305,10 +305,8 @@ class BatchNorm2dFlow(BatchNorm1dFlow):
         self.log_gamma = nn.Parameter(self._unsqueeze(self.log_gamma.data))
         self.beta = nn.Parameter(self._unsqueeze(self.beta.data))
 
-        self.register_buffer('_running_mean', self._unsqueeze(self._running_mean))
-        self.register_buffer('_running_var', self._unsqueeze(self._running_mean))
-        self.register_buffer('_batch_mean', self._unsqueeze(self._batch_mean))
-        self.register_buffer('_batch_var', self._unsqueeze(self._batch_var))
+        self.register_buffer('running_mean', self._unsqueeze(self._running_mean))
+        self.register_buffer('running_var', self._unsqueeze(self._running_mean))
 
     def _unsqueeze(self, x):
         return x.unsqueeze(1).unsqueeze(2)
@@ -320,11 +318,11 @@ class Flatten(Flow):
         self.in_size = in_size
         self._logdet_jacobian = 0
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         self.in_size = x.shape[1:]
         return x.view(x.size(0), -1)
 
-    def inverse(self, z):
+    def inverse(self, z, y=None):
         if self.in_size is None:
             raise ValueError
         return z.view(z.size(0), self.in_size[0], self.in_size[1], self.in_size[2])
@@ -339,7 +337,7 @@ class PreProcess(Flow):
     def logit(x):
         return x.log() - (1. - x).log()
 
-    def forward(self, x, compute_jacobian=True):
+    def forward(self, x, y=None, compute_jacobian=True):
         # add noise to pixels to dequantize them.
         x = (x * 255. + torch.rand_like(x)) / 256.
 
@@ -350,9 +348,13 @@ class PreProcess(Flow):
         if compute_jacobian:
             logdet_jacobian = F.softplus(z) + F.softplus(-z) \
                               - F.softplus((1. - self.data_constraint).log() - self.data_constraint.log())
-            self._logdet_jacobian = logdet_jacobian.view(logdet_jacobian.size(0), -1).sum(-1)
+
+            logdet_jacobian = logdet_jacobian.view(logdet_jacobian.size(0), -1).sum(-1)
+            logdet_jacobian = logdet_jacobian - np.log(256.) * np.prod(z.size()[1:])
+
+            self._logdet_jacobian = logdet_jacobian
 
         return z
 
-    def inverse(self, z):
+    def inverse(self, z, y=None):
         return torch.sigmoid(z)

@@ -1,10 +1,7 @@
 import torch
-import torch.nn as nn
 import numpy as np
 
 from .flows import Flow
-from .resnet import ResNet
-from ..utils import sum_samples
 
 
 class AffineCouplingLayer(Flow):
@@ -41,17 +38,10 @@ class AffineCouplingLayer(Flow):
         if scale_net and translate_net:
             self.scale_net = scale_net
             self.translate_net = translate_net
+        elif scale_translate_net:
+            self.scale_translate_net = scale_translate_net
         else:
-            if scale_translate_net:
-                self.scale_translate_net = scale_translate_net
-            else:
-                # Set a default network.
-                self.scale_translate_net =\
-                    ResNet(in_channels, 64, 2 * in_channels,
-                           num_blocks=8, kernel_size=3, padding=1,
-                           double_after_norm=(self.mask_type == "checkerboard"))
-
-        self.scale_weight = nn.Parameter(torch.randn(1))
+            raise ValueError
 
     def build_mask(self, x):
         """
@@ -102,11 +92,12 @@ class AffineCouplingLayer(Flow):
 
         raise ValueError
 
-    def get_parameters(self, x):
+    def get_parameters(self, x, y=None):
         """
         Parameters
         ----------
         x : torch.tensor
+        y : torch.tensor
 
         Returns
         -------
@@ -137,30 +128,36 @@ class AffineCouplingLayer(Flow):
         x_masked = mask * x
 
         if self.scale_translate_net:
-            s_t = self.scale_translate_net(x_masked)
-            log_s, t = s_t.chunk(2, dim=1)
+            if y is None:
+                log_s, t = self.scale_translate_net(x_masked)
+            else:
+                log_s, t = self.scale_translate_net(x_masked, y)
         else:
-            log_s = self.scale_net(x_masked)
-            t = self.translate_net(x_masked)
+            if y is None:
+                log_s = self.scale_net(x_masked)
+                t = self.translate_net(x_masked)
+            else:
+                log_s = self.scale_net(x_masked, y)
+                t = self.translate_net(x_masked, y)
 
-        log_s = (self.scale_weight * torch.tanh(log_s)) * (1 - mask)
+        log_s = log_s * (1 - mask)
         t = t * (1 - mask)
 
         return log_s, t
 
-    def forward(self, x, compute_jacobian=True):
-        log_s, t = self.get_parameters(x)
-        z = (x + t) * torch.exp(log_s)
+    def forward(self, x, y=None, compute_jacobian=True):
+        log_s, t = self.get_parameters(x, y)
+        x = x * torch.exp(log_s) + t
         if compute_jacobian:
-            self._logdet_jacobian = sum_samples(log_s)
-
-        return z
-
-    def inverse(self, z):
-        log_s, t = self.get_parameters(z)
-        x = z * torch.exp(-log_s) - t
+            self._logdet_jacobian = log_s.view(log_s.size(0), -1).sum(-1)
 
         return x
+
+    def inverse(self, z, y=None):
+        log_s, t = self.get_parameters(z, y)
+        z = (z - t) * torch.exp(-log_s)
+
+        return z
 
     def extra_repr(self):
         return 'in_features={}, mask_type={}, inverse_mask={}'.format(
