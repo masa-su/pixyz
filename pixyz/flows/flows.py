@@ -104,7 +104,7 @@ class FlowList(Flow):
 
 
 class PlanarFlow(Flow):
-    """
+    r"""
     Planar flow.
 
     .. math::
