@@ -95,7 +95,7 @@ class AffineCouplingLayer(Flow):
         raise ValueError
 
     def get_parameters(self, x, y=None):
-        """
+        r"""
         Parameters
         ----------
         x : torch.tensor
@@ -180,17 +180,17 @@ def checkerboard_mask(height, width, inverse_mask=False):
     Examples
     --------
     >>> checkerboard_mask(5, 4, False)
-    array([[1., 0., 1., 0.],
-           [0., 1., 0., 1.],
-           [1., 0., 1., 0.],
-           [0., 1., 0., 1.],
-           [1., 0., 1., 0.]], dtype=float32)
+    array([[ 1.,  0.,  1.,  0.],
+           [ 0.,  1.,  0.,  1.],
+           [ 1.,  0.,  1.,  0.],
+           [ 0.,  1.,  0.,  1.],
+           [ 1.,  0.,  1.,  0.]], dtype=float32)
     >>> checkerboard_mask(5, 4, True)
-    array([[0., 1., 0., 1.],
-           [1., 0., 1., 0.],
-           [0., 1., 0., 1.],
-           [1., 0., 1., 0.],
-           [0., 1., 0., 1.]], dtype=float32)
+    array([[ 0.,  1.,  0.,  1.],
+           [ 1.,  0.,  1.,  0.],
+           [ 0.,  1.,  0.,  1.],
+           [ 1.,  0.,  1.,  0.],
+           [ 0.,  1.,  0.,  1.]], dtype=float32)
 
     """
     mask = np.arange(height).reshape(-1, 1) + np.arange(width)
@@ -215,7 +215,7 @@ def channel_wise_mask(channels, inverse_mask=False):
     >>> channel_wise_mask(6, False)
     array([ 1.,  1.,  1.,  0.,  0.,  0.], dtype=float32)
     >>> channel_wise_mask(6, True)
-    array([0., 0., 0., 1., 1., 1.], dtype=float32)
+    array([ 0.,  0.,  0.,  1.,  1.,  1.], dtype=float32)
 
     """
     mask = np.zeros(channels).astype(np.float32)
