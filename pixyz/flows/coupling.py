@@ -108,16 +108,15 @@ class AffineCouplingLayer(Flow):
 
         Examples
         --------
+        >>> scale_translate_net = lambda x: (x, x)
         >>> # Channel-wise mask
-        >>> f1 = AffineCouplingLayer(4, mask_type="channel_wise", scale_net=lambda x: x, translate_net=lambda x: x,
-        ...                          inverse_mask=False)
+        >>> f1 = AffineCouplingLayer(4, mask_type="channel_wise", scale_translate_net=scale_translate_net, inverse_mask=False)
         >>> x1 = torch.randn([1,4,3,3])
         >>> log_s, t = f1.get_parameters(x1)
         >>> print(torch.sum(log_s[:, :2, :, :]).data)
         tensor(0.)
         >>> # Checkerboard mask
-        >>> f2 = AffineCouplingLayer(2, mask_type="checkerboard", scale_net=lambda x: x, translate_net=lambda x: x,
-        ...                          inverse_mask=True)
+        >>> f2 = AffineCouplingLayer(2, mask_type="checkerboard", scale_translate_net=scale_translate_net, inverse_mask=False)
         >>> x2 = torch.randn([1,2,5,5])
         >>> log_s, t = f2.get_parameters(x2)
         >>> print(torch.sum(log_s[:,:,1::2, 1::2]).data)
@@ -180,17 +179,17 @@ def checkerboard_mask(height, width, inverse_mask=False):
     Examples
     --------
     >>> checkerboard_mask(5, 4, False)
-    array([[ 1.,  0.,  1.,  0.],
-           [ 0.,  1.,  0.,  1.],
-           [ 1.,  0.,  1.,  0.],
-           [ 0.,  1.,  0.,  1.],
-           [ 1.,  0.,  1.,  0.]], dtype=float32)
+    array([[1., 0., 1., 0.],
+           [0., 1., 0., 1.],
+           [1., 0., 1., 0.],
+           [0., 1., 0., 1.],
+           [1., 0., 1., 0.]], dtype=float32)
     >>> checkerboard_mask(5, 4, True)
-    array([[ 0.,  1.,  0.,  1.],
-           [ 1.,  0.,  1.,  0.],
-           [ 0.,  1.,  0.,  1.],
-           [ 1.,  0.,  1.,  0.],
-           [ 0.,  1.,  0.,  1.]], dtype=float32)
+    array([[0., 1., 0., 1.],
+           [1., 0., 1., 0.],
+           [0., 1., 0., 1.],
+           [1., 0., 1., 0.],
+           [0., 1., 0., 1.]], dtype=float32)
 
     """
     mask = np.arange(height).reshape(-1, 1) + np.arange(width)
@@ -213,9 +212,9 @@ def channel_wise_mask(channels, inverse_mask=False):
     Examples
     --------
     >>> channel_wise_mask(6, False)
-    array([ 1.,  1.,  1.,  0.,  0.,  0.], dtype=float32)
+    array([1., 1., 1., 0., 0., 0.], dtype=float32)
     >>> channel_wise_mask(6, True)
-    array([ 0.,  0.,  0.,  1.,  1.,  1.], dtype=float32)
+    array([0., 0., 0., 1., 1., 1.], dtype=float32)
 
     """
     mask = np.zeros(channels).astype(np.float32)
