@@ -74,16 +74,30 @@ ReverseLayer
     :members:
     :undoc-members:
 
-BatchNorm1dFlow
+BatchNorm1d
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: BatchNorm1dFlow
+.. autoclass:: BatchNorm1d
     :members:
     :undoc-members:
 
-BatchNorm2dFlow
+BatchNorm2d
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: BatchNorm2dFlow
+.. autoclass:: BatchNorm2d
+    :members:
+    :undoc-members:
+
+Flatten
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Flatten
+    :members:
+    :undoc-members:
+
+PreProcess
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: PreProcess
     :members:
     :undoc-members:

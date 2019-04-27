@@ -211,16 +211,16 @@ class ReverseLayer(PermutationLayer):
         super().__init__(permute_indices)
 
 
-class BatchNorm1dFlow(Flow):
+class BatchNorm1d(Flow):
     """
-    An batch normalization with the inverse transformation.
+    A batch normalization with the inverse transformation.
 
     https://github.com/ikostrikov/pytorch-flows/blob/master/flows.py#L205
 
     Examples
     --------
     >>> x = torch.randn(20, 100)
-    >>> f = BatchNorm1dFlow(100)
+    >>> f = BatchNorm1d(100)
     >>> # transformation
     >>> z = f(x)
     >>> # reconstruction
@@ -281,16 +281,16 @@ class BatchNorm1dFlow(Flow):
         return x
 
 
-class BatchNorm2dFlow(BatchNorm1dFlow):
+class BatchNorm2d(BatchNorm1d):
     """
-    An batch normalization with the inverse transformation.
+    A batch normalization with the inverse transformation.
 
     https://github.com/ikostrikov/pytorch-flows/blob/master/flows.py#L205
 
     Examples
     --------
     >>> x = torch.randn(20, 100, 35, 45)
-    >>> f = BatchNorm2dFlow(100)
+    >>> f = BatchNorm2d(100)
     >>> # transformation
     >>> z = f(x)
     >>> # reconstruction
@@ -312,7 +312,7 @@ class BatchNorm2dFlow(BatchNorm1dFlow):
         return x.unsqueeze(1).unsqueeze(2)
 
 
-class Flatten(Flow):
+class FlattenLayer(Flow):
     def __init__(self, in_size=None):
         super().__init__(None)
         self.in_size = in_size
@@ -328,10 +328,10 @@ class Flatten(Flow):
         return z.view(z.size(0), self.in_size[0], self.in_size[1], self.in_size[2])
 
 
-class PreProcess(Flow):
+class PreprocessLayer(Flow):
     def __init__(self):
         super().__init__(None)
-        self.register_buffer('data_constraint', torch.tensor([0.95], dtype=torch.float32))
+        self.register_buffer('data_constraint', torch.tensor([0.05], dtype=torch.float32))
 
     @staticmethod
     def logit(x):
@@ -341,13 +341,13 @@ class PreProcess(Flow):
         # add noise to pixels to dequantize them.
         x = (x * 255. + torch.rand_like(x)) / 256.
 
-        # Transform pixel values with logit to be unconstrained.
-        x = (1 + (2 * x - 1) * self.data_constraint) / 2.
+        # transform pixel values with logit to be unconstrained.
+        x = (1 + (2 * x - 1) * (1 - self.data_constraint)) / 2.
         z = self.logit(x)
 
         if compute_jacobian:
             logdet_jacobian = F.softplus(z) + F.softplus(-z) \
-                - F.softplus((1. - self.data_constraint).log() - self.data_constraint.log())
+                - F.softplus(self.data_constraint.log() - (1. - self.data_constraint).log())
 
             logdet_jacobian = logdet_jacobian.view(logdet_jacobian.size(0), -1).sum(-1)
             logdet_jacobian = logdet_jacobian - np.log(256.) * np.prod(z.size()[1:])

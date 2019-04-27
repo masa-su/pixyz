@@ -55,7 +55,8 @@ class AffineCouplingLayer(Flow):
 
         Examples
         --------
-        >>> f1 = AffineCouplingLayer(4, mask_type="channel_wise", scale_net=lambda x: x, translate_net=lambda x: x,
+        >>> scale_translate_net = lambda x: (x, x)
+        >>> f1 = AffineCouplingLayer(4, mask_type="channel_wise", scale_translate_net=scale_translate_net,
         ...                          inverse_mask=False)
         >>> x1 = torch.randn([1,4,3,3])
         >>> f1.build_mask(x1)
@@ -66,7 +67,7 @@ class AffineCouplingLayer(Flow):
                  [[0.]],
         <BLANKLINE>
                  [[0.]]]])
-        >>> f2 = AffineCouplingLayer(2, mask_type="checkerboard", scale_net=lambda x: x, translate_net=lambda x: x,
+        >>> f2 = AffineCouplingLayer(2, mask_type="checkerboard", scale_translate_net=scale_translate_net,
         ...                          inverse_mask=True)
         >>> x2 = torch.randn([1,2,5,5])
         >>> f2.build_mask(x2)
@@ -110,13 +111,15 @@ class AffineCouplingLayer(Flow):
         --------
         >>> scale_translate_net = lambda x: (x, x)
         >>> # Channel-wise mask
-        >>> f1 = AffineCouplingLayer(4, mask_type="channel_wise", scale_translate_net=scale_translate_net, inverse_mask=False)
+        >>> f1 = AffineCouplingLayer(4, mask_type="channel_wise", scale_translate_net=scale_translate_net,
+        ...                          inverse_mask=False)
         >>> x1 = torch.randn([1,4,3,3])
         >>> log_s, t = f1.get_parameters(x1)
         >>> print(torch.sum(log_s[:, :2, :, :]).data)
         tensor(0.)
         >>> # Checkerboard mask
-        >>> f2 = AffineCouplingLayer(2, mask_type="checkerboard", scale_translate_net=scale_translate_net, inverse_mask=False)
+        >>> f2 = AffineCouplingLayer(2, mask_type="checkerboard", scale_translate_net=scale_translate_net,
+        ...                          inverse_mask=False)
         >>> x2 = torch.randn([1,2,5,5])
         >>> log_s, t = f2.get_parameters(x2)
         >>> print(torch.sum(log_s[:,:,1::2, 1::2]).data)
