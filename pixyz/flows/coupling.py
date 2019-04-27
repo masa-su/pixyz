@@ -166,7 +166,7 @@ class AffineCouplingLayer(Flow):
 
 
 def checkerboard_mask(height, width, inverse_mask=False):
-    """
+    r"""
     Parameters
     ----------
     height : int
@@ -200,7 +200,7 @@ def checkerboard_mask(height, width, inverse_mask=False):
 
 
 def channel_wise_mask(channels, inverse_mask=False):
-    """
+    r"""
     Parameters
     ----------
     channels : int
