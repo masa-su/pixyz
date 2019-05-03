@@ -328,6 +328,84 @@ class FlattenLayer(Flow):
         return z.view(z.size(0), self.in_size[0], self.in_size[1], self.in_size[2])
 
 
+class ActNorm2d(Flow):
+    """
+    Activation Normalization
+    Initialize the bias and scale with a given minibatch,
+    so that the output per-channel have zero mean and unit variance for that.
+    After initialization, `bias` and `logs` will be trained as parameters.
+
+    https://github.com/chaiyujin/glow-pytorch/blob/master/glow/modules.py
+    """
+
+    def __init__(self, in_channels, scale=1.):
+        super().__init__(in_channels)
+        # register mean and scale
+        size = [1, in_channels, 1, 1]
+        self.register_parameter("bias", nn.Parameter(torch.zeros(*size)))
+        self.register_parameter("logs", nn.Parameter(torch.zeros(*size)))
+        self.in_channels = in_channels
+        self.scale = float(scale)
+        self.inited = False
+
+    def initialize_parameters(self, x):
+        if not self.training:
+            return
+        assert x.device == self.bias.device
+        with torch.no_grad():
+            bias = torch.mean(x.clone(), dim=[0, 2, 3], keepdim=True) * -1.0
+            vars = torch.mean((x.clone() + bias) ** 2, dim=[0, 2, 3], keepdim=True)
+            logs = torch.log(self.scale / (torch.sqrt(vars) + epsilon()))
+            self.bias.data.copy_(bias.data)
+            self.logs.data.copy_(logs.data)
+            self.inited = True
+
+    def _center(self, x, inverse=False):
+        if not inverse:
+            return x + self.bias
+        else:
+            return x - self.bias
+
+    def _scale(self, x, compute_jacobian=True, inverse=False):
+        logs = self.logs
+        if not inverse:
+            x = x * torch.exp(logs)
+        else:
+            x = x * torch.exp(-logs)
+        if compute_jacobian:
+            """
+            logs is log_std of `mean of channels`
+            so we need to multiply pixels
+            """
+            pixels = np.prod(x.size()[2:])
+            logdet_jacobian = torch.sum(logs) * pixels
+
+            return x, logdet_jacobian
+
+        return x, None
+
+    def forward(self, x, y=None, compute_jacobian=True):
+        if not self.inited:
+            self.initialize_parameters(x)
+
+        # center and scale
+        x = self._center(x, inverse=False)
+        x, logdet_jacobian = self._scale(x, compute_jacobian, inverse=False)
+        if compute_jacobian:
+            self._logdet_jacobian = logdet_jacobian
+
+        return x
+
+    def inverse(self, x, y=None):
+        if not self.inited:
+            self.initialize_parameters(x)
+
+        # scale and center
+        x, _ = self._scale(x, compute_jacobian=False, inverse=True)
+        x = self._center(x, inverse=True)
+        return x
+
+
 class PreprocessLayer(Flow):
     def __init__(self):
         super().__init__(None)
@@ -343,6 +421,8 @@ class PreprocessLayer(Flow):
 
         # transform pixel values with logit to be unconstrained.
         x = (1 + (2 * x - 1) * (1 - self.data_constraint)) / 2.
+
+        # apply the logit function.
         z = self.logit(x)
 
         if compute_jacobian:

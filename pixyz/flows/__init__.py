@@ -7,6 +7,10 @@ from .coupling import (
     AffineCouplingLayer,
 )
 
+from .conv import (
+    ChannelConv
+)
+
 from .operations import (
     SqueezeLayer,
     UnsqueezeLayer,
@@ -15,6 +19,7 @@ from .operations import (
     ReverseLayer,
     BatchNorm1d,
     BatchNorm2d,
+    ActNorm2d,
     FlattenLayer,
     PreprocessLayer,
 )
@@ -24,6 +29,7 @@ __all__ = [
     'FlowList',
     'PlanarFlow',
     'AffineCouplingLayer',
+    'ChannelConv',
     'SqueezeLayer',
     'UnsqueezeLayer',
     'PermutationLayer',
@@ -31,6 +37,7 @@ __all__ = [
     'ReverseLayer',
     'BatchNorm1d',
     'BatchNorm2d',
+    'ActNorm2d',
     'FlattenLayer',
     'PreprocessLayer',
 ]
