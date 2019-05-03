@@ -17,11 +17,14 @@ from .operations import (
     PermutationLayer,
     ShuffleLayer,
     ReverseLayer,
+    FlattenLayer,
+    PreprocessLayer,
+)
+
+from .normalizations import (
     BatchNorm1d,
     BatchNorm2d,
     ActNorm2d,
-    FlattenLayer,
-    PreprocessLayer,
 )
 
 __all__ = [
