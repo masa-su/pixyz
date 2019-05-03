@@ -38,9 +38,9 @@ __all__ = [
     'PermutationLayer',
     'ShuffleLayer',
     'ReverseLayer',
+    'FlattenLayer',
+    'PreprocessLayer',
     'BatchNorm1d',
     'BatchNorm2d',
     'ActNorm2d',
-    'FlattenLayer',
-    'PreprocessLayer',
 ]
