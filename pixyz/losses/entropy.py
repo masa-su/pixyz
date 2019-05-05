@@ -37,11 +37,11 @@ class AnalyticalEntropy(Loss):
 
     def __init__(self, p, input_var=None, dim=None):
         self.dim = dim
-        super().__init__(p, input_var)
+        super().__init__(p, input_var=input_var)
 
     @property
     def loss_text(self):
-        return "KL[{}||{}]".format(self._p.prob_text, self._q.prob_text)
+        return "-(E_{}[log {}])".format(self._p.prob_text, self._p.prob_text)
 
     def _get_eval(self, x, **kwargs):
         if not hasattr(self._p, 'distribution_torch_class'):
