@@ -1,4 +1,7 @@
-from .losses import SetLoss
+import torch
+
+from ..utils import get_dict_values
+from .losses import Loss, SetLoss
 
 
 class Entropy(SetLoss):
@@ -21,6 +24,42 @@ class Entropy(SetLoss):
 
         loss = -p.log_prob().expectation(p, input_var)
         super().__init__(loss)
+
+
+class AnalyticalEntropy(Loss):
+    r"""
+    Entropy (Analytical).
+
+    .. math::
+
+        H[p] = -\mathbb{E}_{p(x)}[\log p(x)]
+    """
+
+    def __init__(self, p, input_var=None, dim=None):
+        self.dim = dim
+        super().__init__(p, input_var)
+
+    @property
+    def loss_text(self):
+        return "KL[{}||{}]".format(self._p.prob_text, self._q.prob_text)
+
+    def _get_eval(self, x, **kwargs):
+        if not hasattr(self._p, 'distribution_torch_class'):
+            raise ValueError("Entropy of this distribution cannot be evaluated, "
+                             "got %s." % self._p.distribution_name)
+
+        inputs = get_dict_values(x, self._p.input_var, True)
+        self._p.set_dist(inputs)
+
+        entropy = self._p.dist.entropy()
+
+        if self.dim:
+            entropy = torch.sum(entropy, dim=self.dim)
+            return entropy, x
+
+        dim_list = list(torch.arange(entropy.dim()))
+        entropy = torch.sum(entropy, dim=dim_list[1:])
+        return entropy, x
 
 
 class CrossEntropy(SetLoss):

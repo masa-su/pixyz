@@ -5,6 +5,7 @@ from .divergences import (
 from .entropy import (
     CrossEntropy,
     Entropy,
+    AnalyticalEntropy,
     StochasticReconstructionLoss,
 )
 
@@ -44,6 +45,7 @@ __all__ = [
     'Parameter',
     'CrossEntropy',
     'Entropy',
+    'AnalyticalEntropy',
     'StochasticReconstructionLoss',
     'Expectation',
     'KullbackLeibler',
