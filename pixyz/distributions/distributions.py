@@ -352,11 +352,11 @@ class DistributionBase(Distribution):
     def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
         super().__init__(cond_var=cond_var, var=var, name=name, dim=dim)
 
-        self._set_constant_params(**kwargs)
+        self._set_buffers(**kwargs)
         self._dist = None
 
-    def _set_constant_params(self, **params_dict):
-        """Format constant parameters of this distribution.
+    def _set_buffers(self, **params_dict):
+        """Format constant parameters of this distribution as buffers.
 
         Parameters
         ----------
@@ -369,7 +369,6 @@ class DistributionBase(Distribution):
         """
 
         self.replace_params_dict = {}
-        self.constant_params_dict = {}
 
         for key in params_dict.keys():
             if type(params_dict[key]) is str:
@@ -377,8 +376,8 @@ class DistributionBase(Distribution):
                     self.replace_params_dict[params_dict[key]] = key
                 else:
                     raise ValueError
-            elif isinstance(params_dict[key], numbers.Number) or isinstance(params_dict[key], torch.Tensor):
-                self.constant_params_dict[key] = params_dict[key]
+            elif isinstance(params_dict[key], torch.Tensor):
+                self.register_buffer(key, params_dict[key])
             else:
                 raise ValueError
 
@@ -464,9 +463,11 @@ class DistributionBase(Distribution):
         params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
 
-        # append constant_params to dict
         output_dict.update(params_dict)
-        output_dict.update(self.constant_params_dict)
+
+        # append constant_params to dict
+        constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys, return_dict=True)
+        output_dict.update(constant_params_dict)
 
         return output_dict
 
