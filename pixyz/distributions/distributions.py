@@ -248,7 +248,7 @@ class Distribution(nn.Module):
         x_dict : dict
             Input variables.
         sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some axes (dimensions) which are specified by `feature_dims`.
+            Whether the output is summed across some dimensions which are specified by `feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
             Set dimensions to sum across the output.
 
@@ -256,6 +256,26 @@ class Distribution(nn.Module):
         -------
         log_prob : torch.Tensor
             Values of log-probability density/mass function.
+
+        """
+        raise NotImplementedError
+
+    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+        """Giving variables, this method returns values of entropy.
+
+        Parameters
+        ----------
+        x_dict : dict, defaults to {}
+            Input variables.
+        sum_features : :obj:`bool`, defaults to True
+            Whether the output is summed across some dimensions which are specified by `feature_dims`.
+        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
+            Set dimensions to sum across the output.
+
+        Returns
+        -------
+        entropy : torch.Tensor
+            Values of entropy.
 
         """
         raise NotImplementedError
@@ -502,6 +522,16 @@ class DistributionBase(Distribution):
         output_dict.update(constant_params_dict)
 
         return output_dict
+
+    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+        _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
+        self.set_dist(_x_dict, sampling=False)
+
+        entropy = self.dist.entropy()
+        if sum_features:
+            entropy = sum_samples(entropy)
+
+        return entropy
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size([]), return_all=True, reparam=False):
         # check whether the input is valid or convert it to valid dictionary.
