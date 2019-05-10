@@ -24,11 +24,8 @@ class Distribution(nn.Module):
         name : :obj:`str`, defaults to "p"
             Name of this distribution.
             This name is displayed in :attr:`prob_text` and :attr:`prob_factorized_text`.
-        features_shape : :obj:`torch.Size`, defaults to torch.Size([]))
+        features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size([]))
             Shape of dimensions (features) of this distribution.
-            It is not necessary to set
-
-            Moreover, this is not consider when this class is inherited by DNNs.
 
         """
         super().__init__()
@@ -40,7 +37,7 @@ class Distribution(nn.Module):
         self._cond_var = cond_var
         self._var = var
 
-        self._features_shape = torch.Size(tolist(features_shape))
+        self._features_shape = torch.Size(features_shape)
         self._name = name
 
         self._prob_text = None
@@ -104,7 +101,7 @@ class Distribution(nn.Module):
 
     @property
     def features_shape(self):
-        """list: Shape of features of this distribution."""
+        """torch.Size or list: Shape of features of this distribution."""
         return self._features_shape
 
     def _check_input(self, x, var=None):
@@ -168,21 +165,21 @@ class Distribution(nn.Module):
         Examples
         --------
         >>> from pixyz.distributions import Normal
-        >>> dist_1 = Normal(loc=torch.tensor(0), scale=torch.tensor(1), var=["x"], features_shape=1)
+        >>> dist_1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[1])
         >>> print(dist_1.prob_text, dist_1.distribution_name)
         p(x) Normal
         >>> dist_1.get_params()
-        {'loc': 0, 'scale': 1}
-        >>> dist_2 = Normal(loc=torch.tensor(0), scale="z", cond_var=["z"], var=["x"])
+        {'loc': tensor([[0.]]), 'scale': tensor([[1.]])}
+        >>> dist_2 = Normal(loc=torch.tensor(0.), scale="z", cond_var=["z"], var=["x"])
         >>> print(dist_2.prob_text, dist_2.distribution_name)
         p(x|z) Normal
-        >>> dist_2.get_params({"z": 1})
-        {'scale': 1, 'loc': 0}
+        >>> dist_2.get_params({"z": torch.tensor(1.)})
+        {'scale': tensor(1.), 'loc': tensor([[0.]])}
 
         """
         raise NotImplementedError
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
+    def sample(self, x={}, batch_n=1, sample_shape=None, return_all=True,
                reparam=False):
         """Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
@@ -191,11 +188,10 @@ class Distribution(nn.Module):
         ----------
         x : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`, defaults to {}
             Input variables.
-        shape : :obj:`tuple` or :obj:`NoneType`, defaults to None
-            Shape of samples.
-            If set, :attr:`batch_size` is ignored.
-        batch_size : :obj:`int`, defaults to 1.
-            Batch size of samples.
+        sample_shape : :obj:`list` or :obj:`NoneType`, defaults to None
+            Shape of generating samples.
+        batch_n : :obj:`int`, defaults to 1.
+            Batch size of parameters.
         return_all : :obj:`bool`, defaults to True
             Choose whether the output contains input variables.
         reparam : :obj:`bool`, defaults to False.
@@ -205,6 +201,19 @@ class Distribution(nn.Module):
         -------
         output : dict
             Samples of this distribution.
+
+        Examples
+        --------
+        >>> from pixyz.distributions import Normal
+        >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[10, 2])
+        >>> print(p.prob_text, p.distribution_name)
+        p(x) Normal
+        >>> p.sample()["x"].shape  # (batch_n=1, features_shape)
+        torch.Size([1, 10, 2])
+        >>> p.sample(batch_n=20)["x"].shape  # (batch_n, features_shape)
+        torch.Size([20, 10, 2])
+        >>> p.sample(batch_n=20, sample_shape=[40, 30])["x"].shape  # (sample_shape, batch_n, features_shape)
+        torch.Size([40, 30, 20, 10, 2])
 
         """
         raise NotImplementedError
@@ -278,7 +287,7 @@ class Distribution(nn.Module):
             Choose whether the output is summed across some axes (dimensions)
             which are specified by :attr:`feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set axes to sum across the output.
+            Set dimensions to sum across the output. (Note: this parameter is not used for now.)
 
         Returns
         -------
@@ -630,18 +639,18 @@ class MultiplyDistribution(Distribution):
     def prob_factorized_text(self):
         return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
+    def sample(self, x={}, batch_n=1, sample_shape=None, return_all=True, reparam=False):
         # sample from the parent distribution
         parents_x_dict = x
         child_x_dict = self._parent.sample(x=parents_x_dict,
-                                           shape=shape,
-                                           batch_size=batch_size,
+                                           batch_n=batch_n,
+                                           sample_shape=sample_shape,
                                            return_all=True, reparam=reparam)
 
         # sample from the child distribution
         output_dict = self._child.sample(x=child_x_dict,
-                                         shape=shape,
-                                         batch_size=batch_size,
+                                         batch_n=batch_n,
+                                         sample_shape=sample_shape,
                                          return_all=True, reparam=reparam)
 
         if return_all is False:
@@ -728,7 +737,7 @@ class ReplaceVarDistribution(Distribution):
 
         _cond_var = [replace_dict[var] if var in replace_dict.keys() else var for var in _cond_var]
         _var = [replace_dict[var] if var in replace_dict.keys() else var for var in _var]
-        super().__init__(cond_var=_cond_var, var=_var, name=a.name, dim=a.dim)
+        super().__init__(cond_var=_cond_var, var=_var, name=a.name, features_shape=a.features_shape)
 
         self._a = a
         _input_var = [replace_dict[var] if var in replace_dict.keys() else var for var in a.input_var]
@@ -741,11 +750,11 @@ class ReplaceVarDistribution(Distribution):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
         return self._a.get_params(params_dict)
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
+    def sample(self, x={}, batch_n=1, sample_shape=None, return_all=True, reparam=False):
         input_dict = get_dict_values(x, self.cond_var, return_dict=True)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
-        output_dict = self._a.sample(replaced_input_dict, shape=shape, batch_size=batch_size,
+        output_dict = self._a.sample(replaced_input_dict, batch_n=batch_n, sample_shape=sample_shape,
                                      return_all=False, reparam=reparam)
         output_dict = replace_dict_keys(output_dict, self._replace_dict)
 
@@ -837,7 +846,7 @@ class MarginalizeVarDistribution(Distribution):
 
         _var = [var for var in _var if var not in marginalize_list]
 
-        super().__init__(cond_var=_cond_var, var=_var, name=a.name, dim=a.dim)
+        super().__init__(cond_var=_cond_var, var=_var, name=a.name, features_shape=a.features_shape)
         self._a = a
         self._marginalize_list = marginalize_list
 
@@ -847,8 +856,8 @@ class MarginalizeVarDistribution(Distribution):
     def get_params(self, params_dict):
         return self._a.get_params(params_dict)
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
-        output_dict = self._a.sample(x=x, shape=shape, batch_size=batch_size, return_all=False,
+    def sample(self, x={}, batch_n=1, sample_shape=None, return_all=True, reparam=False):
+        output_dict = self._a.sample(x=x, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
                                      reparam=reparam)
         output_dict = delete_dict_values(output_dict, self._marginalize_list)
 
