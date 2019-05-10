@@ -191,7 +191,7 @@ class Distribution(nn.Module):
         sample_shape : :obj:`list` or :obj:`NoneType`, defaults to None
             Shape of generating samples.
         batch_n : :obj:`int`, defaults to 1.
-            Batch size of parameters.
+            Set batch size of parameters.
         return_all : :obj:`bool`, defaults to True
             Choose whether the output contains input variables.
         reparam : :obj:`bool`, defaults to False.
@@ -429,7 +429,8 @@ class DistributionBase(Distribution):
             Parameters of this distribution.
         sampling : :obj:`bool`, defaults to False.
             Choose whether to use relaxed_* in PyTorch distribution.
-        batch_n :
+        batch_n : :obj:`int`, defaults to 1.
+            Set batch size of parameters.
         **kwargs
             Arbitrary keyword arguments.
 
