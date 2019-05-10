@@ -1,6 +1,5 @@
 from __future__ import print_function
 import torch
-import numbers
 import re
 from torch import nn
 from copy import deepcopy
@@ -13,7 +12,7 @@ from ..losses import LogProb, Prob
 class Distribution(nn.Module):
     """Distribution class. In Pixyz, all distributions are required to inherit this class."""
 
-    def __init__(self, var, cond_var=[], name="p", dim=1):
+    def __init__(self, var, cond_var=[], name="p", features_shape=torch.Size([])):
         """
         Parameters
         ----------
@@ -25,10 +24,10 @@ class Distribution(nn.Module):
         name : :obj:`str`, defaults to "p"
             Name of this distribution.
             This name is displayed in :attr:`prob_text` and :attr:`prob_factorized_text`.
-        dim : :obj:`int`, defaults to 1
-            Number of dimensions of this distribution.
-            This might be ignored depending on the shape which is set in the sample method and on its parent
-            distribution.
+        features_shape : :obj:`torch.Size`, defaults to torch.Size([]))
+            Shape of dimensions (features) of this distribution.
+            It is not necessary to set
+
             Moreover, this is not consider when this class is inherited by DNNs.
 
         """
@@ -40,7 +39,8 @@ class Distribution(nn.Module):
 
         self._cond_var = cond_var
         self._var = var
-        self._dim = dim
+
+        self._features_shape = torch.Size(tolist(features_shape))
         self._name = name
 
         self._prob_text = None
@@ -103,9 +103,9 @@ class Distribution(nn.Module):
         return self.prob_text
 
     @property
-    def dim(self):
-        """int: Number of dimensions of this distribution."""
-        return self._dim
+    def features_shape(self):
+        """list: Shape of features of this distribution."""
+        return self._features_shape
 
     def _check_input(self, x, var=None):
         """Check the type of given input.
@@ -168,12 +168,12 @@ class Distribution(nn.Module):
         Examples
         --------
         >>> from pixyz.distributions import Normal
-        >>> dist_1 = Normal(loc=0, scale=1, var=["x"], dim=1)
+        >>> dist_1 = Normal(loc=torch.tensor(0), scale=torch.tensor(1), var=["x"], features_shape=1)
         >>> print(dist_1.prob_text, dist_1.distribution_name)
         p(x) Normal
         >>> dist_1.get_params()
         {'loc': 0, 'scale': 1}
-        >>> dist_2 = Normal(loc=0, scale="z", cond_var=["z"], var=["x"])
+        >>> dist_2 = Normal(loc=torch.tensor(0), scale="z", cond_var=["z"], var=["x"])
         >>> print(dist_2.prob_text, dist_2.distribution_name)
         p(x|z) Normal
         >>> dist_2.get_params({"z": 1})
@@ -241,7 +241,7 @@ class Distribution(nn.Module):
         sum_features : :obj:`bool`, defaults to True
             Whether the output is summed across some axes (dimensions) which are specified by `feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set axes to sum across the output.
+            Set dimensions to sum across the output.
 
         Returns
         -------
@@ -349,8 +349,8 @@ class Distribution(nn.Module):
 class DistributionBase(Distribution):
     """Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim)
+    def __init__(self, cond_var=[], var=["x"], name="p", features_shape=[1], **kwargs):
+        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
 
         self._set_buffers(**kwargs)
         self._dist = None
@@ -377,9 +377,22 @@ class DistributionBase(Distribution):
                 else:
                     raise ValueError
             elif isinstance(params_dict[key], torch.Tensor):
-                self.register_buffer(key, params_dict[key])
+                features = params_dict[key]
+                features_checked = self._check_features_shape(features)
+                self.register_buffer(key, features_checked)
             else:
                 raise ValueError
+
+    def _check_features_shape(self, features):
+        # scalar
+        if features.size() == torch.Size([]):
+            features = features.expand(self.features_shape)
+
+        if features.size() == self.features_shape:
+            batches = features.unsqueeze(0)
+            return batches
+
+        raise ValueError
 
     @property
     def params_keys(self):
@@ -396,7 +409,7 @@ class DistributionBase(Distribution):
         """Return the instance of PyTorch distribution."""
         return self._dist
 
-    def set_dist(self, x={}, sampling=False, **kwargs):
+    def set_dist(self, x={}, sampling=False, batch_n=None, **kwargs):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
         This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
@@ -407,6 +420,7 @@ class DistributionBase(Distribution):
             Parameters of this distribution.
         sampling : :obj:`bool`, defaults to False.
             Choose whether to use relaxed_* in PyTorch distribution.
+        batch_n :
         **kwargs
             Arbitrary keyword arguments.
 
@@ -419,6 +433,14 @@ class DistributionBase(Distribution):
             raise ValueError
 
         self._dist = self.distribution_torch_class(**params)
+
+        # expand batch_n
+        if batch_n:
+            batch_shape = self._dist.batch_shape
+            if batch_shape[0] == 1:
+                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
+            else:
+                raise ValueError
 
     def get_sample(self, reparam=False, sample_shape=torch.Size()):
         """Get a sample_shape shaped sample from :attr:`dist`.
@@ -465,36 +487,24 @@ class DistributionBase(Distribution):
 
         output_dict.update(params_dict)
 
-        # append constant_params to dict
+        # append constant parameters to output_dict
         constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys, return_dict=True)
         output_dict.update(constant_params_dict)
 
         return output_dict
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size([]), return_all=True, reparam=False):
         # check whether the input is valid or convert it to valid dictionary.
-        x_dict = self._check_input(x)
-
-        # unconditioned
-        if len(self.input_var) == 0:
-            if shape:
-                sample_shape = shape
-            else:
-                if self.dim is None:
-                    sample_shape = (batch_size, )
-                else:
-                    sample_shape = (batch_size, self.dim)
-
-            self.set_dist()
-            output_dict = self.get_sample(reparam=reparam,
-                                          sample_shape=sample_shape)
+        x_dict = self._check_input(x_dict)
+        input_dict = {}
 
         # conditioned
-        else:
-            # remove redundant variables from x_dict.
-            _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
-            self.set_dist(_x_dict)
-            output_dict = self.get_sample(reparam=reparam)
+        if len(self.input_var) != 0:
+            input_dict.update(get_dict_values(x_dict, self.input_var, return_dict=True))
+
+        self.set_dist(input_dict, batch_n=batch_n)
+        output_dict = self.get_sample(reparam=reparam,
+                                      sample_shape=sample_shape)
 
         if return_all:
             x_dict.update(output_dict)
