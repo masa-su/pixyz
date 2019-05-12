@@ -5,7 +5,7 @@ import numpy as np
 from .flows import Flow
 
 
-class SqueezeLayer(Flow):
+class Squeeze(Flow):
     """
     Squeeze operation.
 
@@ -20,7 +20,7 @@ class SqueezeLayer(Flow):
               [ 5,  6,  7,  8],
               [ 9, 10, 11, 12],
               [13, 14, 15, 16]]]])
-    >>> f = SqueezeLayer()
+    >>> f = Squeeze()
     >>> print(f(a))
     tensor([[[[ 1,  3],
               [ 9, 11]],
@@ -79,7 +79,7 @@ class SqueezeLayer(Flow):
         return x
 
 
-class UnsqueezeLayer(SqueezeLayer):
+class Unsqueeze(Squeeze):
     """
     Unsqueeze operation.
 
@@ -101,7 +101,7 @@ class UnsqueezeLayer(SqueezeLayer):
     <BLANKLINE>
              [[13, 14],
               [15, 16]]]])
-    >>> f = UnsqueezeLayer()
+    >>> f = Unsqueeze()
     >>> print(f(a))
     tensor([[[[ 1,  5,  2,  6],
               [ 9, 13, 10, 14],
@@ -129,7 +129,7 @@ class UnsqueezeLayer(SqueezeLayer):
         return super().forward(z)
 
 
-class PermutationLayer(Flow):
+class Permutation(Flow):
     """
     Examples
     --------
@@ -148,7 +148,7 @@ class PermutationLayer(Flow):
              [[13, 14],
               [15, 16]]]])
     >>> perm = [0,3,1,2]
-    >>> f = PermutationLayer(perm)
+    >>> f = Permutation(perm)
     >>> f(a)
     tensor([[[[ 1,  2],
               [ 3,  4]],
@@ -197,19 +197,19 @@ class PermutationLayer(Flow):
         raise ValueError
 
 
-class ShuffleLayer(PermutationLayer):
+class Shuffle(Permutation):
     def __init__(self, in_channels):
         permute_indices = np.random.permutation(in_channels)
         super().__init__(permute_indices)
 
 
-class ReverseLayer(PermutationLayer):
+class Reverse(Permutation):
     def __init__(self, in_channels):
         permute_indices = np.array(np.arange(0, in_channels)[::-1])
         super().__init__(permute_indices)
 
 
-class FlattenLayer(Flow):
+class Flatten(Flow):
     def __init__(self, in_size=None):
         super().__init__(None)
         self.in_size = in_size
@@ -225,7 +225,7 @@ class FlattenLayer(Flow):
         return z.view(z.size(0), self.in_size[0], self.in_size[1], self.in_size[2])
 
 
-class PreprocessLayer(Flow):
+class Preprocess(Flow):
     def __init__(self):
         super().__init__(None)
         self.register_buffer('data_constraint', torch.tensor([0.05], dtype=torch.float32))

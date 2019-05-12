@@ -1,10 +1,14 @@
 from .flows import (
     Flow,
     FlowList,
-    PlanarFlow,
 )
+
+from .normalizing import (
+    PlanarFlow
+)
+
 from .coupling import (
-    AffineCouplingLayer,
+    AffineCoupling,
 )
 
 from .conv import (
@@ -12,13 +16,13 @@ from .conv import (
 )
 
 from .operations import (
-    SqueezeLayer,
-    UnsqueezeLayer,
-    PermutationLayer,
-    ShuffleLayer,
-    ReverseLayer,
-    FlattenLayer,
-    PreprocessLayer,
+    Squeeze,
+    Unsqueeze,
+    Permutation,
+    Shuffle,
+    Reverse,
+    Flatten,
+    Preprocess,
 )
 
 from .normalizations import (
@@ -31,15 +35,15 @@ __all__ = [
     'Flow',
     'FlowList',
     'PlanarFlow',
-    'AffineCouplingLayer',
+    'AffineCoupling',
     'ChannelConv',
-    'SqueezeLayer',
-    'UnsqueezeLayer',
-    'PermutationLayer',
-    'ShuffleLayer',
-    'ReverseLayer',
-    'FlattenLayer',
-    'PreprocessLayer',
+    'Squeeze',
+    'Unsqueeze',
+    'Permutation',
+    'Shuffle',
+    'Reverse',
+    'Flatten',
+    'Preprocess',
     'BatchNorm1d',
     'BatchNorm2d',
     'ActNorm2d',
