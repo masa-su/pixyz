@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from .flows import Flow
+from ..utils import sum_samples
 
 
 class Squeeze(Flow):
@@ -198,14 +199,14 @@ class Permutation(Flow):
 
 
 class Shuffle(Permutation):
-    def __init__(self, in_channels):
-        permute_indices = np.random.permutation(in_channels)
+    def __init__(self, in_features):
+        permute_indices = np.random.permutation(in_features)
         super().__init__(permute_indices)
 
 
 class Reverse(Permutation):
-    def __init__(self, in_channels):
-        permute_indices = np.array(np.arange(0, in_channels)[::-1])
+    def __init__(self, in_features):
+        permute_indices = np.array(np.arange(0, in_features)[::-1])
         super().__init__(permute_indices)
 
 
@@ -235,21 +236,22 @@ class Preprocess(Flow):
         return x.log() - (1. - x).log()
 
     def forward(self, x, y=None, compute_jacobian=True):
-        # add noise to pixels to dequantize them.
+        # 1. add noise to pixels to dequantize them.
         x = (x * 255. + torch.rand_like(x)) / 256.
 
-        # transform pixel values with logit to be unconstrained.
+        # 2. transform pixel values with logit to be unconstrained.
         x = (1 + (2 * x - 1) * (1 - self.data_constraint)) / 2.
 
-        # apply the logit function.
+        # 3. apply the logit function.
         z = self.logit(x)
 
         if compute_jacobian:
+            # log-det Jacobian of transformation (2 & 3)
             logdet_jacobian = F.softplus(z) + F.softplus(-z) \
                 - F.softplus(self.data_constraint.log() - (1. - self.data_constraint).log())
+            logdet_jacobian = sum_samples(logdet_jacobian)
 
-            logdet_jacobian = logdet_jacobian.view(logdet_jacobian.size(0), -1).sum(-1)
-            logdet_jacobian = logdet_jacobian - np.log(256.) * np.prod(z.size()[1:])
+            logdet_jacobian = logdet_jacobian - np.log(256.) * z[0].numel()
 
             self._logdet_jacobian = logdet_jacobian
 

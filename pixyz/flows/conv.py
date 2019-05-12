@@ -53,7 +53,7 @@ class ChannelConv(Flow):
         device = x.device
 
         if not self.decomposed:
-            logdet_jacobian = torch.slogdet(self.weight)[1] * pixels
+            logdet_jacobian = torch.slogdet(self.weight.cpu())[1].to(device) * pixels
             if not inverse:
                 weight = self.weight.view(w_shape[0], w_shape[1], 1, 1)
             else:

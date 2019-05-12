@@ -95,8 +95,8 @@ class BatchNorm2d(BatchNorm1d):
     >>> diff < 0.1
     tensor(1, dtype=torch.uint8)
     """
-    def __init__(self, in_channels, momentum=0.0):
-        super().__init__(in_channels, momentum)
+    def __init__(self, in_features, momentum=0.0):
+        super().__init__(in_features, momentum)
         self.log_gamma = nn.Parameter(self._unsqueeze(self.log_gamma.data))
         self.beta = nn.Parameter(self._unsqueeze(self.beta.data))
 
@@ -117,13 +117,12 @@ class ActNorm2d(Flow):
     https://github.com/chaiyujin/glow-pytorch/blob/master/glow/modules.py
     """
 
-    def __init__(self, in_channels, scale=1.):
-        super().__init__(in_channels)
+    def __init__(self, in_features, scale=1.):
+        super().__init__(in_features)
         # register mean and scale
-        size = [1, in_channels, 1, 1]
+        size = [1, in_features, 1, 1]
         self.register_parameter("bias", nn.Parameter(torch.zeros(*size)))
         self.register_parameter("logs", nn.Parameter(torch.zeros(*size)))
-        self.in_channels = in_channels
         self.scale = float(scale)
         self.inited = False
 

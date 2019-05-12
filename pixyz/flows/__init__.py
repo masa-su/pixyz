@@ -3,7 +3,7 @@ from .flows import (
     FlowList,
 )
 
-from .normalizing import (
+from .normalizing_flows import (
     PlanarFlow
 )
 

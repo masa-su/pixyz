@@ -18,10 +18,10 @@ class AffineCoupling(Flow):
 
     """
 
-    def __init__(self, in_channels, mask_type="channel_wise",
+    def __init__(self, in_features, mask_type="channel_wise",
                  scale_net=None, translate_net=None, scale_translate_net=None,
                  inverse_mask=False):
-        super().__init__(in_channels)
+        super().__init__(in_features)
 
         # mask initializations
         if mask_type in ["checkerboard", "channel_wise"]:
