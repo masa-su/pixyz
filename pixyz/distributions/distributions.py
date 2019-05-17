@@ -730,6 +730,10 @@ class ReplaceVarDistribution(Distribution):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
         return self._a.get_params(params_dict)
 
+    def set_dist(self, x={}, sampling=False, **kwargs):
+        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
+        return self._a.set_dist(x=x, sampling=sampling, **kwargs)
+
     def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
         input_dict = get_dict_values(x, self.cond_var, return_dict=True)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
