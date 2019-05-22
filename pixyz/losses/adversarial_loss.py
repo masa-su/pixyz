@@ -81,7 +81,7 @@ class AdversarialJensenShannon(AdversarialLoss):
         self._inverse_g_loss = inverse_g_loss
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return sympy.Symbol("mean(D_{{JS}}^{{Adv}} \\left[{}||{} \\right])".format(self._p.prob_text,
                                                                                    self._q.prob_text))
 
@@ -158,7 +158,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         self.bce_loss = nn.BCELoss()
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return sympy.Symbol("mean(D_{{KL}}^{{Adv}} \\left[{}||{} \\right])".format(self._p.prob_text,
                                                                                    self._q.prob_text))
 
@@ -217,7 +217,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
         self._clip_value = clip_value
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return sympy.Symbol("mean(W^{{Adv}} \\left({}, {} \\right))".format(self._p.prob_text, self._q.prob_text))
 
     def d_loss(self, y_p, y_q, *args, **kwargs):

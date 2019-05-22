@@ -205,7 +205,7 @@ def plot_symbol(**kwargs):
 
 def show_latex(loss, **kwargs):
     sympy.init_printing(**kwargs)
-    loss.loss_symbol
+    loss.symbol
 
 def sum_samples(samples):
     """Sum a given sample across the axes.

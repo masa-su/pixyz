@@ -44,12 +44,12 @@ class IterativeLoss(Loss):
         self.series_var = series_var
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         # TODO: naive implementation
         dummy_loss = sympy.Symbol("dummy_loss")
-        _loss_symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 1, self.max_iter))
-        _loss_symbol = _loss_symbol.subs({dummy_loss: self.step_loss.loss_symbol})
-        return _loss_symbol
+        _symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 1, self.max_iter))
+        _symbol = _symbol.subs({dummy_loss: self.step_loss.symbol})
+        return _symbol
 
     def slice_step_fn(self, t, x):
         return {k: v[t] for k, v in x.items()}

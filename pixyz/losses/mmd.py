@@ -45,7 +45,7 @@ class MMD(Loss):
         super().__init__(p, q, input_var=input_var)
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return sympy.Symbol("D_{MMD^2} \\left[{}||{} \\right]".format(self._p.prob_text, self._q.prob_text))
 
     def _get_batch_size(self, x):

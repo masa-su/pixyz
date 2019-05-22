@@ -27,12 +27,12 @@ class Loss(object, metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def loss_symbol(self):
+    def symbol(self):
         raise NotImplementedError
 
     @property
     def loss_text(self):
-        return sympy.latex(self.loss_symbol)
+        return sympy.latex(self.symbol)
 
     def __str__(self):
         return self.loss_text
@@ -104,7 +104,7 @@ class ValueLoss(Loss):
         return self._loss1, x
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return self._loss1
 
 
@@ -118,7 +118,7 @@ class Parameter(Loss):
         return x[self._input_var[0]], x
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return sympy.Symbol(self._input_var[0])
 
 
@@ -170,8 +170,8 @@ class LossOperator(Loss):
 
 class AddLoss(LossOperator):
     @property
-    def loss_symbol(self):
-        return self._loss1.loss_symbol + self._loss2.loss_symbol
+    def symbol(self):
+        return self._loss1.symbol + self._loss2.symbol
 
     def _get_eval(self, x={}, **kwargs):
         loss1, loss2, x = super()._get_eval(x, **kwargs)
@@ -180,8 +180,8 @@ class AddLoss(LossOperator):
 
 class SubLoss(LossOperator):
     @property
-    def loss_symbol(self):
-        return self._loss1.loss_symbol - self._loss2.loss_symbol
+    def symbol(self):
+        return self._loss1.symbol - self._loss2.symbol
 
     def _get_eval(self, x={}, **kwargs):
         loss1, loss2, x = super()._get_eval(x, **kwargs)
@@ -190,8 +190,8 @@ class SubLoss(LossOperator):
 
 class MulLoss(LossOperator):
     @property
-    def loss_symbol(self):
-        return self._loss1.loss_symbol * self._loss2.loss_symbol
+    def symbol(self):
+        return self._loss1.symbol * self._loss2.symbol
 
     def _get_eval(self, x={}, **kwargs):
         loss1, loss2, x = super()._get_eval(x, **kwargs)
@@ -200,8 +200,8 @@ class MulLoss(LossOperator):
 
 class DivLoss(LossOperator):
     @property
-    def loss_symbol(self):
-        return self._loss1.loss_symbol / self._loss2.loss_symbol
+    def symbol(self):
+        return self._loss1.symbol / self._loss2.symbol
 
     def _get_eval(self, x={}, **kwargs):
         loss1, loss2, x = super()._get_eval(x, **kwargs)
@@ -234,8 +234,8 @@ class LossSelfOperator(Loss):
 
 class NegLoss(LossSelfOperator):
     @property
-    def loss_symbol(self):
-        return -self._loss1.loss_symbol
+    def symbol(self):
+        return -self._loss1.symbol
 
     def _get_eval(self, x={}, **kwargs):
         loss, x = self._loss1._get_eval(x, **kwargs)
@@ -244,7 +244,7 @@ class NegLoss(LossSelfOperator):
 
 class AbsLoss(LossSelfOperator):
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return sympy.Symbol("|{}|".format(self._loss1.loss_text))
 
     def _get_eval(self, x={}, **kwargs):
@@ -264,7 +264,7 @@ class BatchMean(LossSelfOperator):
     """
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return sympy.Symbol("mean \\left({} \\right)".format(self._loss1.loss_text))  # TODO: fix it
 
     def _get_eval(self, x={}, **kwargs):
@@ -284,7 +284,7 @@ class BatchSum(LossSelfOperator):
     """
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         return sympy.Symbol("sum \\left({} \\right)".format(self._loss1.loss_text))  # TODO: fix it
 
     def _get_eval(self, x={}, **kwargs):
@@ -304,8 +304,8 @@ class SetLoss(Loss):
         return self._loss._get_eval(x, **kwargs)
 
     @property
-    def loss_symbol(self):
-        return self._loss.loss_symbol
+    def symbol(self):
+        return self._loss.symbol
 
 
 class Expectation(Loss):
@@ -333,7 +333,7 @@ class Expectation(Loss):
         super().__init__(p, input_var=input_var)
 
     @property
-    def loss_symbol(self):
+    def symbol(self):
         p_text = "{" + self._p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
