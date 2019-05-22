@@ -1,4 +1,5 @@
 import torch
+import sympy
 from .losses import Loss
 from ..utils import get_dict_values
 
@@ -44,8 +45,8 @@ class MMD(Loss):
         super().__init__(p, q, input_var=input_var)
 
     @property
-    def loss_text(self):
-        return "MMD^2[{}||{}]".format(self._p.prob_text, self._q.prob_text)
+    def loss_symbol(self):
+        return sympy.Symbol("D_{MMD^2} \\left[{}||{} \\right]".format(self._p.prob_text, self._q.prob_text))
 
     def _get_batch_size(self, x):
         return get_dict_values(x, self.input_dist.input_var[0])[0].shape[0]

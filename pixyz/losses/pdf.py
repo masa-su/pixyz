@@ -1,3 +1,4 @@
+import sympy
 import torch
 from .losses import Loss
 
@@ -18,8 +19,8 @@ class LogProb(Loss):
         super().__init__(p, input_var=input_var)
 
     @property
-    def loss_text(self):
-        return "log {}".format(self._p.prob_text)
+    def loss_symbol(self):
+        return sympy.log(sympy.Symbol(self._p.prob_text))
 
     def _get_eval(self, x={}, **kwargs):
         log_prob = self._p.get_log_prob(x, sum_features=self.sum_features, feature_dims=self.feature_dims)
@@ -36,8 +37,8 @@ class Prob(LogProb):
     """
 
     @property
-    def loss_text(self):
-        return self._p.prob_text
+    def loss_symbol(self):
+        return sympy.Symbol(self._p.prob_text)
 
     def _get_eval(self, x={}, **kwargs):
         log_prob, x = super()._get_eval(x, **kwargs)

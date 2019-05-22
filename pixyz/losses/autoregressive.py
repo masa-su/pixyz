@@ -1,8 +1,9 @@
 from copy import deepcopy
+import sympy
 
 from .losses import Loss
 from ..utils import get_dict_values
-
+from sympy import Function
 
 class IterativeLoss(Loss):
     r"""
@@ -23,6 +24,7 @@ class IterativeLoss(Loss):
         self.max_iter = max_iter
         self.update_value = update_value
         self.timestep_var = timestep_var
+        self.timpstep_symbol = sympy.Symbol(self.timestep_var[0])
 
         self.slice_step = slice_step
         if self.slice_step:
@@ -42,11 +44,12 @@ class IterativeLoss(Loss):
         self.series_var = series_var
 
     @property
-    def loss_text(self):
-
-        _loss_text = "sum({} in [1, {}]) ({})".format(self.timestep_var[0], str(self.max_iter),
-                                                      self.step_loss.loss_text)
-        return _loss_text
+    def loss_symbol(self):
+        # TODO: naive implementation
+        dummy_loss = sympy.Symbol("dummy_loss")
+        _loss_symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 1, self.max_iter))
+        _loss_symbol = _loss_symbol.subs({dummy_loss: self.step_loss.loss_symbol})
+        return _loss_symbol
 
     def slice_step_fn(self, t, x):
         return {k: v[t] for k, v in x.items()}

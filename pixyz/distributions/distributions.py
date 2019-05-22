@@ -863,7 +863,7 @@ class MarginalizeVarDistribution(Distribution):
 
     @property
     def prob_factorized_text(self):
-        integral_symbol = len(self._marginalize_list) * "∫"
+        integral_symbol = len(self._marginalize_list) * "\int "
         integral_variables = ["d" + str(var) for var in self._marginalize_list]
         integral_variables = "".join(integral_variables)
 

@@ -1,3 +1,4 @@
+import sympy
 from torch import optim, nn
 import torch
 from .losses import Loss
@@ -80,9 +81,9 @@ class AdversarialJensenShannon(AdversarialLoss):
         self._inverse_g_loss = inverse_g_loss
 
     @property
-    def loss_text(self):
-        return "mean(AdversarialJS[{}||{}])".format(self._p.prob_text,
-                                                    self._q.prob_text)
+    def loss_symbol(self):
+        return sympy.Symbol("mean(D_{{JS}}^{{Adv}} \\left[{}||{} \\right])".format(self._p.prob_text,
+                                                                                   self._q.prob_text))
 
     def _get_eval(self, x, discriminator=False, **kwargs):
         batch_size = self._get_batch_size(x)
@@ -157,9 +158,9 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         self.bce_loss = nn.BCELoss()
 
     @property
-    def loss_text(self):
-        return "mean(AdversarialKL[{}||{}])".format(self._p.prob_text,
-                                                    self._q.prob_text)
+    def loss_symbol(self):
+        return sympy.Symbol("mean(D_{{KL}}^{{Adv}} \\left[{}||{} \\right])".format(self._p.prob_text,
+                                                                                   self._q.prob_text))
 
     def _get_eval(self, x, discriminator=False, **kwargs):
         batch_size = self._get_batch_size(x)
@@ -216,9 +217,8 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
         self._clip_value = clip_value
 
     @property
-    def loss_text(self):
-        return "mean(AdversarialWD[{}||{}])".format(self._p.prob_text,
-                                                    self._q.prob_text)
+    def loss_symbol(self):
+        return sympy.Symbol("mean(W^{{Adv}} \\left({}, {} \\right))".format(self._p.prob_text, self._q.prob_text))
 
     def d_loss(self, y_p, y_q, *args, **kwargs):
         return - (torch.mean(y_p) - torch.mean(y_q))

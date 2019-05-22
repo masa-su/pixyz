@@ -1,3 +1,4 @@
+import sympy
 import torch
 from torch.distributions import kl_divergence
 
@@ -23,8 +24,8 @@ class KullbackLeibler(Loss):
         super().__init__(p, q, input_var)
 
     @property
-    def loss_text(self):
-        return "KL[{}||{}]".format(self._p.prob_text, self._q.prob_text)
+    def loss_symbol(self):
+        return sympy.Symbol("D_{{KL}} \\left[{}||{} \\right]".format(self._p.prob_text, self._q.prob_text))
 
     def _get_eval(self, x, **kwargs):
         if (not hasattr(self._p, 'distribution_torch_class')) or (not hasattr(self._q, 'distribution_torch_class')):

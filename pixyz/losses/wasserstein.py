@@ -1,4 +1,5 @@
 from torch.nn.modules.distance import PairwiseDistance
+import sympy
 from .losses import Loss
 from ..utils import get_dict_values
 
@@ -44,8 +45,8 @@ class WassersteinDistance(Loss):
         super().__init__(p, q, input_var)
 
     @property
-    def loss_text(self):
-        return "WD_upper[{}||{}]".format(self._p.prob_text, self._q.prob_text)
+    def loss_symbol(self):
+        return sympy.Symbol("W^{{upper}} \\left({}, {} \\right)".format(self._p.prob_text, self._q.prob_text))
 
     def _get_batch_size(self, x):
         return get_dict_values(x, self.input_dist.input_var[0])[0].shape[0]
