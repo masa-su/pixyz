@@ -1,5 +1,6 @@
 import torch
 import sympy
+from IPython.display import display
 
 _EPSILON = 1e-07
 
@@ -199,13 +200,9 @@ def tolist(a):
     return [a]
 
 
-def plot_symbol(**kwargs):
+def plot_latex(**kwargs):
     sympy.init_printing(**kwargs)
 
-
-def show_latex(loss, **kwargs):
-    sympy.init_printing(**kwargs)
-    loss.symbol
 
 def sum_samples(samples):
     """Sum a given sample across the axes.
