@@ -186,8 +186,8 @@ class PosteriorMixtureModel(Distribution):
 
     @property
     def prob_factorized_text(self):
-        numinator = "{"+"{}({},{})".format(self._name, self._hidden_var[0], self._var[0])+"}"
-        denominator = "{"+"{}({})".format(self._name, self._var[0])+"}"
+        numinator = "{" + "{}({},{})".format(self._name, self._hidden_var[0], self._var[0]) + "}"
+        denominator = "{" + "{}({})".format(self._name, self._var[0]) + "}"
 
         _prob_text = "\\frac{}{}".format(numinator, denominator)
 

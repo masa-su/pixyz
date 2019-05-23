@@ -792,7 +792,7 @@ class MarginalizeVarDistribution(Distribution):
     p(x,y|z)
     >>> p_marg = MarginalizeVarDistribution(p_multi, ["y"])
     >>> print(p_marg.prob_text, p_marg.prob_factorized_text)
-    p(x|z) ∫p(x|z)p(y|z)dy
+    p(x|z) \int p(x|z)p(y|z)dy
 
     """
 

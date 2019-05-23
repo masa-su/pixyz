@@ -3,7 +3,7 @@ import sympy
 
 from .losses import Loss
 from ..utils import get_dict_values
-from sympy import Function
+
 
 class IterativeLoss(Loss):
     r"""
