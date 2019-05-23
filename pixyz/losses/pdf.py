@@ -20,7 +20,7 @@ class LogProb(Loss):
 
     @property
     def _symbol(self):
-        return sympy.log(sympy.Symbol(self._p.prob_text))
+        return sympy.Symbol("\\log {}".format(self._p.prob_text))
 
     def _get_eval(self, x={}, **kwargs):
         log_prob = self._p.get_log_prob(x, sum_features=self.sum_features, feature_dims=self.feature_dims)
