@@ -8,7 +8,7 @@ from .norm_util import WNConv2d
 class ResidualBlock(nn.Module):
     """ResNet basic block with weight norm."""
     def __init__(self, in_channels, out_channels):
-        super(ResidualBlock, self).__init__()
+        super().__init__()
 
         self.in_norm = nn.BatchNorm2d(in_channels)
         self.in_conv = WNConv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False)
@@ -45,7 +45,7 @@ class ResNet(nn.Module):
     """
     def __init__(self, in_channels, mid_channels, out_channels,
                  num_blocks, kernel_size, padding, double_after_norm):
-        super(ResNet, self).__init__()
+        super().__init__()
         self.in_norm = nn.BatchNorm2d(in_channels)
         self.double_after_norm = double_after_norm
         self.in_conv = WNConv2d(2 * in_channels, mid_channels, kernel_size, padding, bias=True)
