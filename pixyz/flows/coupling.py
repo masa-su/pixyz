@@ -126,38 +126,50 @@ class AffineCoupling(Flow):
         tensor(0.)
 
         """
-        mask = self.build_mask(x)
-        x_masked = mask * x
 
         if self.scale_translate_net:
             if y is None:
-                log_s, t = self.scale_translate_net(x_masked)
+                log_s, t = self.scale_translate_net(x)
             else:
-                log_s, t = self.scale_translate_net(x_masked, y)
+                log_s, t = self.scale_translate_net(x, y)
         else:
             if y is None:
-                log_s = self.scale_net(x_masked)
-                t = self.translate_net(x_masked)
+                log_s = self.scale_net(x)
+                t = self.translate_net(x)
             else:
-                log_s = self.scale_net(x_masked, y)
-                t = self.translate_net(x_masked, y)
-
-        log_s = log_s * (1 - mask)
-        t = t * (1 - mask)
+                log_s = self.scale_net(x, y)
+                t = self.translate_net(x, y)
 
         return log_s, t
 
     def forward(self, x, y=None, compute_jacobian=True):
-        log_s, t = self.get_parameters(x, y)
-        x = x * torch.exp(log_s) + t
+        mask = self.build_mask(x)
+        x_masked = mask * x
+        x_inv_masked = (1 - mask) * x
+
+        log_s, t = self.get_parameters(x_masked, y)
+
+        log_s = log_s * (1 - mask)
+        t = t * (1 - mask)
+
+        x = x_masked + x_inv_masked * torch.exp(log_s) + t
+
         if compute_jacobian:
             self._logdet_jacobian = log_s.view(log_s.size(0), -1).sum(-1)
 
         return x
 
     def inverse(self, z, y=None):
-        log_s, t = self.get_parameters(z, y)
-        z = (z - t) * torch.exp(-log_s)
+        mask = self.build_mask(z)
+        z_masked = mask * z
+        z_inv_masked = (1 - mask) * z
+
+        log_s, t = self.get_parameters(z_masked, y)
+
+        log_s = log_s * (1 - mask)
+        t = t * (1 - mask)
+
+        z = z_masked + (z_inv_masked - t) * torch.exp(-log_s)
 
         return z
 
