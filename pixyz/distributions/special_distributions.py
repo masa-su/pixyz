@@ -40,7 +40,7 @@ class DataDistribution(Distribution):
     TODO: Fix this behavior if multiplied with other distributions
     """
 
-    def __init__(self, var, name="p_data"):
+    def __init__(self, var, name="p_{data}"):
         super().__init__(var=var, cond_var=[], name=name, dim=1)
 
     @property
