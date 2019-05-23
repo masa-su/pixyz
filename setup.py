@@ -29,5 +29,6 @@ setup(
     install_requires=["torch",
                       "torchvision",
                       "tqdm",
-                      "sympy"]
+                      "sympy",
+                      "ipython"]
 )
