@@ -1,6 +1,6 @@
 import torch
-import sympy
-from IPython.display import display
+from IPython.display import Math
+import pixyz
 
 _EPSILON = 1e-07
 
@@ -200,8 +200,15 @@ def tolist(a):
     return [a]
 
 
-def plot_latex(**kwargs):
-    sympy.init_printing(**kwargs)
+def print_latex(object):
+    if isinstance(object, pixyz.distributions.distributions.Distribution):
+        latex_text = object.prob_joint_factorized_and_text
+    elif isinstance(object, pixyz.losses.losses.Loss):
+        latex_text = object.loss_text
+    elif isinstance(object, pixyz.models.model.Model):
+        latex_text = object.loss_cls.loss_text
+
+    return Math(latex_text)
 
 
 def sum_samples(samples):

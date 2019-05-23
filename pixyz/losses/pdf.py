@@ -19,7 +19,7 @@ class LogProb(Loss):
         super().__init__(p, input_var=input_var)
 
     @property
-    def symbol(self):
+    def _symbol(self):
         return sympy.log(sympy.Symbol(self._p.prob_text))
 
     def _get_eval(self, x={}, **kwargs):
@@ -37,7 +37,7 @@ class Prob(LogProb):
     """
 
     @property
-    def symbol(self):
+    def _symbol(self):
         return sympy.Symbol(self._p.prob_text)
 
     def _get_eval(self, x={}, **kwargs):

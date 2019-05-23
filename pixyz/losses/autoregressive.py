@@ -44,7 +44,7 @@ class IterativeLoss(Loss):
         self.series_var = series_var
 
     @property
-    def symbol(self):
+    def _symbol(self):
         # TODO: naive implementation
         dummy_loss = sympy.Symbol("dummy_loss")
         _symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 1, self.max_iter))
