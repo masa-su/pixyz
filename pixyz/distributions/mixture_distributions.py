@@ -6,6 +6,7 @@ from ..distributions.distributions import Distribution
 
 class MixtureModel(Distribution):
     r"""Mixture models.
+
     .. math::
 
         p(x) = \sum_i p(x|z=i)p(z=i)
@@ -186,9 +187,10 @@ class PosteriorMixtureModel(Distribution):
 
     @property
     def prob_factorized_text(self):
-        _prob_text = "{}({},{})/{}({})".format(
-            self._name, self._hidden_var[0], self._var[0],
-            self._name, self._var[0])
+        numinator = "{" + "{}({},{})".format(self._name, self._hidden_var[0], self._var[0]) + "}"
+        denominator = "{" + "{}({})".format(self._name, self._var[0]) + "}"
+
+        _prob_text = "\\frac{}{}".format(numinator, denominator)
 
         return _prob_text
 

@@ -3,10 +3,10 @@
 ![logo](https://user-images.githubusercontent.com/11865486/47983581-31c08c80-e117-11e8-8d9d-1efbd920718c.png)
 
 
-[![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
-[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz)
+[![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
+[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=develop-v0.1.0)](https://docs.pixyz.io/en/develop-v0.1.0/)
-[![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=develop%2Fv0.1.0)](https://github.com/masa-su/pixyz)
+[![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=develop%2Fv0.1.0)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
 
 - [What is Pixyz?](#what-is-pixyz)
 - [Installation](#installation)
@@ -15,25 +15,25 @@
 - [Acknowledgements](#acknowledgements)
 
 ## What is Pixyz?
-Pixyz is a high-level deep generative models framework, based on [PyTorch](https://pytorch.org/). It is developed with a focus on enabling easy implementation of various deep generative models.
+Pixyz is a high-level deep generative modeling library, based on [PyTorch](https://pytorch.org/). It is developed with a focus on enabling easy implementation of various deep generative models.
 
 Recently, many papers about deep generative models have been published. However, its reproduction becomes a hard task, for both specialists and practitioners, because such recent models become more complex and there are no unified tools that bridge mathematical formulation of them and implementation. The vision of our library is to enable both specialists and practitioners to implement such complex deep generative models by **just as if writing the formulas provided in these papers**.
 
 Our library supports following typical deep generative models.
 
 * Explicit models (likelihood-based)
-  * variational autoencoders (variational inference)
-  * flow-based models
+  * Variational autoencoders (variational inference)
+  * Flow-based models
+  * Autoregressive generative models
 * Implicit models
-  * generative adversarial networks
+  * Generative adversarial networks
   
-Using Pixyz, you can implement these different models **in the same framework** and **in combination with each other**.
-
+Pixyz enables us to implement these different models **in the same framework** and **in combination with each other**.
 
 The overview of Pixyz is as follows. Each API will be discussed below.
-![overview](https://user-images.githubusercontent.com/11865486/48596532-d73bf180-e99c-11e8-996f-79a9e95ab459.png)
+<img src="https://user-images.githubusercontent.com/11865486/58321994-a3b1b680-7e5a-11e9-89dd-334086a89525.png" width="400px">
 
-**Note**: since this library is under development, there are possibilities to have many bugs.
+**Note**: Since this library is under development, there are possibilities to have some bugs.
 
 ## Installation
 ```
@@ -45,7 +45,7 @@ $ pip install -e pixyz
 
 So now, let's create a deep generative model with Pixyz!
 
-Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model q(z|x) and a generative model p(x,z)=p(x|z)p(z), which are defined by DNNs, and this objective function is as follows.
+Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model q(z|x) and a generative model p(x,z)=p(x|z)p(z), each of which is defined by DNN, and this objective function is as follows.
 
 <img src="https://latex.codecogs.com/gif.latex?{\cal&space;L}(x;&space;\phi,&space;\theta)&space;=&space;E_{q_\phi(z|x)}[\log\frac{p_\theta(x,z)}{q_\phi(z|x)}]" /> (1)
 

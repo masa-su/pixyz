@@ -12,7 +12,7 @@ from .exponential_distributions import (
     Gamma,
 )
 from .custom_distributions import (
-    CustomPDF,
+    CustomProb,
 )
 
 from .special_distributions import (
@@ -31,9 +31,11 @@ from .poe import ProductOfNormal, ElementWiseProductOfNormal
 
 from .mixture_distributions import MixtureModel
 
+from .flow_distribution import TransformedDistribution, InverseTransformedDistribution
+
 __all__ = [
     'Distribution',
-    'CustomPDF',
+    'CustomProb',
     'Deterministic',
     'DataDistribution',
     'Normal',
@@ -54,4 +56,7 @@ __all__ = [
     'ProductOfNormal',
     'ElementWiseProductOfNormal',
     'MixtureModel',
+
+    'TransformedDistribution',
+    'InverseTransformedDistribution',
 ]

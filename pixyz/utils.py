@@ -1,4 +1,6 @@
 import torch
+from IPython.display import Math
+import pixyz
 
 _EPSILON = 1e-07
 
@@ -196,6 +198,25 @@ def tolist(a):
     if type(a) is list:
         return a
     return [a]
+
+
+def print_latex(object):
+    """Print formulas in latex format.
+
+    Parameters
+    ----------
+    object : pixyz.distributions.distributions.Distribution, pixyz.losses.losses.Loss or pixyz.models.model.Model.
+
+    """
+
+    if isinstance(object, pixyz.distributions.distributions.Distribution):
+        latex_text = object.prob_joint_factorized_and_text
+    elif isinstance(object, pixyz.losses.losses.Loss):
+        latex_text = object.loss_text
+    elif isinstance(object, pixyz.models.model.Model):
+        latex_text = object.loss_cls.loss_text
+
+    return Math(latex_text)
 
 
 def sum_samples(samples):

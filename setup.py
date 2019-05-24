@@ -28,5 +28,8 @@ setup(
     author='Masahiro Suzuki',
     install_requires=["torch",
                       "torchvision",
-                      "tqdm"]
+                      "tqdm",
+                      "scipy",
+                      "sympy",
+                      "ipython"]
 )

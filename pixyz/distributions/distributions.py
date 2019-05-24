@@ -100,10 +100,19 @@ class Distribution(nn.Module):
         return self.prob_text
 
     @property
+    def prob_joint_factorized_and_text(self):
+        """str: Return a formula of the factorized probability distribution."""
+        if self.prob_factorized_text == self.prob_text:
+            prob_text = self.prob_text
+        else:
+            prob_text = "{} = {}".format(self.prob_text, self.prob_factorized_text)
+        return prob_text
+
+    @property
     def features_shape(self):
         """torch.Size or list: Shape of features of this distribution."""
-        return self._features_shape
-
+        return self._features_shape 
+      
     def _check_input(self, x, var=None):
         """Check the type of given input.
         If the input type is :obj:`dict`, this method checks whether the input keys contains the :attr:`var` list.
@@ -362,16 +371,16 @@ class Distribution(nn.Module):
 
     def __str__(self):
         # Distribution
-        if self.prob_factorized_text == self.prob_text:
-            prob_text = "{} ({})".format(self.prob_text, self.distribution_name)
-        else:
-            prob_text = "{} = {}".format(self.prob_text, self.prob_factorized_text)
-        text = "Distribution:\n  {}\n".format(prob_text)
+        text = "Distribution:\n  {}\n".format(self.prob_joint_factorized_and_text)
 
         # Network architecture (`repr`)
         network_text = self.__repr__()
         network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
         text += "Network architecture:\n{}".format(network_text)
+        return text
+
+    def __repr__(self):
+        text = "{} ({}): {}".format(self.prob_text, self.distribution_name, super().__repr__())
         return text
 
 
@@ -704,17 +713,7 @@ class MultiplyDistribution(Distribution):
                          " so you must set sum_dim=True.".format(self._parent.prob_text, self._child.prob_text))
 
     def __repr__(self):
-        if isinstance(self._parent, MultiplyDistribution):
-            text = self._parent.__repr__()
-        else:
-            text = "{} ({}): {}".format(self._parent.prob_text, self._parent.distribution_name, self._parent.__repr__())
-        text += "\n"
-
-        if isinstance(self._child, MultiplyDistribution):
-            text += self._child.__repr__()
-        else:
-            text += "{} ({}): {}".format(self._child.prob_text, self._child.distribution_name, self._child.__repr__())
-        return text
+        return self._parent.__repr__() + "\n" + self._child.__repr__()
 
 
 class ReplaceVarDistribution(Distribution):
@@ -780,6 +779,10 @@ class ReplaceVarDistribution(Distribution):
     def get_params(self, params_dict):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
         return self._a.get_params(params_dict)
+     
+    def set_dist(self, x={}, sampling=False, batch_n=None, **kwargs):
+        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
+        return self._a.set_dist(x=x, sampling=sampling, batch_n=batch_n, **kwargs)
 
     def sample(self, x={}, batch_n=1, sample_shape=None, return_all=True, reparam=False):
         input_dict = get_dict_values(x, self.cond_var, return_dict=True)
@@ -840,7 +843,7 @@ class MarginalizeVarDistribution(Distribution):
     p(x,y|z)
     >>> p_marg = MarginalizeVarDistribution(p_multi, ["y"])
     >>> print(p_marg.prob_text, p_marg.prob_factorized_text)
-    p(x|z) ∫p(x|z)p(y|z)dy
+    p(x|z) \int p(x|z)p(y|z)dy
 
     """
 
@@ -910,7 +913,7 @@ class MarginalizeVarDistribution(Distribution):
 
     @property
     def prob_factorized_text(self):
-        integral_symbol = len(self._marginalize_list) * "∫"
+        integral_symbol = len(self._marginalize_list) * "\\int "
         integral_variables = ["d" + str(var) for var in self._marginalize_list]
         integral_variables = "".join(integral_variables)
 
