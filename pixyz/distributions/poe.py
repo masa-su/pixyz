@@ -19,8 +19,8 @@ class ProductOfNormal(Normal):
 
     Examples
     --------
-    >>> # pon = ProductOfNormal([p_x, p_y])
-    >>> # pon.sample({"x": x, "y": y})
+    >>> pon = ProductOfNormal([p_x, p_y]) # doctest: +SKIP
+    >>> pon.sample({"x": x, "y": y}) # doctest: +SKIP
     {'x': tensor([[0., 0., 0.,  ..., 0., 0., 0.],
          [0., 0., 0.,  ..., 0., 0., 0.],
          [0., 0., 0.,  ..., 0., 0., 0.],
@@ -42,7 +42,7 @@ class ProductOfNormal(Normal):
          [ 0.7820, -0.4761,  0.1804,  ..., -0.5701, -0.0714, -0.5485],
          [-0.1873, -0.2105, -0.1861,  ..., -0.5372,  0.0752,  0.2777],
          [-0.2563, -0.0828,  0.1605,  ...,  0.2767, -0.8456,  0.7364]])}
-    >>> # pon.sample({"y": y})
+    >>> pon.sample({"y": y}) # doctest: +SKIP
     {'y': tensor([[0., 0., 0.,  ..., 0., 0., 0.],
          [0., 0., 0.,  ..., 0., 0., 1.],
          [0., 0., 0.,  ..., 1., 0., 0.],
@@ -57,7 +57,7 @@ class ProductOfNormal(Normal):
          [ 0.5688, -1.6612, -0.0713,  ..., -0.1400, -0.3903,  0.2533],
          [ 0.5412, -0.0289,  0.6365,  ...,  0.7407,  0.7838,  0.9218],
          [ 0.0299,  0.5148, -0.1001,  ...,  0.9938,  1.0689, -1.1902]])}
-    >>> # pon.sample()  # same as sampling from unit Gaussian.
+    >>> pon.sample()  # same as sampling from unit Gaussian. # doctest: +SKIP
     {'z': tensor(-0.4494)}
 
     """
@@ -236,8 +236,8 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
     Examples
     --------
-    >>> # pon = ElementWiseProductOfNormal(p)
-    >>> # pon.sample({"x": x})
+    >>> pon = ElementWiseProductOfNormal(p) # doctest: +SKIP
+    >>> pon.sample({"x": x}) # doctest: +SKIP
     {'x': tensor([[0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
          [0., 0., 0., 0., 1., 0., 0., 0., 0., 0.]]),
      'z': tensor([[-0.3572, -0.0632,  0.4872,  0.2269, -0.1693, -0.0160, -0.0429,  0.2017,
@@ -256,7 +256,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
            0.7500, -0.3253,  0.0250,  0.0888,  1.0340, -0.1405, -0.8114,  0.4492,
            0.2725, -0.0270,  0.6379, -0.8096,  0.4259,  0.3179, -0.1681,  0.3365,
            0.6305,  0.5203,  0.2384,  0.0572,  0.4804,  0.9553, -0.3244,  1.5373]])}
-    >>> # pon.sample({"x": torch.zeros_like(x)})  # same as sampling from unit Gaussian.
+    >>> pon.sample({"x": torch.zeros_like(x)})  # same as sampling from unit Gaussian. # doctest: +SKIP
     {'x': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
          [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]),
      'z': tensor([[-0.7777, -0.5908, -1.5498, -0.7505,  0.6201,  0.7218,  1.0045,  0.8923,

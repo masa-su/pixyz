@@ -9,7 +9,7 @@ class Flow(nn.Module):
         Parameters
         ----------
         in_features : int
-            Size of each input sample
+            Size of  input data.
 
         """
         super().__init__()
@@ -28,9 +28,9 @@ class Flow(nn.Module):
         ----------
         x : torch.Tensor
             Input data.
-        y : torch.Tensor
+        y : torch.Tensor, defaults to None
             Data for conditioning.
-        compute_jacobian : bool
+        compute_jacobian : bool, defaults to True
             Whether to calculate and store log-determinant Jacobian.
             If true, calculated Jacobian values are stored in :attr:`logdet_jacobian`.
 
@@ -51,7 +51,7 @@ class Flow(nn.Module):
         ----------
         z : torch.Tensor
             Input data.
-        y : torch.Tensor
+        y : torch.Tensor, defaults to None
             Data for conditioning.
 
         Returns
@@ -90,8 +90,8 @@ class FlowList(Flow):
         Parameters
         ----------
         flow_list : list
-        """
 
+        """
         super().__init__(flow_list[0].in_features)
         self.flow_list = nn.ModuleList(flow_list)
 

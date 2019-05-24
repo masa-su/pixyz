@@ -4,12 +4,20 @@ from ..utils import get_dict_values
 
 class TransformedDistribution(Distribution):
     """
-    p(z)
-    z = f(x), x~p(x)
+    Convert flow transformations to distributions.
+
+    .. math::
+
+        p(z=f_{flow}(x)),
+
+    where :math:`x \sim p_{prior}(x)`.
+
+
+    Once initializing, it can be handled as a distribution module.
+
     """
 
     def __init__(self, prior, flow, var, name="p"):
-
         super().__init__(var=var, cond_var=prior.cond_var, name=name, dim=flow.in_features)
         self.prior = prior
         self.flow = flow  # FlowList
@@ -22,11 +30,18 @@ class TransformedDistribution(Distribution):
 
     @property
     def flow_input_var(self):
+        """list: Input variables of the flow module."""
         return self._flow_input_var
 
     @property
     def logdet_jacobian(self):
-        """Get log-determinant Jacobian."""
+        """
+        Get log-determinant Jacobian.
+
+        Before calling this, you should run :attr:`forward` or :attr:`update_jacobian` methods to calculate and
+        store log-determinant Jacobian.
+
+        """
         return self.flow.logdet_jacobian
 
     def sample(self, x_dict={}, shape=None, batch_size=1, return_all=True, compute_jacobian=True, **kwargs):
@@ -54,17 +69,67 @@ class TransformedDistribution(Distribution):
 
         return log_prob_prior - self.logdet_jacobian
 
-    def forward(self, *args, **kwargs):
-        return self.flow.forward(*args, **kwargs)
+    def forward(self, x, y=None, compute_jacobian=True):
+        """
+        Forward propagation of flow layers.
 
-    def inverse(self, *args, **kwargs):
-        return self.flow.inverse(*args, **kwargs)
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input data.
+        y : torch.Tensor, defaults to None
+            Data for conditioning.
+        compute_jacobian : bool, defaults to True
+            Whether to calculate and store log-determinant Jacobian.
+            If true, calculated Jacobian values are stored in :attr:`logdet_jacobian`.
+
+        Returns
+        -------
+        z : torch.Tensor
+
+        """
+        return self.flow.forward(x=x, y=y, compute_jacobian=compute_jacobian)
+
+    def inverse(self, z, y=None):
+        """
+        Backward (inverse) propagation of flow layers.
+        In this method, log-determinant Jacobian is not calculated.
+
+        Parameters
+        ----------
+        z : torch.Tensor
+            Input data.
+        y : torch.Tensor, defaults to None
+            Data for conditioning.
+
+        Returns
+        -------
+        x : torch.Tensor
+
+        """
+        return self.flow.inverse(z=z, y=y)
 
 
 class InverseTransformedDistribution(Distribution):
     """
-    p(x)
-    x = f^-1(z), z~p(z)
+    Convert inverse flow transformations to distributions.
+
+    .. math::
+
+        p(x=f^{-1}_{flow}(z)),
+
+    where :math:`z \sim p_{prior}(z)`.
+
+    Once initializing, it can be handled as a distribution module.
+
+    Moreover, this distribution can take a conditional variable.
+
+    .. math::
+
+        p(x=f^{-1}_{flow}(z, y)),
+
+    where :math:`z \sim p_{prior}(z)` and :math:`y` is given.
+
     """
 
     def __init__(self, prior, flow, var, cond_var=[], name="p"):
@@ -85,7 +150,13 @@ class InverseTransformedDistribution(Distribution):
 
     @property
     def logdet_jacobian(self):
-        """Get log-determinant Jacobian."""
+        """
+        Get log-determinant Jacobian.
+
+        Before calling this, you should run :attr:`forward` or :attr:`update_jacobian` methods to calculate and
+        store log-determinant Jacobian.
+
+        """
         return self.flow.logdet_jacobian
 
     def sample(self, z_dict={}, shape=None, batch_size=1, return_all=True, **kwargs):
@@ -135,8 +206,42 @@ class InverseTransformedDistribution(Distribution):
 
         return log_prob_prior + self.logdet_jacobian
 
-    def forward(self, *args, **kwargs):
-        return self.flow.forward(*args, **kwargs)
+    def forward(self, x, y=None, compute_jacobian=True):
+        """
+        Forward propagation of flow layers.
 
-    def inverse(self, *args, **kwargs):
-        return self.flow.inverse(*args, **kwargs)
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input data.
+        y : torch.Tensor, defaults to None
+            Data for conditioning.
+        compute_jacobian : bool, defaults to True
+            Whether to calculate and store log-determinant Jacobian.
+            If true, calculated Jacobian values are stored in :attr:`logdet_jacobian`.
+
+        Returns
+        -------
+        z : torch.Tensor
+
+        """
+        return self.flow.forward(x=x, y=y, compute_jacobian=compute_jacobian)
+
+    def inverse(self, z, y=None):
+        """
+        Backward (inverse) propagation of flow layers.
+        In this method, log-determinant Jacobian is not calculated.
+
+        Parameters
+        ----------
+        z : torch.Tensor
+            Input data.
+        y : torch.Tensor, defaults to None
+            Data for conditioning.
+
+        Returns
+        -------
+        x : torch.Tensor
+
+        """
+        return self.flow.inverse(z=z, y=y)
