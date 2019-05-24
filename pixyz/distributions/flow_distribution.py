@@ -3,7 +3,7 @@ from ..utils import get_dict_values
 
 
 class TransformedDistribution(Distribution):
-    """
+    r"""
     Convert flow transformations to distributions.
 
     .. math::
@@ -111,7 +111,7 @@ class TransformedDistribution(Distribution):
 
 
 class InverseTransformedDistribution(Distribution):
-    """
+    r"""
     Convert inverse flow transformations to distributions.
 
     .. math::
