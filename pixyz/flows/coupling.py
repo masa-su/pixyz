@@ -109,22 +109,19 @@ class AffineCoupling(Flow):
 
         Examples
         --------
+        >>> # In case of using scale_translate_net
         >>> scale_translate_net = lambda x: (x, x)
-        >>> # Channel-wise mask
         >>> f1 = AffineCoupling(4, mask_type="channel_wise", scale_translate_net=scale_translate_net,
         ...                     inverse_mask=False)
         >>> x1 = torch.randn([1,4,3,3])
         >>> log_s, t = f1.get_parameters(x1)
-        >>> print(torch.sum(log_s[:, :2, :, :]).data)
-        tensor(0.)
-        >>> # Checkerboard mask
-        >>> f2 = AffineCoupling(2, mask_type="checkerboard", scale_translate_net=scale_translate_net,
+        >>> # In case of using scale_net and translate_net
+        >>> scale_net = lambda x: x
+        >>> translate_net = lambda x: x
+        >>> f2 = AffineCoupling(4, mask_type="channel_wise", scale_net=scale_net, translate_net=translate_net,
         ...                     inverse_mask=False)
-        >>> x2 = torch.randn([1,2,5,5])
+        >>> x2 = torch.randn([1,4,3,3])
         >>> log_s, t = f2.get_parameters(x2)
-        >>> print(torch.sum(log_s[:,:,1::2, 1::2]).data)
-        tensor(0.)
-
         """
 
         if self.scale_translate_net:

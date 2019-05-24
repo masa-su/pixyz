@@ -29,48 +29,65 @@ PlanarFlow
 Coupling layer
 ----------------------------
 
-AffineCouplingLayer
+AffineCoupling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: AffineCouplingLayer
+.. autoclass:: AffineCoupling
+    :members:
+    :undoc-members:
+
+Invertible layer
+-----------------
+
+ChannelConv
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: ChannelConv
     :members:
     :undoc-members:
 
 Operation layer
 ---------------
 
-SqueezeLayer
+Squeeze
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: SqueezeLayer
+.. autoclass:: Squeeze
     :members:
     :undoc-members:
 
-UnsqueezeLayer
+Unsqueeze
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: UnsqueezeLayer
+.. autoclass:: Unsqueeze
     :members:
     :undoc-members:
 
-PermutationLayer
+Permutation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: PermutationLayer
+.. autoclass:: Permutation
     :members:
     :undoc-members:
 
-ShuffleLayer
+Shuffle
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: ShuffleLayer
+.. autoclass:: Shuffle
     :members:
     :undoc-members:
 
-ReverseLayer
+Reverse
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: ReverseLayer
+.. autoclass:: Reverse
+    :members:
+    :undoc-members:
+
+Flatten
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Flatten
     :members:
     :undoc-members:
 
@@ -88,16 +105,16 @@ BatchNorm2d
     :members:
     :undoc-members:
 
-Flatten
+ActNorm2d
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Flatten
+.. autoclass:: ActNorm2d
     :members:
     :undoc-members:
 
-PreProcess
+Preprocess
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: PreProcess
+.. autoclass:: Preprocess
     :members:
     :undoc-members:

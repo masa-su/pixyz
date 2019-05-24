@@ -22,11 +22,17 @@ class Flow(nn.Module):
 
     def forward(self, x, y=None, compute_jacobian=True):
         """
+        Forward propagation of flow layers.
+
         Parameters
         ----------
         x : torch.Tensor
+            Input data.
         y : torch.Tensor
+            Data for conditioning.
         compute_jacobian : bool
+            Whether to calculate and store log-determinant Jacobian.
+            If true, calculated Jacobian values are stored in :attr:`logdet_jacobian`.
 
         Returns
         -------
@@ -38,10 +44,15 @@ class Flow(nn.Module):
 
     def inverse(self, z, y=None):
         """
+        Backward (inverse) propagation of flow layers.
+        In this method, log-determinant Jacobian is not calculated.
+
         Parameters
         ----------
         z : torch.Tensor
+            Input data.
         y : torch.Tensor
+            Data for conditioning.
 
         Returns
         -------
@@ -56,7 +67,8 @@ class Flow(nn.Module):
         """
         Get log-determinant Jacobian.
 
-        Before calling this, you should run :attr:`forward` or :attr:`update_jacobian` methods.
+        Before calling this, you should run :attr:`forward` or :attr:`update_jacobian` methods to calculate and
+        store log-determinant Jacobian.
 
         """
         return self._logdet_jacobian
@@ -66,6 +78,15 @@ class FlowList(Flow):
 
     def __init__(self, flow_list):
         """
+        Hold flow modules in a list.
+
+        Once initializing, it can be handled as a single flow module.
+
+        Notes
+        -----
+        Indexing is not supported for now.
+
+
         Parameters
         ----------
         flow_list : list

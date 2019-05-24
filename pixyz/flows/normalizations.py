@@ -10,6 +10,9 @@ class BatchNorm1d(Flow):
     """
     A batch normalization with the inverse transformation.
 
+    Notes
+    -----
+    This is implemented with reference to the following code.
     https://github.com/ikostrikov/pytorch-flows/blob/master/flows.py#L205
 
     Examples
@@ -80,6 +83,9 @@ class BatchNorm2d(BatchNorm1d):
     """
     A batch normalization with the inverse transformation.
 
+    Notes
+    -----
+    This is implemented with reference to the following code.
     https://github.com/ikostrikov/pytorch-flows/blob/master/flows.py#L205
 
     Examples
@@ -114,6 +120,9 @@ class ActNorm2d(Flow):
     so that the output per-channel have zero mean and unit variance for that.
     After initialization, `bias` and `logs` will be trained as parameters.
 
+    Notes
+    -----
+    This is implemented with reference to the following code.
     https://github.com/chaiyujin/glow-pytorch/blob/master/glow/modules.py
     """
 

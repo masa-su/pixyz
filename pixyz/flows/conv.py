@@ -44,10 +44,6 @@ class ChannelConv(Flow):
         self.decomposed = decomposed
 
     def get_parameters(self, x, inverse):
-        """
-        log-det = log|abs(|W|)| * pixels
-
-        """
         w_shape = self.w_shape
         pixels = np.prod(x.size()[2:])
         device = x.device
