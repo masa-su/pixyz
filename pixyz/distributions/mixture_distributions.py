@@ -198,7 +198,7 @@ class PosteriorMixtureModel(Distribution):
     def distribution_name(self):
         return "Mixture Model (Posterior)"
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
+    def sample(self, *args, **kwargs):
         raise NotImplementedError
 
     def get_log_prob(self, x_dict, **kwargs):

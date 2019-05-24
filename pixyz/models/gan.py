@@ -25,19 +25,19 @@ class GAN(Model):
                          distributions=distributions,
                          optimizer=optimizer, optimizer_params=optimizer_params)
 
-    def train(self, train_x={}, adversarial_loss=True, **kwargs):
+    def train(self, train_x_dict={}, adversarial_loss=True, **kwargs):
         if adversarial_loss:
-            d_loss = self.loss_cls.train(train_x, **kwargs)
-        loss = super().train(train_x, **kwargs)
+            d_loss = self.loss_cls.train(train_x_dict, **kwargs)
+        loss = super().train(train_x_dict, **kwargs)
 
         if adversarial_loss:
             return loss, d_loss
 
         return loss
 
-    def test(self, test_x={}, adversarial_loss=True, **kwargs):
-        loss = super().test(test_x, **kwargs)
+    def test(self, test_x_dict={}, adversarial_loss=True, **kwargs):
+        loss = super().test(test_x_dict, **kwargs)
         if adversarial_loss:
-            d_loss = self.loss_cls.test(test_x, **kwargs)
+            d_loss = self.loss_cls.test(test_x_dict, **kwargs)
             return loss, d_loss
         return loss

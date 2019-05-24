@@ -71,8 +71,8 @@ class RelaxedBernoulli(Bernoulli):
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def set_dist(self, x={}, sampling=True, **kwargs):
-        params = self.get_params(x, **kwargs)
+    def set_dist(self, x_dict={}, sampling=True, **kwargs):
+        params = self.get_params(x_dict, **kwargs)
         if sampling is True:
             self._dist =\
                 self.relaxed_distribution_torch_class(temperature=self.temperature,
@@ -93,9 +93,9 @@ class FactorizedBernoulli(Bernoulli):
     def distribution_name(self):
         return "FactorizedBernoulli"
 
-    def get_log_prob(self, x):
-        log_prob = super().get_log_prob(x, sum_features=False)
-        [_x] = get_dict_values(x, self._var)
+    def get_log_prob(self, x_dict):
+        log_prob = super().get_log_prob(x_dict, sum_features=False)
+        [_x] = get_dict_values(x_dict, self._var)
         log_prob[_x == 0] = 0
         log_prob = sum_samples(log_prob)
         return log_prob
@@ -143,8 +143,8 @@ class RelaxedCategorical(Categorical):
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def set_dist(self, x={}, sampling=True, **kwargs):
-        params = self.get_params(x, **kwargs)
+    def set_dist(self, x_dict={}, sampling=True, **kwargs):
+        params = self.get_params(x_dict, **kwargs)
         if sampling is True:
             self._dist =\
                 self.relaxed_distribution_torch_class(temperature=self.temperature,
@@ -152,12 +152,12 @@ class RelaxedCategorical(Categorical):
         else:
             self._dist = self.distribution_torch_class(**params)
 
-    def sample_mean(self, x={}):
-        self.set_dist(x, sampling=False)
+    def sample_mean(self, x_dict={}):
+        self.set_dist(x_dict, sampling=False)
         return self.dist.mean
 
-    def sample_variance(self, x={}):
-        self.set_dist(x, sampling=False)
+    def sample_variance(self, x_dict={}):
+        self.set_dist(x_dict, sampling=False)
         return self.dist.variance
 
 
