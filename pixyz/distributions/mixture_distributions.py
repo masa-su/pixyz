@@ -6,7 +6,6 @@ from ..distributions.distributions import Distribution
 
 class MixtureModel(Distribution):
     r"""Mixture models.
-
     .. math::
 
         p(x) = \sum_i p(x|z=i)p(z=i)

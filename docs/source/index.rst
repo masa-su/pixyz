@@ -18,7 +18,6 @@ Pixyz is a library for developing deep generative models in a more concise, intu
    distributions
    losses
    models
-   flows
    utils
 
 

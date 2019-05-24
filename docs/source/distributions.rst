@@ -113,23 +113,6 @@ ElementWiseProductOfNormal
 .. autoclass:: ElementWiseProductOfNormal
     :members:
     :undoc-members:
-
-Flow distributions
-------------------
-
-TransformedDistribution
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: TransformedDistribution
-    :members:
-    :undoc-members:
-
-InverseTransformedDistribution
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: InverseTransformedDistribution
-    :members:
-    :undoc-members:
        
 Special distributions
 ---------------------
@@ -148,10 +131,10 @@ DataDistribution
     :members:
     :undoc-members:
 
-CustomProb
+CustomPDF
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: CustomProb
+.. autoclass:: CustomPDF
     :members:
     :undoc-members:
 

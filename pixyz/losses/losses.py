@@ -337,9 +337,8 @@ class Expectation(Loss):
         p_text = "{" + self._p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
-    def _get_eval(self, x={}, shape=None, batch_size=1, reparam=True, **kwargs):
-        samples_dict = self._p.sample(x, shape=shape, batch_size=batch_size,
-                                      reparam=reparam, return_all=True)
+    def _get_eval(self, x={}, **kwargs):
+        samples_dict = self._p.sample(x, reparam=True, return_all=True)
 
         # TODO: whether eval or _get_eval
         loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)
