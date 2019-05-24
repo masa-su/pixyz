@@ -28,8 +28,7 @@ Our library supports following typical deep generative models.
 * Implicit models
   * Generative adversarial networks
   
-Using Pixyz, you can implement these different models **in the same framework** and in **combination with each other**.
-
+Pixyz enables us to implement these different models **in the same framework** and **in combination with each other**.
 
 The overview of Pixyz is as follows. Each API will be discussed below.
 <img src="https://user-images.githubusercontent.com/11865486/58321994-a3b1b680-7e5a-11e9-89dd-334086a89525.png" width="400px">
