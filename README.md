@@ -31,7 +31,7 @@ Using Pixyz, you can implement these different models **in the same framework** 
 
 
 The overview of Pixyz is as follows. Each API will be discussed below.
-![overview](https://user-images.githubusercontent.com/11865486/48596532-d73bf180-e99c-11e8-996f-79a9e95ab459.png)
+<img src="https://user-images.githubusercontent.com/11865486/58321994-a3b1b680-7e5a-11e9-89dd-334086a89525.png" width="400px">
 
 **Note**: Since this library is under development, there are possibilities to have some bugs.
 
