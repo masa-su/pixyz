@@ -201,6 +201,14 @@ def tolist(a):
 
 
 def print_latex(object):
+    """Print formulas in latex format.
+    
+    Parameters
+    ----------
+    object : pixyz.distributions.distributions.Distribution, pixyz.losses.losses.Loss or pixyz.models.model.Model.
+
+    """
+
     if isinstance(object, pixyz.distributions.distributions.Distribution):
         latex_text = object.prob_joint_factorized_and_text
     elif isinstance(object, pixyz.losses.losses.Loss):
