@@ -210,11 +210,11 @@ def print_latex(object):
     """
 
     if isinstance(object, pixyz.distributions.distributions.Distribution):
-        latex_text = object.prob_joint_factorized_and_text
+        latex_text = object.get_prob_joint_factorized_and_text(False)
     elif isinstance(object, pixyz.losses.losses.Loss):
-        latex_text = object.loss_text
+        latex_text = object.get_loss_text(False)
     elif isinstance(object, pixyz.models.model.Model):
-        latex_text = object.loss_cls.loss_text
+        latex_text = object.loss_cls.get_loss_text(False)
 
     return Math(latex_text)
 

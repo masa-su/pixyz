@@ -46,6 +46,8 @@ class Distribution(nn.Module):
         self._prob_text = None
         self._prob_factorized_text = None
 
+        self._index = []
+
     @property
     def distribution_name(self):
         """str: Name of this distribution class."""
@@ -82,13 +84,20 @@ class Distribution(nn.Module):
         """
         return self._cond_var
 
-    @property
-    def prob_text(self):
+    def get_prob_text(self, add_index=False):
         """str: Return a formula of the (joint) probability distribution."""
 
-        _var_text = [','.join(self._var)]
-        if len(self._cond_var) != 0:
-            _var_text += [','.join(self._cond_var)]
+        if add_index and (len(self.index) != 0):
+            index = "_{" + ','.join(self.index) + "}"
+        else:
+            index = ""
+
+        var_with_index = [var + index for var in self.var]
+        cond_var_with_index = [cond_var + index for cond_var in self.cond_var]
+
+        _var_text = [','.join(var_with_index)]
+        if len(cond_var_with_index) != 0:
+            _var_text += [','.join(cond_var_with_index)]
 
         _prob_text = "{}({})".format(
             self._name,
@@ -97,24 +106,37 @@ class Distribution(nn.Module):
 
         return _prob_text
 
-    @property
-    def prob_factorized_text(self):
+    def get_prob_factorized_text(self, add_index=False):
         """str: Return a formula of the factorized probability distribution."""
-        return self.prob_text
+        return self.get_prob_text(add_index)
 
-    @property
-    def prob_joint_factorized_and_text(self):
+    def get_prob_joint_factorized_and_text(self, add_index=None):
         """str: Return a formula of the factorized probability distribution."""
-        if self.prob_factorized_text == self.prob_text:
-            prob_text = self.prob_text
+        prob_text = self.get_prob_text(add_index)
+        prob_factorized_text = self.get_prob_factorized_text(add_index)
+        if prob_text == prob_factorized_text:
+            prob_joint_factorized_and_text = prob_text
         else:
-            prob_text = "{} = {}".format(self.prob_text, self.prob_factorized_text)
-        return prob_text
+            prob_joint_factorized_and_text = "{} = {}".format(prob_text, prob_factorized_text)
+        return prob_joint_factorized_and_text
 
     @property
     def dim(self):
         """int: Number of dimensions of this distribution."""
         return self._dim
+
+    @property
+    def index(self):
+        """list: Input variables of this distribution."""
+        return self._index
+
+    @index.setter
+    def index(self, index):
+        if type(index) is list:
+            self._index = index
+            return
+
+        raise ValueError("Index must be a list type.")
 
     def _check_input(self, x, var=None):
         """Check the type of given input.
@@ -342,7 +364,7 @@ class Distribution(nn.Module):
 
     def __str__(self):
         # Distribution
-        text = "Distribution:\n  {}\n".format(self.prob_joint_factorized_and_text)
+        text = "Distribution:\n  {}\n".format(self.get_prob_joint_factorized_and_text(False))
 
         # Network architecture (`repr`)
         network_text = self.__repr__()
@@ -351,7 +373,7 @@ class Distribution(nn.Module):
         return text
 
     def __repr__(self):
-        text = "{} ({}): {}".format(self.prob_text, self.distribution_name, super().__repr__())
+        text = "{} ({}): {}".format(self.get_prob_text(False), self.distribution_name, super().__repr__())
         return text
 
 
