@@ -12,6 +12,9 @@ class ChannelConv(Flow):
     """
     Invertible 1 × 1 convolution.
 
+    Notes
+    -----
+    This is implemented with reference to the following code.
     https://github.com/chaiyujin/glow-pytorch/blob/master/glow/modules.py
     """
 
