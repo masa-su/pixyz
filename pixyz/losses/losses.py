@@ -257,12 +257,11 @@ class BatchMean(LossSelfOperator):
     where :math:`x_n \sim p_{data}(x)` and :math:`\mathcal{L}` is a loss function.
     """
 
-    @property
-    def _symbol(self):
-        return sympy.Symbol("mean \\left({} \\right)".format(self._loss1.loss_text))  # TODO: fix it
+    def get_symbol(self):
+        return sympy.Symbol("mean \\left({} \\right)".format(self._loss1.get_loss_text(True)))  # TODO: fix it
 
-    def _get_eval(self, x={}, **kwargs):
-        loss, x = self._loss1._get_eval(x, **kwargs)
+    def get_eval(self, x={}, **kwargs):
+        loss, x = self._loss1.get_eval(x, **kwargs)
         return loss.mean(), x
 
 
