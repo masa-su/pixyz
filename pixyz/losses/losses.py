@@ -1,5 +1,6 @@
 import abc
 import sympy
+import torch
 
 import numbers
 from copy import deepcopy
@@ -87,8 +88,8 @@ class Loss(object, metaclass=abc.ABCMeta):
 
         return loss
 
-    def expectation(self, p, input_var=None):
-        return Expectation(p, self, input_var=input_var)
+    def expectation(self, p, input_var=None, sample_shape=torch.Size([])):
+        return Expectation(p, self, input_var=input_var, sample_shape=sample_shape)
 
     @abc.abstractmethod
     def _get_eval(self, x, **kwargs):
@@ -324,11 +325,12 @@ class Expectation(Loss):
     Therefore, in this class, :math:`f` is assumed to :attr:`pixyz.Loss`.
     """
 
-    def __init__(self, p, f, input_var=None):
+    def __init__(self, p, f, input_var=None, sample_shape=torch.Size([])):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
         self._f = f
+        self.sample_shape = torch.Size(sample_shape)
 
         super().__init__(p, input_var=input_var)
 
@@ -337,12 +339,13 @@ class Expectation(Loss):
         p_text = "{" + self._p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
-    def _get_eval(self, x={}, shape=None, batch_size=1, reparam=True, **kwargs):
-        samples_dict = self._p.sample(x, shape=shape, batch_size=batch_size,
-                                      reparam=reparam, return_all=True)
+    def _get_eval(self, x={}, **kwargs):
+        samples_dict = self._p.sample(x, sample_shape=self.sample_shape, reparam=True, return_all=True)
 
-        # TODO: whether eval or _get_eval
-        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)
+        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)  # TODO: eval or _get_eval
         samples_dict.update(loss_sample_dict)
+
+        # sum over sample_shape
+        loss = loss.view(self.sample_shape.numel(), -1).mean(dim=0)
 
         return loss, samples_dict
