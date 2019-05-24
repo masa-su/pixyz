@@ -202,7 +202,7 @@ def tolist(a):
 
 def print_latex(object):
     """Print formulas in latex format.
-    
+
     Parameters
     ----------
     object : pixyz.distributions.distributions.Distribution, pixyz.losses.losses.Loss or pixyz.models.model.Model.
