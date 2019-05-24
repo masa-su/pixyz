@@ -24,6 +24,7 @@ Our library supports following typical deep generative models.
 * Explicit models (likelihood-based)
   * Variational autoencoders (variational inference)
   * Flow-based models
+  * Autoregressive generative models
 * Implicit models
   * Generative adversarial networks
   
