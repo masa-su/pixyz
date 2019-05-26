@@ -478,6 +478,8 @@ class DistributionBase(Distribution):
             batch_shape = self._dist.batch_shape
             if batch_shape[0] == 1:
                 self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
+            elif batch_shape[0] == batch_n:
+                return
             else:
                 raise ValueError
 
@@ -679,14 +681,14 @@ class MultiplyDistribution(Distribution):
     def prob_factorized_text(self):
         return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
-    def sample(self, x_dict={}, return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=1, return_all=True, reparam=False):
         # sample from the parent distribution
         parents_x_dict = x_dict
-        child_x_dict = self._parent.sample(x_dict=parents_x_dict,
+        child_x_dict = self._parent.sample(x_dict=parents_x_dict, batch_n=batch_n,
                                            return_all=True, reparam=reparam)
-
+        print(child_x_dict)
         # sample from the child distribution
-        output_dict = self._child.sample(x_dict=child_x_dict,
+        output_dict = self._child.sample(x_dict=child_x_dict, batch_n=batch_n,
                                          return_all=True, reparam=reparam)
 
         if return_all is False:
