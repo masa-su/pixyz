@@ -1,3 +1,4 @@
+import torch
 from ..distributions import Distribution
 from ..utils import get_dict_values
 
@@ -18,7 +19,12 @@ class TransformedDistribution(Distribution):
     """
 
     def __init__(self, prior, flow, var, name="p"):
-        super().__init__(var=var, cond_var=prior.cond_var, name=name, features_shape=[flow.in_features])
+        if flow.in_features:
+            features_shape = [flow.in_features]
+        else:
+            features_shape = torch.Size()
+
+        super().__init__(var=var, cond_var=prior.cond_var, name=name, features_shape=features_shape)
         self.prior = prior
         self.flow = flow  # FlowList
 
@@ -34,6 +40,13 @@ class TransformedDistribution(Distribution):
         return self._flow_input_var
 
     @property
+    def prob_factorized_text(self):
+        flow_text = "{}=f_{{flow}}({})".format(self.var[0], self.flow_input_var[0])
+        prob_text = "{}({})".format(self._name, flow_text)
+
+        return prob_text
+
+    @property
     def logdet_jacobian(self):
         """
         Get log-determinant Jacobian.
@@ -44,9 +57,10 @@ class TransformedDistribution(Distribution):
         """
         return self.flow.logdet_jacobian
 
-    def sample(self, x_dict={}, shape=None, batch_size=1, return_all=True, compute_jacobian=True, **kwargs):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               compute_jacobian=True):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, shape=shape, batch_size=batch_size, return_all=True, **kwargs)
+        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all)
 
         # flow transformation
         _x = get_dict_values(sample_dict, self.flow_input_var)[0]
@@ -133,8 +147,12 @@ class InverseTransformedDistribution(Distribution):
     """
 
     def __init__(self, prior, flow, var, cond_var=[], name="p"):
+        if flow.in_features:
+            features_shape=[flow.in_features]
+        else:
+            features_shape = torch.Size()
 
-        super().__init__(var, cond_var=cond_var, name=name, features_shape=[flow.in_features])
+        super().__init__(var, cond_var=cond_var, name=name, features_shape=features_shape)
         self.prior = prior
         self.flow = flow  # FlowList
 
@@ -149,6 +167,14 @@ class InverseTransformedDistribution(Distribution):
         return self._flow_output_var
 
     @property
+    def prob_factorized_text(self):
+        var_text = ','.join(self.flow_output_var + self.cond_var)
+        flow_text = "{}=f^{{-1}}_{{flow}}({})".format(self.var[0], var_text)
+        prob_text = "{}({})".format(self._name, flow_text)
+
+        return prob_text
+
+    @property
     def logdet_jacobian(self):
         """
         Get log-determinant Jacobian.
@@ -159,9 +185,9 @@ class InverseTransformedDistribution(Distribution):
         """
         return self.flow.logdet_jacobian
 
-    def sample(self, z_dict={}, shape=None, batch_size=1, return_all=True, **kwargs):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # sample from the prior
-        sample_dict = self.prior.sample(z_dict, shape=shape, batch_size=batch_size, return_all=True, **kwargs)
+        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all)
 
         # inverse flow transformation
         _z = get_dict_values(sample_dict, self.flow_output_var)

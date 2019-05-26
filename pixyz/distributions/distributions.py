@@ -389,7 +389,7 @@ class Distribution(nn.Module):
 class DistributionBase(Distribution):
     """Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", features_shape=[1], **kwargs):
+    def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), **kwargs):
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
 
         self._set_buffers(**kwargs)
@@ -428,11 +428,15 @@ class DistributionBase(Distribution):
         if features.size() == torch.Size():
             features = features.expand(self.features_shape)
 
+        if self.features_shape == torch.Size():
+            self._features_shape = features.shape
+
         if features.size() == self.features_shape:
             batches = features.unsqueeze(0)
             return batches
 
-        raise ValueError
+        raise ValueError("the shape of a given parameter {} and features_shape {} "
+                         "do not match.".format(features.size(), self.features_shape))
 
     @property
     def params_keys(self):

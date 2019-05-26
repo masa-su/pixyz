@@ -55,7 +55,7 @@ class MixtureModel(Distribution):
             raise ValueError("The prior must be the categorical distribution.")
 
         # check the number of mixture
-        if len(prior.get_params()["probs"]) != len(distributions):
+        if len(prior.get_params()["probs"].shape[-1]) != len(distributions):
             raise ValueError("The number of its category must be the same as the length of the distribution list.")
 
         # check whether all distributions have the same variable.
