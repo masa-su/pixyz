@@ -88,7 +88,7 @@ class Loss(object, metaclass=abc.ABCMeta):
 
         return loss
 
-    def expectation(self, p, input_var=None, sample_shape=torch.Size([])):
+    def expectation(self, p, input_var=None, sample_shape=torch.Size()):
         return Expectation(p, self, input_var=input_var, sample_shape=sample_shape)
 
     @abc.abstractmethod
@@ -325,7 +325,7 @@ class Expectation(Loss):
     Therefore, in this class, :math:`f` is assumed to :attr:`pixyz.Loss`.
     """
 
-    def __init__(self, p, f, input_var=None, sample_shape=torch.Size([])):
+    def __init__(self, p, f, input_var=None, sample_shape=torch.Size()):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))

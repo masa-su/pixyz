@@ -27,13 +27,13 @@ class AdversarialLoss(Loss):
         params = discriminator.parameters()
         self.d_optimizer = optimizer(params, **optimizer_params)
 
-    def _get_batch_size(self, x_dict):
+    def _get_batch_n(self, x_dict):
         return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
 
-    def d_loss(self, y_p, y_q, batch_size):
+    def d_loss(self, y_p, y_q, batch_n):
         raise NotImplementedError
 
-    def g_loss(self, y_p, y_q, batch_size):
+    def g_loss(self, y_p, y_q, batch_n):
         raise NotImplementedError
 
     def train(self, train_x_dict, **kwargs):
@@ -86,12 +86,12 @@ class AdversarialJensenShannon(AdversarialLoss):
                                                                                    self._q.prob_text))
 
     def _get_eval(self, x_dict, discriminator=False, **kwargs):
-        batch_size = self._get_batch_size(x_dict)
+        batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = get_dict_values(self._p.sample(x_dict, batch_size=batch_size), self.d.input_var, True)
+        x_p_dict = get_dict_values(self._p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
         # sample x_q from q
-        x_q_dict = get_dict_values(self._q.sample(x_dict, batch_size=batch_size), self.d.input_var, True)
+        x_q_dict = get_dict_values(self._q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
 
         if discriminator:
             # sample y_p from d
@@ -99,7 +99,7 @@ class AdversarialJensenShannon(AdversarialLoss):
             # sample y_q from d
             y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
 
-            return self.d_loss(y_p, y_q, batch_size), x_dict
+            return self.d_loss(y_p, y_q, batch_n), x_dict
 
         # sample y_p from d
         y_p_dict = self.d.sample(x_p_dict)
@@ -109,19 +109,19 @@ class AdversarialJensenShannon(AdversarialLoss):
         y_p = get_dict_values(y_p_dict, self.d.var)[0]
         y_q = get_dict_values(y_q_dict, self.d.var)[0]
 
-        return self.g_loss(y_p, y_q, batch_size), x_dict
+        return self.g_loss(y_p, y_q, batch_n), x_dict
 
-    def d_loss(self, y_p, y_q, batch_size):
+    def d_loss(self, y_p, y_q, batch_n):
         # set labels
-        t_p = torch.ones(batch_size, 1).to(y_p.device)
-        t_q = torch.zeros(batch_size, 1).to(y_p.device)
+        t_p = torch.ones(batch_n, 1).to(y_p.device)
+        t_q = torch.zeros(batch_n, 1).to(y_p.device)
 
         return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
 
-    def g_loss(self, y_p, y_q, batch_size):
+    def g_loss(self, y_p, y_q, batch_n):
         # set labels
-        t1 = torch.ones(batch_size, 1).to(y_p.device)
-        t2 = torch.zeros(batch_size, 1).to(y_p.device)
+        t1 = torch.ones(batch_n, 1).to(y_p.device)
+        t2 = torch.zeros(batch_n, 1).to(y_p.device)
 
         if self._inverse_g_loss:
             y_p_loss = self.bce_loss(y_p, t2)
@@ -163,40 +163,40 @@ class AdversarialKullbackLeibler(AdversarialLoss):
                                                                                    self._q.prob_text))
 
     def _get_eval(self, x_dict, discriminator=False, **kwargs):
-        batch_size = self._get_batch_size(x_dict)
+        batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = get_dict_values(self._p.sample(x_dict, batch_size=batch_size), self.d.input_var, True)
+        x_p_dict = get_dict_values(self._p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
 
         if discriminator:
             # sample x_q from q
-            x_q_dict = get_dict_values(self._q.sample(x_dict, batch_size=batch_size), self.d.input_var, True)
+            x_q_dict = get_dict_values(self._q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
 
             # sample y_p from d
             y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict)), self.d.var)[0]
             # sample y_q from d
             y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
 
-            return self.d_loss(y_p, y_q, batch_size), x_dict
+            return self.d_loss(y_p, y_q, batch_n), x_dict
 
         # sample y from d
         y_p = get_dict_values(self.d.sample(x_p_dict), self.d.var)[0]
 
-        return self.g_loss(y_p, batch_size), x_dict
+        return self.g_loss(y_p, batch_n), x_dict
 
-    def g_loss(self, y_p, batch_size):
+    def g_loss(self, y_p, batch_n):
         # set labels
-        t_p = torch.ones(batch_size, 1).to(y_p.device)
-        t_q = torch.zeros(batch_size, 1).to(y_p.device)
+        t_p = torch.ones(batch_n, 1).to(y_p.device)
+        t_q = torch.zeros(batch_n, 1).to(y_p.device)
 
         y_p_loss = -self.bce_loss(y_p, t_p) + self.bce_loss(y_p, t_q)
 
         return y_p_loss
 
-    def d_loss(self, y_p, y_q, batch_size):
+    def d_loss(self, y_p, y_q, batch_n):
         # set labels
-        t_p = torch.ones(batch_size, 1).to(y_p.device)
-        t_q = torch.zeros(batch_size, 1).to(y_p.device)
+        t_p = torch.ones(batch_n, 1).to(y_p.device)
+        t_q = torch.zeros(batch_n, 1).to(y_p.device)
 
         return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
 

@@ -41,7 +41,7 @@ class DataDistribution(Distribution):
     """
 
     def __init__(self, var, name="p_{data}"):
-        super().__init__(var=var, cond_var=[], name=name, dim=1)
+        super().__init__(var=var, cond_var=[], name=name)
 
     @property
     def distribution_name(self):

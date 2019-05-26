@@ -49,10 +49,11 @@ class Bernoulli(DistributionBase):
 class RelaxedBernoulli(Bernoulli):
     """Relaxed (re-parameterizable) Bernoulli distribution parameterized by :attr:`probs`."""
 
-    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", dim=None, **kwargs):
+    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", features_shape=torch.Size(),
+                 **kwargs):
         self._temperature = temperature
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape, **kwargs)
 
     @property
     def temperature(self):
@@ -71,14 +72,22 @@ class RelaxedBernoulli(Bernoulli):
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def set_dist(self, x_dict={}, sampling=True, **kwargs):
-        params = self.get_params(x_dict, **kwargs)
+    def set_dist(self, x_dict={}, sampling=True, batch_n=None, **kwargs):
+        params = self.get_params(x_dict)
         if sampling is True:
-            self._dist =\
-                self.relaxed_distribution_torch_class(temperature=self.temperature,
-                                                      **params)
+            self._dist = self.relaxed_distribution_torch_class(temperature=self.temperature, **params)
         else:
             self._dist = self.distribution_torch_class(**params)
+
+        # expand batch_n
+        if batch_n:
+            batch_shape = self._dist.batch_shape
+            if batch_shape[0] == 1:
+                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
+            elif batch_shape[0] == batch_n:
+                return
+            else:
+                raise ValueError
 
 
 class FactorizedBernoulli(Bernoulli):
@@ -120,11 +129,11 @@ class Categorical(DistributionBase):
 class RelaxedCategorical(Categorical):
     """Relaxed (re-parameterizable) categorical distribution parameterized by :attr:`probs`."""
 
-    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", dim=None,
+    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", features_shape=torch.Size(),
                  **kwargs):
         self._temperature = temperature
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape, **kwargs)
 
     @property
     def temperature(self):
@@ -143,14 +152,22 @@ class RelaxedCategorical(Categorical):
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def set_dist(self, x_dict={}, sampling=True, **kwargs):
-        params = self.get_params(x_dict, **kwargs)
+    def set_dist(self, x_dict={}, sampling=True, batch_n=None, **kwargs):
+        params = self.get_params(x_dict)
         if sampling is True:
-            self._dist =\
-                self.relaxed_distribution_torch_class(temperature=self.temperature,
-                                                      **params)
+            self._dist = self.relaxed_distribution_torch_class(temperature=self.temperature, **params)
         else:
             self._dist = self.distribution_torch_class(**params)
+
+        # expand batch_n
+        if batch_n:
+            batch_shape = self._dist.batch_shape
+            if batch_shape[0] == 1:
+                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
+            elif batch_shape[0] == batch_n:
+                return
+            else:
+                raise ValueError
 
     def sample_mean(self, x_dict={}):
         self.set_dist(x_dict, sampling=False)
@@ -164,10 +181,10 @@ class RelaxedCategorical(Categorical):
 class Multinomial(DistributionBase):
     """Multinomial distribution parameterized by :attr:`total_count` and :attr:`probs`."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=None, total_count=1, **kwargs):
+    def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), total_count=1, **kwargs):
         self._total_count = total_count
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim, **kwargs)
+        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape, **kwargs)
 
     @property
     def total_count(self):

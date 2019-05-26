@@ -18,7 +18,7 @@ class TransformedDistribution(Distribution):
     """
 
     def __init__(self, prior, flow, var, name="p"):
-        super().__init__(var=var, cond_var=prior.cond_var, name=name, dim=flow.in_features)
+        super().__init__(var=var, cond_var=prior.cond_var, name=name, features_shape=[flow.in_features])
         self.prior = prior
         self.flow = flow  # FlowList
 
@@ -134,7 +134,7 @@ class InverseTransformedDistribution(Distribution):
 
     def __init__(self, prior, flow, var, cond_var=[], name="p"):
 
-        super().__init__(var, cond_var=cond_var, name=name, dim=flow.in_features)
+        super().__init__(var, cond_var=cond_var, name=name, features_shape=[flow.in_features])
         self.prior = prior
         self.flow = flow  # FlowList
 

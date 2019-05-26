@@ -12,7 +12,7 @@ from ..losses import LogProb, Prob
 class Distribution(nn.Module):
     """Distribution class. In Pixyz, all distributions are required to inherit this class."""
 
-    def __init__(self, var, cond_var=[], name="p", features_shape=torch.Size([])):
+    def __init__(self, var, cond_var=[], name="p", features_shape=torch.Size()):
         """
         Parameters
         ----------
@@ -24,7 +24,7 @@ class Distribution(nn.Module):
         name : :obj:`str`, defaults to "p"
             Name of this distribution.
             This name is displayed in :attr:`prob_text` and :attr:`prob_factorized_text`.
-        features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size([]))
+        features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size())
             Shape of dimensions (features) of this distribution.
 
         """
@@ -46,7 +46,7 @@ class Distribution(nn.Module):
     @property
     def distribution_name(self):
         """str: Name of this distribution class."""
-        raise NotImplementedError
+        return ""
 
     @property
     def name(self):
@@ -188,7 +188,7 @@ class Distribution(nn.Module):
         """
         raise NotImplementedError
 
-    def sample(self, x_dict={}, batch_n=1, sample_shape=None, return_all=True,
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
                reparam=False):
         """Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
@@ -197,9 +197,9 @@ class Distribution(nn.Module):
         ----------
         x_dict : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`, defaults to {}
             Input variables.
-        sample_shape : :obj:`list` or :obj:`NoneType`, defaults to None
+        sample_shape : :obj:`list` or :obj:`NoneType`, defaults to torch.Size()
             Shape of generating samples.
-        batch_n : :obj:`int`, defaults to 1.
+        batch_n : :obj:`int`, defaults to None.
             Set batch size of parameters.
         return_all : :obj:`bool`, defaults to True
             Choose whether the output contains input variables.
@@ -379,9 +379,11 @@ class Distribution(nn.Module):
         text += "Network architecture:\n{}".format(network_text)
         return text
 
-    def __repr__(self):
-        text = "{} ({}): {}".format(self.prob_text, self.distribution_name, super().__repr__())
-        return text
+    def __repr__(self, network_only=False):
+        if network_only:
+            return super().__repr__()
+
+        return "{} ({}): {}".format(self.prob_text, self.distribution_name, super().__repr__())
 
 
 class DistributionBase(Distribution):
@@ -423,7 +425,7 @@ class DistributionBase(Distribution):
 
     def _check_features_shape(self, features):
         # scalar
-        if features.size() == torch.Size([]):
+        if features.size() == torch.Size():
             features = features.expand(self.features_shape)
 
         if features.size() == self.features_shape:
@@ -458,7 +460,7 @@ class DistributionBase(Distribution):
             Parameters of this distribution.
         sampling : :obj:`bool`, defaults to False.
             Choose whether to use relaxed_* in PyTorch distribution.
-        batch_n : :obj:`int`, defaults to 1.
+        batch_n : :obj:`int`, defaults to None.
             Set batch size of parameters.
         **kwargs
             Arbitrary keyword arguments.
@@ -544,7 +546,7 @@ class DistributionBase(Distribution):
 
         return entropy
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size([]), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # check whether the input is valid or convert it to valid dictionary.
         x_dict = self._check_input(x_dict)
         input_dict = {}
@@ -681,12 +683,11 @@ class MultiplyDistribution(Distribution):
     def prob_factorized_text(self):
         return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
-    def sample(self, x_dict={}, batch_n=1, return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, return_all=True, reparam=False, **kwargs):
         # sample from the parent distribution
         parents_x_dict = x_dict
         child_x_dict = self._parent.sample(x_dict=parents_x_dict, batch_n=batch_n,
                                            return_all=True, reparam=reparam)
-        print(child_x_dict)
         # sample from the child distribution
         output_dict = self._child.sample(x_dict=child_x_dict, batch_n=batch_n,
                                          return_all=True, reparam=reparam)
@@ -710,8 +711,8 @@ class MultiplyDistribution(Distribution):
         raise ValueError("Two PDFs, {} and {}, have different sizes,"
                          " so you must set sum_dim=True.".format(self._parent.prob_text, self._child.prob_text))
 
-    def __repr__(self):
-        return self._parent.__repr__() + "\n" + self._child.__repr__()
+    def __repr__(self, network_only=False):
+        return self._parent.__repr__(network_only) + "\n" + self._child.__repr__(network_only)
 
 
 class ReplaceVarDistribution(Distribution):
@@ -774,7 +775,7 @@ class ReplaceVarDistribution(Distribution):
     def forward(self, *args, **kwargs):
         return self._a.forward(*args, **kwargs)
 
-    def get_params(self, params_dict):
+    def get_params(self, params_dict={}):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
         return self._a.get_params(params_dict)
 
@@ -782,7 +783,7 @@ class ReplaceVarDistribution(Distribution):
         x_dict = replace_dict_keys(x_dict, self._replace_inv_cond_var_dict)
         return self._a.set_dist(x_dict=x_dict, sampling=sampling, batch_n=batch_n, **kwargs)
 
-    def sample(self, x_dict={}, batch_n=1, sample_shape=None, return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
@@ -798,12 +799,12 @@ class ReplaceVarDistribution(Distribution):
         input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
         return self._a.get_log_prob(input_dict, **kwargs)
 
-    def sample_mean(self, x_dict):
+    def sample_mean(self, x_dict={}):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
         return self._a.sample_mean(input_dict)
 
-    def sample_variance(self, x_dict):
+    def sample_variance(self, x_dict={}):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
         return self._a.sample_variance(input_dict)
@@ -816,8 +817,11 @@ class ReplaceVarDistribution(Distribution):
     def distribution_name(self):
         return self._a.distribution_name
 
-    def __repr__(self):
-        return self._a.__repr__()
+    def __repr__(self, network_only=False):
+        if network_only:
+            super().__repr__(network_only=True)
+
+        return "{} ({}): {}".format(self.prob_text, self.distribution_name, self._a.__repr__(network_only=True))
 
     def __getattr__(self, item):
         try:
@@ -885,20 +889,20 @@ class MarginalizeVarDistribution(Distribution):
     def forward(self, *args, **kwargs):
         return self._a.forward(*args, **kwargs)
 
-    def get_params(self, params_dict):
+    def get_params(self, params_dict={}):
         return self._a.get_params(params_dict)
 
-    def sample(self, x_dict={}, batch_n=1, sample_shape=None, return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         output_dict = self._a.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
                                      reparam=reparam)
         output_dict = delete_dict_values(output_dict, self._marginalize_list)
 
         return output_dict
 
-    def sample_mean(self, x_dict):
+    def sample_mean(self, x_dict={}):
         return self._a.sample_mean(x_dict)
 
-    def sample_variance(self, x_dict):
+    def sample_variance(self, x_dict={}):
         return self._a.sample_variance(x_dict)
 
     @property
@@ -917,8 +921,8 @@ class MarginalizeVarDistribution(Distribution):
 
         return "{}{}{}".format(integral_symbol, self._a.prob_factorized_text, integral_variables)
 
-    def __repr__(self):
-        return self._a.__repr__()
+    def __repr__(self, network_only=False):
+        return self._a.__repr__(network_only)
 
     def __getattr__(self, item):
         try:
