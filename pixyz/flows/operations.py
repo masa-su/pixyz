@@ -236,21 +236,25 @@ class Preprocess(Flow):
         return x.log() - (1. - x).log()
 
     def forward(self, x, y=None, compute_jacobian=True):
-        # 1. add noise to pixels to dequantize them.
-        x = (x * 255. + torch.rand_like(x)) / 256.
+        # 1. transform the domain of x from [0, 1] to [0, 255]
+        x = x * 255
 
-        # 2. transform pixel values with logit to be unconstrained.
+        # 2-1. add noise to pixels to dequantize them and transform its domain ([0, 255]->[0, 1]).
+        x = (x + torch.rand_like(x)) / 256.
+
+        # 2-2. transform pixel values with logit to be unconstrained ([0, 1]->(0, 1)).
         x = (1 + (2 * x - 1) * (1 - self.data_constraint)) / 2.
 
-        # 3. apply the logit function.
+        # 2-3. apply the logit function ((0, 1)->(-inf, inf)).
         z = self.logit(x)
 
         if compute_jacobian:
-            # log-det Jacobian of transformation (2 & 3)
+            # log-det Jacobian of transformation (2)
             logdet_jacobian = F.softplus(z) + F.softplus(-z) \
                 - F.softplus(self.data_constraint.log() - (1. - self.data_constraint).log())
             logdet_jacobian = sum_samples(logdet_jacobian)
 
+            # log-det Jacobian of transformation (1)
             logdet_jacobian = logdet_jacobian - np.log(256.) * z[0].numel()
 
             self._logdet_jacobian = logdet_jacobian
@@ -258,4 +262,5 @@ class Preprocess(Flow):
         return z
 
     def inverse(self, z, y=None):
+        # transform the domain of z from (-inf, inf) to (0, 1).
         return torch.sigmoid(z)
