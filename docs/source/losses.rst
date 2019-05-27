@@ -55,7 +55,14 @@ Entropy
 
 .. autoclass:: Entropy
     :members:
-    :undoc-members:       
+    :undoc-members:
+
+AnalyticalEntropy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AnalyticalEntropy
+    :members:
+    :undoc-members:
 
 StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -574,8 +574,8 @@ class DistributionBase(Distribution):
                                       sample_shape=sample_shape)
 
         if return_all:
-            x_dict.update(output_dict)
-            return x_dict
+            input_dict.update(output_dict)
+            return input_dict
 
         return output_dict
 

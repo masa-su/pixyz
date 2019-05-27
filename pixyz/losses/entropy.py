@@ -1,4 +1,6 @@
-from .losses import SetLoss
+import sympy
+
+from .losses import Loss, SetLoss
 
 
 class Entropy(SetLoss):
@@ -13,6 +15,13 @@ class Entropy(SetLoss):
 
     Note:
         This class is a special case of the :attr:`Expectation` class.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> loss = Entropy(p).eval()
     """
 
     def __init__(self, p, input_var=None):
@@ -21,6 +30,37 @@ class Entropy(SetLoss):
 
         loss = -p.log_prob().expectation(p, input_var)
         super().__init__(loss)
+
+
+class AnalyticalEntropy(Loss):
+    r"""
+    Entropy (Analytical).
+
+    .. math::
+
+        H[p] = -\mathbb{E}_{p(x)}[\log p(x)]
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> loss = AnalyticalEntropy(p).eval()
+    """
+
+    @property
+    def _symbol(self):
+        p_text = "{" + self.p.prob_text + "}"
+        return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.p.log_prob().loss_text))
+
+    def _get_eval(self, x_dict, **kwargs):
+        if not hasattr(self.p, 'distribution_torch_class'):
+            raise ValueError("Entropy of this distribution cannot be evaluated, "
+                             "got %s." % self.p.distribution_name)
+
+        entropy = self.p.get_entropy(x_dict)
+
+        return entropy, x_dict
 
 
 class CrossEntropy(SetLoss):
@@ -35,11 +75,19 @@ class CrossEntropy(SetLoss):
 
     Note:
         This class is a special case of the :attr:`Expectation` class.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> q = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> loss = CrossEntropy(p, q).eval()
     """
 
     def __init__(self, p, q, input_var=None):
         if input_var is None:
-            input_var = list(set(p.input_var + q.var))
+            input_var = list(set(p.input_var + q.input_var) - set(p.var))
 
         loss = -q.log_prob().expectation(p, input_var)
         super().__init__(loss)
@@ -57,6 +105,14 @@ class StochasticReconstructionLoss(SetLoss):
 
     Note:
         This class is a special case of the :attr:`Expectation` class.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> q = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"], features_shape=[64]) # q(z|x)
+    >>> p = Normal(loc="z", scale=torch.tensor(1.), var=["x"], cond_var=["z"], features_shape=[64]) # p(x|z)
+    >>> loss = StochasticReconstructionLoss(q, p).eval({"x": torch.randn(1,64)})
     """
 
     def __init__(self, encoder, decoder, input_var=None):
