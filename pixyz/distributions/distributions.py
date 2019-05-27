@@ -385,6 +385,11 @@ class Distribution(nn.Module):
 
         return "{} ({}): {}".format(self.prob_text, self.distribution_name, super().__repr__())
 
+    def extra_repr(self):
+        # add buffers to repr
+        buffers = ["({}): {}".format(key, value.shape) for key, value in self._buffers.items()]
+        return '\n'.join(buffers)
+
 
 class DistributionBase(Distribution):
     """Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class."""
