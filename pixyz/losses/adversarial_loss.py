@@ -82,16 +82,16 @@ class AdversarialJensenShannon(AdversarialLoss):
 
     @property
     def _symbol(self):
-        return sympy.Symbol("mean(D_{{JS}}^{{Adv}} \\left[{}||{} \\right])".format(self._p.prob_text,
-                                                                                   self._q.prob_text))
+        return sympy.Symbol("mean(D_{{JS}}^{{Adv}} \\left[{}||{} \\right])".format(self.p.prob_text,
+                                                                                   self.q.prob_text))
 
     def _get_eval(self, x_dict, discriminator=False, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = get_dict_values(self._p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_p_dict = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
         # sample x_q from q
-        x_q_dict = get_dict_values(self._q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_q_dict = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
 
         if discriminator:
             # sample y_p from d
@@ -130,10 +130,10 @@ class AdversarialJensenShannon(AdversarialLoss):
             y_p_loss = -self.bce_loss(y_p, t1)
             y_q_loss = -self.bce_loss(y_q, t2)
 
-        if self._p.distribution_name == "Data distribution":
+        if self.p.distribution_name == "Data distribution":
             y_p_loss = y_p_loss.detach()
 
-        if self._q.distribution_name == "Data distribution":
+        if self.q.distribution_name == "Data distribution":
             y_q_loss = y_q_loss.detach()
 
         return y_p_loss + y_q_loss
@@ -159,18 +159,18 @@ class AdversarialKullbackLeibler(AdversarialLoss):
 
     @property
     def _symbol(self):
-        return sympy.Symbol("mean(D_{{KL}}^{{Adv}} \\left[{}||{} \\right])".format(self._p.prob_text,
-                                                                                   self._q.prob_text))
+        return sympy.Symbol("mean(D_{{KL}}^{{Adv}} \\left[{}||{} \\right])".format(self.p.prob_text,
+                                                                                   self.q.prob_text))
 
     def _get_eval(self, x_dict, discriminator=False, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = get_dict_values(self._p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_p_dict = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
 
         if discriminator:
             # sample x_q from q
-            x_q_dict = get_dict_values(self._q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+            x_q_dict = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
 
             # sample y_p from d
             y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict)), self.d.var)[0]
@@ -218,16 +218,16 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
 
     @property
     def _symbol(self):
-        return sympy.Symbol("mean(W^{{Adv}} \\left({}, {} \\right))".format(self._p.prob_text, self._q.prob_text))
+        return sympy.Symbol("mean(W^{{Adv}} \\left({}, {} \\right))".format(self.p.prob_text, self.q.prob_text))
 
     def d_loss(self, y_p, y_q, *args, **kwargs):
         return - (torch.mean(y_p) - torch.mean(y_q))
 
     def g_loss(self, y_p, y_q, *args, **kwargs):
-        if self._p.distribution_name == "Data distribution":
+        if self.p.distribution_name == "Data distribution":
             y_p = y_p.detach()
 
-        if self._q.distribution_name == "Data distribution":
+        if self.q.distribution_name == "Data distribution":
             y_q = y_q.detach()
 
         return torch.mean(y_p) - torch.mean(y_q)

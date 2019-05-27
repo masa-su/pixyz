@@ -10,8 +10,8 @@ from ..utils import tolist
 
 class Loss(object, metaclass=abc.ABCMeta):
     def __init__(self, p, q=None, input_var=None):
-        self._p = p
-        self._q = q
+        self.p = p
+        self.q = q
 
         if input_var is not None:
             self._input_var = input_var
@@ -336,11 +336,11 @@ class Expectation(Loss):
 
     @property
     def _symbol(self):
-        p_text = "{" + self._p.prob_text + "}"
+        p_text = "{" + self.p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
     def _get_eval(self, x_dict={}, **kwargs):
-        samples_dict = self._p.sample(x_dict, sample_shape=self.sample_shape, reparam=True, return_all=True)
+        samples_dict = self.p.sample(x_dict, sample_shape=self.sample_shape, reparam=True, return_all=True)
 
         loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)  # TODO: eval or _get_eval
         samples_dict.update(loss_sample_dict)

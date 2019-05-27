@@ -25,20 +25,20 @@ class KullbackLeibler(Loss):
 
     @property
     def _symbol(self):
-        return sympy.Symbol("D_{{KL}} \\left[{}||{} \\right]".format(self._p.prob_text, self._q.prob_text))
+        return sympy.Symbol("D_{{KL}} \\left[{}||{} \\right]".format(self.p.prob_text, self.q.prob_text))
 
     def _get_eval(self, x_dict, **kwargs):
-        if (not hasattr(self._p, 'distribution_torch_class')) or (not hasattr(self._q, 'distribution_torch_class')):
+        if (not hasattr(self.p, 'distribution_torch_class')) or (not hasattr(self.q, 'distribution_torch_class')):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "
-                             "got %s and %s." % (self._p.distribution_name, self._q.distribution_name))
+                             "got %s and %s." % (self.p.distribution_name, self.q.distribution_name))
 
-        input_dict = get_dict_values(x_dict, self._p.input_var, True)
-        self._p.set_dist(input_dict)
+        input_dict = get_dict_values(x_dict, self.p.input_var, True)
+        self.p.set_dist(input_dict)
 
-        input_dict = get_dict_values(x_dict, self._q.input_var, True)
-        self._q.set_dist(input_dict)
+        input_dict = get_dict_values(x_dict, self.q.input_var, True)
+        self.q.set_dist(input_dict)
 
-        divergence = kl_divergence(self._p.dist, self._q.dist)
+        divergence = kl_divergence(self.p.dist, self.q.dist)
 
         if self.dim:
             divergence = torch.sum(divergence, dim=self.dim)
