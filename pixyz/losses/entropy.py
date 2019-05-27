@@ -1,6 +1,6 @@
 import torch
+import sympy
 
-from ..utils import get_dict_values
 from .losses import Loss, SetLoss
 
 
@@ -35,31 +35,19 @@ class AnalyticalEntropy(Loss):
         H[p] = -\mathbb{E}_{p(x)}[\log p(x)]
     """
 
-    def __init__(self, p, input_var=None, dim=None):
-        self.dim = dim
-        super().__init__(p, input_var=input_var)
-
     @property
-    def loss_text(self):
-        return "-(E_{}[log {}])".format(self._p.prob_text, self._p.prob_text)
+    def _symbol(self):
+        p_text = "{" + self.p.prob_text + "}"
+        return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.p.log_prob().loss_text))
 
-    def _get_eval(self, x, **kwargs):
-        if not hasattr(self._p, 'distribution_torch_class'):
+    def _get_eval(self, x_dict, **kwargs):
+        if not hasattr(self.p, 'distribution_torch_class'):
             raise ValueError("Entropy of this distribution cannot be evaluated, "
-                             "got %s." % self._p.distribution_name)
+                             "got %s." % self.p.distribution_name)
 
-        inputs = get_dict_values(x, self._p.input_var, True)
-        self._p.set_dist(inputs)
+        entropy = self.p.get_entropy(x_dict)
 
-        entropy = self._p.dist.entropy()
-
-        if self.dim:
-            entropy = torch.sum(entropy, dim=self.dim)
-            return entropy, x
-
-        dim_list = list(torch.arange(entropy.dim()))
-        entropy = torch.sum(entropy, dim=dim_list[1:])
-        return entropy, x
+        return entropy, x_dict
 
 
 class CrossEntropy(SetLoss):
