@@ -183,7 +183,7 @@ class Distribution(nn.Module):
         >>> print(dist_2.prob_text, dist_2.distribution_name)
         p(x|z) Normal
         >>> dist_2.get_params({"z": torch.tensor(1.)})
-        {'scale': tensor(1.), 'loc': tensor([[0.]])}
+        {'scale': tensor(1.), 'loc': tensor([0.])}
 
         """
         raise NotImplementedError
@@ -379,16 +379,21 @@ class Distribution(nn.Module):
         text += "Network architecture:\n{}".format(network_text)
         return text
 
-    def __repr__(self, network_only=False):
-        if network_only:
-            return super().__repr__()
-
-        return "{} ({}): {}".format(self.prob_text, self.distribution_name, super().__repr__())
-
     def extra_repr(self):
-        # add buffers to repr
-        buffers = ["({}): {}".format(key, value.shape) for key, value in self._buffers.items()]
-        return '\n'.join(buffers)
+        # parameters
+        parameters_text = 'name={}, distribution_name={},\n' \
+                          'var={}, cond_var={}, input_var={}, ' \
+                          'features_shape={}'.format(self.name, self.distribution_name,
+                                                     self.var, self.cond_var, self.input_var,
+                                                     self.features_shape
+                                                     )
+
+        if len(self._buffers) != 0:
+            # add buffers to repr
+            buffers = ["({}): {}".format(key, value.shape) for key, value in self._buffers.items()]
+            return parameters_text + "\n" + "\n".join(buffers)
+
+        return parameters_text
 
 
 class DistributionBase(Distribution):
@@ -720,8 +725,8 @@ class MultiplyDistribution(Distribution):
         raise ValueError("Two PDFs, {} and {}, have different sizes,"
                          " so you must set sum_dim=True.".format(self._parent.prob_text, self._child.prob_text))
 
-    def __repr__(self, network_only=False):
-        return self._parent.__repr__(network_only) + "\n" + self._child.__repr__(network_only)
+    def __repr__(self):
+        return self._parent.__repr__() + "\n" + self._child.__repr__()
 
 
 class ReplaceVarDistribution(Distribution):
@@ -729,38 +734,38 @@ class ReplaceVarDistribution(Distribution):
 
     Examples
     --------
-    >>> a = DistributionBase(var=["x"], cond_var=["z"])
-    >>> print(a.prob_text)
+    >>> p = DistributionBase(var=["x"], cond_var=["z"])
+    >>> print(p.prob_text)
     p(x|z)
     >>> replace_dict = {'x': 'y'}
-    >>> p_repl = ReplaceVarDistribution(a, replace_dict)
+    >>> p_repl = ReplaceVarDistribution(p, replace_dict)
     >>> print(p_repl.prob_text)
     p(y|z)
 
     """
 
-    def __init__(self, a, replace_dict):
+    def __init__(self, p, replace_dict):
         """
         Parameters
         ----------
-        a : pixyz.Distribution (not pixyz.MultiplyDistribution)
+        p : pixyz.Distribution (not pixyz.MultiplyDistribution)
             Distribution.
 
         replace_dict : dict
             Dictionary.
 
         """
-        if not isinstance(a, Distribution):
-            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(a)))
+        if not isinstance(p, Distribution):
+            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(p)))
 
-        if isinstance(a, MultiplyDistribution):
+        if isinstance(p, MultiplyDistribution):
             raise ValueError("`pixyz.MultiplyDistribution` is not supported for now.")
 
-        if isinstance(a, MarginalizeVarDistribution):
+        if isinstance(p, MarginalizeVarDistribution):
             raise ValueError("`pixyz.MarginalizeVarDistribution` is not supported for now.")
 
-        _cond_var = deepcopy(a.cond_var)
-        _var = deepcopy(a.var)
+        _cond_var = deepcopy(p.cond_var)
+        _var = deepcopy(p.var)
         all_vars = _cond_var + _var
 
         if not (set(replace_dict.keys()) <= set(all_vars)):
@@ -775,29 +780,29 @@ class ReplaceVarDistribution(Distribution):
 
         _cond_var = [replace_dict[var] if var in replace_dict.keys() else var for var in _cond_var]
         _var = [replace_dict[var] if var in replace_dict.keys() else var for var in _var]
-        super().__init__(cond_var=_cond_var, var=_var, name=a.name, features_shape=a.features_shape)
+        super().__init__(cond_var=_cond_var, var=_var, name=p.name, features_shape=p.features_shape)
 
-        self._a = a
-        _input_var = [replace_dict[var] if var in replace_dict.keys() else var for var in a.input_var]
+        self.p = p
+        _input_var = [replace_dict[var] if var in replace_dict.keys() else var for var in p.input_var]
         self._input_var = _input_var
 
     def forward(self, *args, **kwargs):
-        return self._a.forward(*args, **kwargs)
+        return self.p.forward(*args, **kwargs)
 
     def get_params(self, params_dict={}):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
-        return self._a.get_params(params_dict)
+        return self.p.get_params(params_dict)
 
     def set_dist(self, x_dict={}, sampling=False, batch_n=None, **kwargs):
         x_dict = replace_dict_keys(x_dict, self._replace_inv_cond_var_dict)
-        return self._a.set_dist(x_dict=x_dict, sampling=sampling, batch_n=batch_n, **kwargs)
+        return self.p.set_dist(x_dict=x_dict, sampling=sampling, batch_n=batch_n, **kwargs)
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
-        output_dict = self._a.sample(replaced_input_dict, batch_n=batch_n, sample_shape=sample_shape,
-                                     return_all=False, reparam=reparam)
+        output_dict = self.p.sample(replaced_input_dict, batch_n=batch_n, sample_shape=sample_shape,
+                                    return_all=False, reparam=reparam)
         output_dict = replace_dict_keys(output_dict, self._replace_dict)
 
         x_dict.update(output_dict)
@@ -806,17 +811,17 @@ class ReplaceVarDistribution(Distribution):
     def get_log_prob(self, x_dict, **kwargs):
         input_dict = get_dict_values(x_dict, self.cond_var + self.var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
-        return self._a.get_log_prob(input_dict, **kwargs)
+        return self.p.get_log_prob(input_dict, **kwargs)
 
     def sample_mean(self, x_dict={}):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
-        return self._a.sample_mean(input_dict)
+        return self.p.sample_mean(input_dict)
 
     def sample_variance(self, x_dict={}):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
-        return self._a.sample_variance(input_dict)
+        return self.p.sample_variance(input_dict)
 
     @property
     def input_var(self):
@@ -824,19 +829,13 @@ class ReplaceVarDistribution(Distribution):
 
     @property
     def distribution_name(self):
-        return self._a.distribution_name
-
-    def __repr__(self, network_only=False):
-        if network_only:
-            super().__repr__(network_only=True)
-
-        return "{} ({}): {}".format(self.prob_text, self.distribution_name, self._a.__repr__(network_only=True))
+        return self.p.distribution_name
 
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)
         except AttributeError:
-            return self._a.__getattribute__(item)
+            return self.p.__getattribute__(item)
 
 
 class MarginalizeVarDistribution(Distribution):
@@ -858,11 +857,11 @@ class MarginalizeVarDistribution(Distribution):
 
     """
 
-    def __init__(self, a, marginalize_list):
+    def __init__(self, p, marginalize_list):
         """
         Parameters
         ----------
-        a : pixyz.Distribution (not pixyz.DistributionBase)
+        p : pixyz.Distribution (not pixyz.DistributionBase)
             Distribution.
 
         marginalize_list : list
@@ -871,14 +870,14 @@ class MarginalizeVarDistribution(Distribution):
         """
         marginalize_list = tolist(marginalize_list)
 
-        if not isinstance(a, Distribution):
-            raise ValueError("Given input must be `pixyz.Distribution`, got {}.".format(type(a)))
+        if not isinstance(p, Distribution):
+            raise ValueError("Given input must be `pixyz.Distribution`, got {}.".format(type(p)))
 
-        if isinstance(a, DistributionBase):
+        if isinstance(p, DistributionBase):
             raise ValueError("`pixyz.DistributionBase` cannot marginalize its variables for now.")
 
-        _var = deepcopy(a.var)
-        _cond_var = deepcopy(a.cond_var)
+        _var = deepcopy(p.var)
+        _cond_var = deepcopy(p.cond_var)
 
         if not((set(marginalize_list)) < set(_var)):
             raise ValueError()
@@ -891,36 +890,36 @@ class MarginalizeVarDistribution(Distribution):
 
         _var = [var for var in _var if var not in marginalize_list]
 
-        super().__init__(cond_var=_cond_var, var=_var, name=a.name, features_shape=a.features_shape)
-        self._a = a
+        super().__init__(cond_var=_cond_var, var=_var, name=p.name, features_shape=p.features_shape)
+        self.p = p
         self._marginalize_list = marginalize_list
 
     def forward(self, *args, **kwargs):
-        return self._a.forward(*args, **kwargs)
+        return self.p.forward(*args, **kwargs)
 
     def get_params(self, params_dict={}):
-        return self._a.get_params(params_dict)
+        return self.p.get_params(params_dict)
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
-        output_dict = self._a.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
-                                     reparam=reparam)
+        output_dict = self.p.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
+                                    reparam=reparam)
         output_dict = delete_dict_values(output_dict, self._marginalize_list)
 
         return output_dict
 
     def sample_mean(self, x_dict={}):
-        return self._a.sample_mean(x_dict)
+        return self.p.sample_mean(x_dict)
 
     def sample_variance(self, x_dict={}):
-        return self._a.sample_variance(x_dict)
+        return self.p.sample_variance(x_dict)
 
     @property
     def input_var(self):
-        return self._a.input_var
+        return self.p.input_var
 
     @property
     def distribution_name(self):
-        return self._a.distribution_name
+        return self.p.distribution_name
 
     @property
     def prob_factorized_text(self):
@@ -928,13 +927,13 @@ class MarginalizeVarDistribution(Distribution):
         integral_variables = ["d" + str(var) for var in self._marginalize_list]
         integral_variables = "".join(integral_variables)
 
-        return "{}{}{}".format(integral_symbol, self._a.prob_factorized_text, integral_variables)
+        return "{}{}{}".format(integral_symbol, self.p.prob_factorized_text, integral_variables)
 
-    def __repr__(self, network_only=False):
-        return self._a.__repr__(network_only)
+    def __repr__(self):
+        return self.p.__repr__()
 
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)
         except AttributeError:
-            return self._a.__getattribute__(item)
+            return self.p.__getattribute__(item)

@@ -148,7 +148,7 @@ class InverseTransformedDistribution(Distribution):
 
     def __init__(self, prior, flow, var, cond_var=[], name="p"):
         if flow.in_features:
-            features_shape=[flow.in_features]
+            features_shape = [flow.in_features]
         else:
             features_shape = torch.Size()
 
