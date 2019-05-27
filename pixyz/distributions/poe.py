@@ -114,7 +114,7 @@ class ProductOfNormal(Normal):
         if self.prob_factorized_text == self.prob_text:
             prob_text = self.prob_text
         else:
-            prob_text = "{} \propto {}".format(self.prob_text, self.prob_factorized_text)
+            prob_text = "{} \\propto {}".format(self.prob_text, self.prob_factorized_text)
         return prob_text
 
     def _get_expert_params(self, params_dict={}, **kwargs):
