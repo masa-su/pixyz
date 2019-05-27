@@ -14,9 +14,17 @@ class KullbackLeibler(Loss):
 
         D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
 
-    TODO:
-        This class seems to be slightly slower than this previous implementation
-        (perhaps because of :attr:`set_dist`).
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal, Beta
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["z"], features_shape=[64], name="p")
+    >>> q = Beta(concentration0=torch.tensor(1.), concentration1=torch.tensor(1.),
+    ...          var=["z"], features_shape=[64], name="q")
+    >>> loss_cls = KullbackLeibler(p, q)
+    >>> print(loss_cls)
+    D_{KL} \left[p(z)||q(z) \right]
+    >>> loss = loss_cls.eval()
     """
 
     def __init__(self, p, q, input_var=None, dim=None):

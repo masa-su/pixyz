@@ -10,6 +10,16 @@ class LogProb(Loss):
     .. math::
 
         \log p(x)
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> loss_cls = LogProb(p)  # or p.log_prob()
+    >>> print(loss_cls)
+    \log p(x)
+    >>> loss = loss_cls.eval({"x": torch.randn(1,64)})
     """
 
     def __init__(self, p, sum_features=True, feature_dims=None):
@@ -34,6 +44,16 @@ class Prob(LogProb):
     .. math::
 
         p(x) = \exp(\log p(x))
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> loss_cls = Prob(p)  # or p.prob()
+    >>> print(loss_cls)
+    p(x)
+    >>> loss = loss_cls.eval({"x": torch.randn(1,64)})
     """
 
     @property

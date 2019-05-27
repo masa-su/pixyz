@@ -21,7 +21,10 @@ class Entropy(SetLoss):
     >>> import torch
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> loss = Entropy(p).eval()
+    >>> loss_cls = Entropy(p)
+    >>> print(loss_cls)
+    - \mathbb{E}_{p(x)} \left[\log p(x) \right]
+    >>> loss = loss_cls.eval()
     """
 
     def __init__(self, p, input_var=None):
@@ -34,7 +37,7 @@ class Entropy(SetLoss):
 
 class AnalyticalEntropy(Loss):
     r"""
-    Entropy (Analytical).
+    Entropy (analytical).
 
     .. math::
 
@@ -45,13 +48,16 @@ class AnalyticalEntropy(Loss):
     >>> import torch
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> loss = AnalyticalEntropy(p).eval()
+    >>> loss_cls = AnalyticalEntropy(p)
+    >>> print(loss_cls)
+    - \mathbb{E}_{p(x)} \left[\log p(x) \right]
+    >>> loss = loss_cls.eval()
     """
 
     @property
     def _symbol(self):
         p_text = "{" + self.p.prob_text + "}"
-        return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.p.log_prob().loss_text))
+        return sympy.Symbol("- \\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.p.log_prob().loss_text))
 
     def _get_eval(self, x_dict, **kwargs):
         if not hasattr(self.p, 'distribution_torch_class'):
@@ -80,9 +86,12 @@ class CrossEntropy(SetLoss):
     --------
     >>> import torch
     >>> from pixyz.distributions import Normal
-    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> q = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> loss = CrossEntropy(p, q).eval()
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="p")
+    >>> q = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="q")
+    >>> loss_cls = CrossEntropy(p, q)
+    >>> print(loss_cls)
+    - \mathbb{E}_{p(x)} \left[\log q(x) \right]
+    >>> loss = loss_cls.eval()
     """
 
     def __init__(self, p, q, input_var=None):
@@ -110,9 +119,12 @@ class StochasticReconstructionLoss(SetLoss):
     --------
     >>> import torch
     >>> from pixyz.distributions import Normal
-    >>> q = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"], features_shape=[64]) # q(z|x)
-    >>> p = Normal(loc="z", scale=torch.tensor(1.), var=["x"], cond_var=["z"], features_shape=[64]) # p(x|z)
-    >>> loss = StochasticReconstructionLoss(q, p).eval({"x": torch.randn(1,64)})
+    >>> q = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"], features_shape=[64], name="q") # q(z|x)
+    >>> p = Normal(loc="z", scale=torch.tensor(1.), var=["x"], cond_var=["z"], features_shape=[64], name="p") # p(x|z)
+    >>> loss_cls = StochasticReconstructionLoss(q, p)
+    >>> print(loss_cls)
+    - \mathbb{E}_{q(z|x)} \left[\log p(x|z) \right]
+    >>> loss = loss_cls.eval({"x": torch.randn(1,64)})
     """
 
     def __init__(self, encoder, decoder, input_var=None):

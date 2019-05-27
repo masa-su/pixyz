@@ -25,10 +25,39 @@ class MixtureModel(Distribution):
     >>> probs = torch.empty(z_dim).fill_(1. / z_dim)  # initialize the value of probabilities
     >>> prior = Categorical(probs=probs, var=["z"], name="prior")
     >>> p = MixtureModel(distributions=distributions, prior=prior)
-    >>> print(p.prob_text)
-    p(x)
-    >>> print(p.prob_factorized_text)
-    p_0(x|z=0)prior(z=0) + p_1(x|z=1)prior(z=1) + p_2(x|z=2)prior(z=2)
+    >>> print(p)
+    Distribution:
+      p(x) = p_0(x|z=0)prior(z=0) + p_1(x|z=1)prior(z=1) + p_2(x|z=2)prior(z=2)
+    Network architecture:
+      MixtureModel(
+        name=p, distribution_name=Mixture Model,
+        var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([])
+        (distributions): ModuleList(
+          (0): Normal(
+            name=p_0, distribution_name=Normal,
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
+            (loc): torch.Size([1, 2])
+            (scale): torch.Size([1, 2])
+          )
+          (1): Normal(
+            name=p_1, distribution_name=Normal,
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
+            (loc): torch.Size([1, 2])
+            (scale): torch.Size([1, 2])
+          )
+          (2): Normal(
+            name=p_2, distribution_name=Normal,
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
+            (loc): torch.Size([1, 2])
+            (scale): torch.Size([1, 2])
+          )
+        )
+        (prior): Categorical(
+          name=prior, distribution_name=Categorical,
+          var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([3])
+          (probs): torch.Size([1, 3])
+        )
+      )
     """
 
     def __init__(self, distributions, prior, name="p"):

@@ -14,6 +14,18 @@ class MMD(Loss):
         - 2\mathbb{E}_{p(x), q(x')}[k(x, x')]
 
     where :math:`k(x, x')` is any positive definite kernel.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"], features_shape=[64], name="p")
+    >>> q = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"], features_shape=[64], name="q")
+    >>> loss_cls = MMD(p, q, kernel="gaussian")
+    >>> print(loss_cls)
+    D_{MMD^2} \left[p(z|x)||q(z|x) \right]
+    >>> loss = loss_cls.eval({"x": torch.randn(1, 64)})
+    >>> loss = MMD(p, q, kernel="inv-multiquadratic").eval({"x": torch.randn(10, 64)})
     """
 
     def __init__(self, p, q, input_var=None, kernel="gaussian", **kernel_params):
