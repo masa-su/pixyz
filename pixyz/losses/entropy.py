@@ -1,4 +1,3 @@
-import torch
 import sympy
 
 from .losses import Loss, SetLoss
@@ -16,6 +15,13 @@ class Entropy(SetLoss):
 
     Note:
         This class is a special case of the :attr:`Expectation` class.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> loss = Entropy(p).eval()
     """
 
     def __init__(self, p, input_var=None):
@@ -33,6 +39,13 @@ class AnalyticalEntropy(Loss):
     .. math::
 
         H[p] = -\mathbb{E}_{p(x)}[\log p(x)]
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> loss = AnalyticalEntropy(p).eval()
     """
 
     @property
@@ -62,11 +75,19 @@ class CrossEntropy(SetLoss):
 
     Note:
         This class is a special case of the :attr:`Expectation` class.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> q = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> loss = CrossEntropy(p, q).eval()
     """
 
     def __init__(self, p, q, input_var=None):
         if input_var is None:
-            input_var = list(set(p.input_var + q.var))
+            input_var = list(set(p.input_var + q.input_var) - set(p.var))
 
         loss = -q.log_prob().expectation(p, input_var)
         super().__init__(loss)
