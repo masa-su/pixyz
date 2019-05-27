@@ -55,7 +55,7 @@ class MixtureModel(Distribution):
             raise ValueError("The prior must be the categorical distribution.")
 
         # check the number of mixture
-        if len(prior.get_params()["probs"].shape[-1]) != len(distributions):
+        if prior.get_params()["probs"].shape[-1] != len(distributions):
             raise ValueError("The number of its category must be the same as the length of the distribution list.")
 
         # check whether all distributions have the same variable.
@@ -71,10 +71,15 @@ class MixtureModel(Distribution):
 
         super().__init__(var=var_list, name=name)
 
-        self._distributions = distributions
-        self._prior = prior
+        self.distributions = distributions
+        self.prior = prior
 
         self._hidden_var = hidden_var
+
+    @property
+    def hidden_var(self):
+        """list: Hidden variables of this distribution."""
+        return self._hidden_var
 
     @property
     def prob_text(self):
@@ -87,10 +92,10 @@ class MixtureModel(Distribution):
     @property
     def prob_factorized_text(self):
         _mixture_prob_text = []
-        for i, d in enumerate(self._distributions):
+        for i, d in enumerate(self.distributions):
             _mixture_prob_text.append("{}({}|{}={}){}({}={})".format(
-                d.name, self._var[0], self._hidden_var[0], i,
-                self._prior.name, self._hidden_var[0], i
+                d.name, self.var[0], self._hidden_var[0], i,
+                self.prior.name, self._hidden_var[0], i
             ))
 
         _prob_text = ' + '.join(_mixture_prob_text)
@@ -104,21 +109,19 @@ class MixtureModel(Distribution):
     def posterior(self, name=None):
         return PosteriorMixtureModel(self, name=name)
 
-    def sample(self, batch_size=1, return_hidden=False, **kwargs):
-        hidden_output = []
+    def sample(self, batch_n=None, sample_shape=torch.Size(), return_hidden=False, **kwargs):
+        # sample from prior
+        hidden_output = self.prior.sample(batch_n=batch_n)[self._hidden_var[0]]
+
         var_output = []
+        for _hidden_output in hidden_output:
+            var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample()[self._var[0]])
 
-        for i in range(batch_size):
-            # sample from prior
-            _hidden_output = self._prior.sample()[self._hidden_var[0]]
-            hidden_output.append(_hidden_output)
-
-            var_output.append(self._distributions[_hidden_output.argmax(dim=-1)].sample()[self._var[0]])
-
-        output_dict = {self._var[0]: torch.cat(var_output, 0)}
+        var_output = torch.cat(var_output, dim=0)
+        output_dict = {self._var[0]: var_output}
 
         if return_hidden:
-            output_dict.update({self._hidden_var[0]: torch.cat(hidden_output, 0)})
+            output_dict.update({self._hidden_var[0]: hidden_output})
 
         return output_dict
 
@@ -150,11 +153,11 @@ class MixtureModel(Distribution):
         log_prob_all = []
 
         _device = x_dict[self._var[0]].device
-        eye_tensor = torch.eye(len(self._distributions)).to(_device)  # for prior
+        eye_tensor = torch.eye(len(self.distributions)).to(_device)  # for prior
 
-        for i, d in enumerate(self._distributions):
+        for i, d in enumerate(self.distributions):
             # p(z=i)
-            prior_log_prob = self._prior.log_prob().eval({self._hidden_var[0]: eye_tensor[i]})
+            prior_log_prob = self.prior.log_prob().eval({self._hidden_var[0]: eye_tensor[i]})
             # p(x|z=i)
             log_prob = d.log_prob().eval(x_dict)
             # p(x, z=i)
@@ -174,8 +177,13 @@ class PosteriorMixtureModel(Distribution):
             name = p.name
         super().__init__(var=p.var, name=name)
 
-        self._p = p
-        self._hidden_var = p._hidden_var
+        self.p = p
+        self._hidden_var = p.hidden_var
+
+    @property
+    def hidden_var(self):
+        """list: Hidden variables of this distribution."""
+        return self._hidden_var
 
     @property
     def prob_text(self):
@@ -203,5 +211,5 @@ class PosteriorMixtureModel(Distribution):
 
     def get_log_prob(self, x_dict, **kwargs):
         # log p(z|x) = log p(x, z) - log p(x)
-        log_prob = self._p.get_log_prob(x_dict, return_hidden=True) - self._p.get_log_prob(x_dict)
+        log_prob = self.p.get_log_prob(x_dict, return_hidden=True) - self.p.get_log_prob(x_dict)
         return log_prob  # (num_mix, batch_size)
