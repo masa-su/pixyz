@@ -62,7 +62,7 @@ class ProductOfNormal(Normal):
 
     """
 
-    def __init__(self, p=[], name="p", dim=1):
+    def __init__(self, p=[], name="p", features_shape=torch.Size()):
         """
         Parameters
         ----------
@@ -71,10 +71,8 @@ class ProductOfNormal(Normal):
         name : :obj:`str`, defaults to "p"
             Name of this distribution.
             This name is displayed in prob_text and prob_factorized_text.
-        dim : :obj:`int`, defaults to 1
-            Number of dimensions of this distribution.
-            This might be ignored depending on the shape which is set in the sample method and on its parent distribution.
-            Moreover, this is not consider when this class is inherited by DNNs.
+        features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size())
+            Shape of dimensions (features) of this distribution.
 
         """
         p = tolist(p)
@@ -93,7 +91,7 @@ class ProductOfNormal(Normal):
 
             cond_var += _p.cond_var
 
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim)
+        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
         if len(p) == 1:
             self.p = p[0]
         else:
@@ -101,16 +99,22 @@ class ProductOfNormal(Normal):
 
     @property
     def prob_factorized_text(self):
-        if len(self._cond_var) == 0:
-            prob_text = "p({})".format(
-                ','.join(self._var)
-            )
-        else:
-            prob_text = "p({}|{})".format(
-                ','.join(self._var),
-                ','.join(self._cond_var)
-            )
+        prob_text = "p({})".format(
+            ','.join(self._var)
+        )
 
+        if len(self._cond_var) != 0:
+            prob_text += "".join([p.prob_text for p in self.p])
+
+        return prob_text
+
+    @property
+    def prob_joint_factorized_and_text(self):
+        """str: Return a formula of the factorized probability distribution."""
+        if self.prob_factorized_text == self.prob_text:
+            prob_text = self.prob_text
+        else:
+            prob_text = "{} \\propto {}".format(self.prob_text, self.prob_factorized_text)
         return prob_text
 
     def _get_expert_params(self, params_dict={}, **kwargs):
@@ -278,7 +282,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
     """
 
-    def __init__(self, p, name="p", dim=1):
+    def __init__(self, p, name="p", features_shape=torch.Size()):
         r"""
         Parameters
         ----------
@@ -289,17 +293,14 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         name : str, defaults to "p"
             Name of this distribution.
             This name is displayed in prob_text and prob_factorized_text.
-        dim : int, defaults to 1
-            Number of dimensions of this distribution.
-            This might be ignored depending on the shape which is set in the sample method and on its parent
-            distribution.
-            Moreover, this is not consider when this class is inherited by DNNs.
+        features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size())
+            Shape of dimensions (features) of this distribution.
 
         """
         if len(p.cond_var) != 1:
             raise ValueError
 
-        super().__init__(p=p, name=name, dim=dim)
+        super().__init__(p=p, name=name, features_shape=features_shape)
 
     def _check_input(self, x, var=None):
         if var is None:

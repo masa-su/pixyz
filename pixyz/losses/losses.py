@@ -1,5 +1,6 @@
 import abc
 import sympy
+import torch
 
 import numbers
 from copy import deepcopy
@@ -9,8 +10,8 @@ from ..utils import tolist
 
 class Loss(object, metaclass=abc.ABCMeta):
     def __init__(self, p, q=None, input_var=None):
-        self._p = p
-        self._q = q
+        self.p = p
+        self.q = q
 
         if input_var is not None:
             self._input_var = input_var
@@ -76,22 +77,22 @@ class Loss(object, metaclass=abc.ABCMeta):
     def sum(self):
         return BatchSum(self)
 
-    def eval(self, x={}, return_dict=False, **kwargs):
-        if not(set(list(x.keys())) >= set(self._input_var)):
-            raise ValueError("Input keys are not valid, got {}.".format(list(x.keys())))
+    def eval(self, x_dict={}, return_dict=False, **kwargs):
+        if not(set(list(x_dict.keys())) >= set(self._input_var)):
+            raise ValueError("Input keys are not valid, got {}.".format(list(x_dict.keys())))
 
-        loss, x = self._get_eval(x, **kwargs)
+        loss, x_dict = self._get_eval(x_dict, **kwargs)
 
         if return_dict:
-            return loss, x
+            return loss, x_dict
 
         return loss
 
-    def expectation(self, p, input_var=None):
-        return Expectation(p, self, input_var=input_var)
+    def expectation(self, p, input_var=None, sample_shape=torch.Size()):
+        return Expectation(p, self, input_var=input_var, sample_shape=sample_shape)
 
     @abc.abstractmethod
-    def _get_eval(self, x, **kwargs):
+    def _get_eval(self, x_dict, **kwargs):
         raise NotImplementedError
 
 
@@ -100,8 +101,8 @@ class ValueLoss(Loss):
         self._loss1 = loss1
         self._input_var = []
 
-    def _get_eval(self, x={}, **kwargs):
-        return self._loss1, x
+    def _get_eval(self, x_dict={}, **kwargs):
+        return self._loss1, x_dict
 
     @property
     def _symbol(self):
@@ -114,8 +115,8 @@ class Parameter(Loss):
             raise ValueError
         self._input_var = tolist(input_var)
 
-    def _get_eval(self, x={}, **kwargs):
-        return x[self._input_var[0]], x
+    def _get_eval(self, x_dict={}, **kwargs):
+        return x_dict[self._input_var[0]], x_dict
 
     @property
     def _symbol(self):
@@ -150,15 +151,15 @@ class LossOperator(Loss):
         self._loss1 = loss1
         self._loss2 = loss2
 
-    def _get_eval(self, x={}, **kwargs):
+    def _get_eval(self, x_dict={}, **kwargs):
         if not isinstance(self._loss1, type(None)):
-            loss1, x1 = self._loss1._get_eval(x, **kwargs)
+            loss1, x1 = self._loss1._get_eval(x_dict, **kwargs)
         else:
             loss1 = 0
             x1 = {}
 
         if not isinstance(self._loss2, type(None)):
-            loss2, x2 = self._loss2._get_eval(x, **kwargs)
+            loss2, x2 = self._loss2._get_eval(x_dict, **kwargs)
         else:
             loss2 = 0
             x2 = {}
@@ -173,9 +174,9 @@ class AddLoss(LossOperator):
     def _symbol(self):
         return self._loss1._symbol + self._loss2._symbol
 
-    def _get_eval(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_eval(x, **kwargs)
-        return loss1 + loss2, x
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+        return loss1 + loss2, x_dict
 
 
 class SubLoss(LossOperator):
@@ -183,9 +184,9 @@ class SubLoss(LossOperator):
     def _symbol(self):
         return self._loss1._symbol - self._loss2._symbol
 
-    def _get_eval(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_eval(x, **kwargs)
-        return loss1 - loss2, x
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+        return loss1 - loss2, x_dict
 
 
 class MulLoss(LossOperator):
@@ -193,9 +194,9 @@ class MulLoss(LossOperator):
     def _symbol(self):
         return self._loss1._symbol * self._loss2._symbol
 
-    def _get_eval(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_eval(x, **kwargs)
-        return loss1 * loss2, x
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+        return loss1 * loss2, x_dict
 
 
 class DivLoss(LossOperator):
@@ -203,9 +204,9 @@ class DivLoss(LossOperator):
     def _symbol(self):
         return self._loss1._symbol / self._loss2._symbol
 
-    def _get_eval(self, x={}, **kwargs):
-        loss1, loss2, x = super()._get_eval(x, **kwargs)
-        return loss1 / loss2, x
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+        return loss1 / loss2, x_dict
 
 
 class LossSelfOperator(Loss):
@@ -225,11 +226,11 @@ class LossSelfOperator(Loss):
         self._input_var = _input_var
         self._loss1 = loss1
 
-    def train(self, x={}, **kwargs):
-        return self._loss1.train(x, **kwargs)
+    def train(self, x_dict={}, **kwargs):
+        return self._loss1.train(x_dict, **kwargs)
 
-    def test(self, x={}, **kwargs):
-        return self._loss1.test(x, **kwargs)
+    def test(self, x_dict={}, **kwargs):
+        return self._loss1.test(x_dict, **kwargs)
 
 
 class NegLoss(LossSelfOperator):
@@ -237,9 +238,9 @@ class NegLoss(LossSelfOperator):
     def _symbol(self):
         return -self._loss1._symbol
 
-    def _get_eval(self, x={}, **kwargs):
-        loss, x = self._loss1._get_eval(x, **kwargs)
-        return -loss, x
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss, x_dict = self._loss1._get_eval(x_dict, **kwargs)
+        return -loss, x_dict
 
 
 class AbsLoss(LossSelfOperator):
@@ -247,9 +248,9 @@ class AbsLoss(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("|{}|".format(self._loss1.loss_text))
 
-    def _get_eval(self, x={}, **kwargs):
-        loss, x = self._loss1._get_eval(x, **kwargs)
-        return loss.abs(), x
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss, x_dict = self._loss1._get_eval(x_dict, **kwargs)
+        return loss.abs(), x_dict
 
 
 class BatchMean(LossSelfOperator):
@@ -267,9 +268,9 @@ class BatchMean(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("mean \\left({} \\right)".format(self._loss1.loss_text))  # TODO: fix it
 
-    def _get_eval(self, x={}, **kwargs):
-        loss, x = self._loss1._get_eval(x, **kwargs)
-        return loss.mean(), x
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss, x_dict = self._loss1._get_eval(x_dict, **kwargs)
+        return loss.mean(), x_dict
 
 
 class BatchSum(LossSelfOperator):
@@ -287,9 +288,9 @@ class BatchSum(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("sum \\left({} \\right)".format(self._loss1.loss_text))  # TODO: fix it
 
-    def _get_eval(self, x={}, **kwargs):
-        loss, x = self._loss1._get_eval(x, **kwargs)
-        return loss.sum(), x
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss, x_dict = self._loss1._get_eval(x_dict, **kwargs)
+        return loss.sum(), x_dict
 
 
 class SetLoss(Loss):
@@ -300,8 +301,8 @@ class SetLoss(Loss):
     def __getattr__(self, name):
         getattr(self._loss, name)
 
-    def _get_eval(self, x, **kwargs):
-        return self._loss._get_eval(x, **kwargs)
+    def _get_eval(self, x_dict, **kwargs):
+        return self._loss._get_eval(x_dict, **kwargs)
 
     @property
     def _symbol(self):
@@ -324,25 +325,27 @@ class Expectation(Loss):
     Therefore, in this class, :math:`f` is assumed to :attr:`pixyz.Loss`.
     """
 
-    def __init__(self, p, f, input_var=None):
+    def __init__(self, p, f, input_var=None, sample_shape=torch.Size()):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
         self._f = f
+        self.sample_shape = torch.Size(sample_shape)
 
         super().__init__(p, input_var=input_var)
 
     @property
     def _symbol(self):
-        p_text = "{" + self._p.prob_text + "}"
+        p_text = "{" + self.p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
-    def _get_eval(self, x={}, shape=None, batch_size=1, reparam=True, **kwargs):
-        samples_dict = self._p.sample(x, shape=shape, batch_size=batch_size,
-                                      reparam=reparam, return_all=True)
+    def _get_eval(self, x_dict={}, **kwargs):
+        samples_dict = self.p.sample(x_dict, sample_shape=self.sample_shape, reparam=True, return_all=True)
 
-        # TODO: whether eval or _get_eval
-        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)
+        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)  # TODO: eval or _get_eval
         samples_dict.update(loss_sample_dict)
+
+        # sum over sample_shape
+        loss = loss.view(self.sample_shape.numel(), -1).mean(dim=0)
 
         return loss, samples_dict

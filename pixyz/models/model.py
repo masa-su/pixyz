@@ -56,11 +56,11 @@ class Model(object):
         else:
             self.test_loss_cls = loss
 
-    def train(self, train_x={}, **kwargs):
+    def train(self, train_x_dict={}, **kwargs):
         self.distributions.train()
 
         self.optimizer.zero_grad()
-        loss = self.loss_cls.eval(train_x, **kwargs)
+        loss = self.loss_cls.eval(train_x_dict, **kwargs)
 
         # backprop
         loss.backward()
@@ -75,10 +75,10 @@ class Model(object):
 
         return loss
 
-    def test(self, test_x={}, **kwargs):
+    def test(self, test_x_dict={}, **kwargs):
         self.distributions.eval()
 
         with torch.no_grad():
-            loss = self.test_loss_cls.eval(test_x, **kwargs)
+            loss = self.test_loss_cls.eval(test_x_dict, **kwargs)
 
         return loss

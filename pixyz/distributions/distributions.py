@@ -1,6 +1,5 @@
 from __future__ import print_function
 import torch
-import numbers
 import re
 from torch import nn
 from copy import deepcopy
@@ -13,7 +12,7 @@ from ..losses import LogProb, Prob
 class Distribution(nn.Module):
     """Distribution class. In Pixyz, all distributions are required to inherit this class."""
 
-    def __init__(self, var, cond_var=[], name="p", dim=1):
+    def __init__(self, var, cond_var=[], name="p", features_shape=torch.Size()):
         """
         Parameters
         ----------
@@ -25,11 +24,8 @@ class Distribution(nn.Module):
         name : :obj:`str`, defaults to "p"
             Name of this distribution.
             This name is displayed in :attr:`prob_text` and :attr:`prob_factorized_text`.
-        dim : :obj:`int`, defaults to 1
-            Number of dimensions of this distribution.
-            This might be ignored depending on the shape which is set in the sample method and on its parent
-            distribution.
-            Moreover, this is not consider when this class is inherited by DNNs.
+        features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size())
+            Shape of dimensions (features) of this distribution.
 
         """
         super().__init__()
@@ -40,7 +36,8 @@ class Distribution(nn.Module):
 
         self._cond_var = cond_var
         self._var = var
-        self._dim = dim
+
+        self._features_shape = torch.Size(features_shape)
         self._name = name
 
         self._prob_text = None
@@ -49,7 +46,7 @@ class Distribution(nn.Module):
     @property
     def distribution_name(self):
         """str: Name of this distribution class."""
-        raise NotImplementedError
+        return ""
 
     @property
     def name(self):
@@ -112,18 +109,18 @@ class Distribution(nn.Module):
         return prob_text
 
     @property
-    def dim(self):
-        """int: Number of dimensions of this distribution."""
-        return self._dim
+    def features_shape(self):
+        """torch.Size or list: Shape of features of this distribution."""
+        return self._features_shape
 
-    def _check_input(self, x, var=None):
+    def _check_input(self, input, var=None):
         """Check the type of given input.
         If the input type is :obj:`dict`, this method checks whether the input keys contains the :attr:`var` list.
         In case that its type is :obj:`list` or :obj:`tensor`, it returns the output formatted in :obj:`dict`.
 
         Parameters
         ----------
-        x : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`
+        input : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`
             Input variables.
         var : :obj:`list` or :obj:`NoneType`, defaults to None
             Variables to check if given input contains them.
@@ -131,7 +128,7 @@ class Distribution(nn.Module):
 
         Returns
         -------
-        checked_x : dict
+        input_dict : dict
             Variables checked in this method.
 
         Raises
@@ -143,22 +140,22 @@ class Distribution(nn.Module):
         if var is None:
             var = self.input_var
 
-        if type(x) is torch.Tensor:
-            checked_x = {var[0]: x}
+        if type(input) is torch.Tensor:
+            input_dict = {var[0]: input}
 
-        elif type(x) is list:
+        elif type(input) is list:
             # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-            checked_x = dict(zip(var, x))
+            input_dict = dict(zip(var, input))
 
-        elif type(x) is dict:
-            if not (set(list(x.keys())) >= set(var)):
+        elif type(input) is dict:
+            if not (set(list(input.keys())) >= set(var)):
                 raise ValueError("Input keys are not valid.")
-            checked_x = x
+            input_dict = input
 
         else:
-            raise ValueError("The type of input is not valid, got %s." % type(x))
+            raise ValueError("The type of input is not valid, got %s." % type(input))
 
-        return checked_x
+        return input_dict
 
     def get_params(self, params_dict={}):
         """This method aims to get parameters of this distributions from constant parameters set in initialization
@@ -177,34 +174,33 @@ class Distribution(nn.Module):
         Examples
         --------
         >>> from pixyz.distributions import Normal
-        >>> dist_1 = Normal(loc=0, scale=1, var=["x"], dim=1)
+        >>> dist_1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[1])
         >>> print(dist_1.prob_text, dist_1.distribution_name)
         p(x) Normal
         >>> dist_1.get_params()
-        {'loc': 0, 'scale': 1}
-        >>> dist_2 = Normal(loc=0, scale="z", cond_var=["z"], var=["x"])
+        {'loc': tensor([[0.]]), 'scale': tensor([[1.]])}
+        >>> dist_2 = Normal(loc=torch.tensor(0.), scale="z", cond_var=["z"], var=["x"])
         >>> print(dist_2.prob_text, dist_2.distribution_name)
         p(x|z) Normal
-        >>> dist_2.get_params({"z": 1})
-        {'scale': 1, 'loc': 0}
+        >>> dist_2.get_params({"z": torch.tensor(1.)})
+        {'scale': tensor(1.), 'loc': tensor([0.])}
 
         """
         raise NotImplementedError
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True,
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
                reparam=False):
         """Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
 
         Parameters
         ----------
-        x : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`, defaults to {}
+        x_dict : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`, defaults to {}
             Input variables.
-        shape : :obj:`tuple` or :obj:`NoneType`, defaults to None
-            Shape of samples.
-            If set, :attr:`batch_size` is ignored.
-        batch_size : :obj:`int`, defaults to 1.
-            Batch size of samples.
+        sample_shape : :obj:`list` or :obj:`NoneType`, defaults to torch.Size()
+            Shape of generating samples.
+        batch_n : :obj:`int`, defaults to None.
+            Set batch size of parameters.
         return_all : :obj:`bool`, defaults to True
             Choose whether the output contains input variables.
         reparam : :obj:`bool`, defaults to False.
@@ -215,26 +211,39 @@ class Distribution(nn.Module):
         output : dict
             Samples of this distribution.
 
+        Examples
+        --------
+        >>> from pixyz.distributions import Normal
+        >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[10, 2])
+        >>> print(p.prob_text, p.distribution_name)
+        p(x) Normal
+        >>> p.sample()["x"].shape  # (batch_n=1, features_shape)
+        torch.Size([1, 10, 2])
+        >>> p.sample(batch_n=20)["x"].shape  # (batch_n, features_shape)
+        torch.Size([20, 10, 2])
+        >>> p.sample(batch_n=20, sample_shape=[40, 30])["x"].shape  # (sample_shape, batch_n, features_shape)
+        torch.Size([40, 30, 20, 10, 2])
+
         """
         raise NotImplementedError
 
-    def sample_mean(self, x={}):
+    def sample_mean(self, x_dict={}):
         """Return the mean of the distribution.
 
         Parameters
         ----------
-        x : :obj:`dict`, defaults to {}
+        x_dict : :obj:`dict`, defaults to {}
             Parameters of this distribution.
 
         """
         raise NotImplementedError
 
-    def sample_variance(self, x={}):
+    def sample_variance(self, x_dict={}):
         """Return the variance of the distribution.
 
         Parameters
         ----------
-        x : :obj:`dict`, defaults to {}
+        x_dict : :obj:`dict`, defaults to {}
             Parameters of this distribution.
 
         """
@@ -248,14 +257,34 @@ class Distribution(nn.Module):
         x_dict : dict
             Input variables.
         sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some axes (dimensions) which are specified by `feature_dims`.
+            Whether the output is summed across some dimensions which are specified by `feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set axes to sum across the output.
+            Set dimensions to sum across the output.
 
         Returns
         -------
         log_prob : torch.Tensor
             Values of log-probability density/mass function.
+
+        """
+        raise NotImplementedError
+
+    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+        """Giving variables, this method returns values of entropy.
+
+        Parameters
+        ----------
+        x_dict : dict, defaults to {}
+            Input variables.
+        sum_features : :obj:`bool`, defaults to True
+            Whether the output is summed across some dimensions which are specified by `feature_dims`.
+        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
+            Set dimensions to sum across the output.
+
+        Returns
+        -------
+        entropy : torch.Tensor
+            Values of entropy.
 
         """
         raise NotImplementedError
@@ -287,7 +316,7 @@ class Distribution(nn.Module):
             Choose whether the output is summed across some axes (dimensions)
             which are specified by :attr:`feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set axes to sum across the output.
+            Set dimensions to sum across the output. (Note: this parameter is not used for now.)
 
         Returns
         -------
@@ -350,22 +379,34 @@ class Distribution(nn.Module):
         text += "Network architecture:\n{}".format(network_text)
         return text
 
-    def __repr__(self):
-        text = "{} ({}): {}".format(self.prob_text, self.distribution_name, super().__repr__())
-        return text
+    def extra_repr(self):
+        # parameters
+        parameters_text = 'name={}, distribution_name={},\n' \
+                          'var={}, cond_var={}, input_var={}, ' \
+                          'features_shape={}'.format(self.name, self.distribution_name,
+                                                     self.var, self.cond_var, self.input_var,
+                                                     self.features_shape
+                                                     )
+
+        if len(self._buffers) != 0:
+            # add buffers to repr
+            buffers = ["({}): {}".format(key, value.shape) for key, value in self._buffers.items()]
+            return parameters_text + "\n" + "\n".join(buffers)
+
+        return parameters_text
 
 
 class DistributionBase(Distribution):
     """Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", dim=1, **kwargs):
-        super().__init__(cond_var=cond_var, var=var, name=name, dim=dim)
+    def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), **kwargs):
+        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
 
-        self._set_constant_params(**kwargs)
+        self._set_buffers(**kwargs)
         self._dist = None
 
-    def _set_constant_params(self, **params_dict):
-        """Format constant parameters of this distribution.
+    def _set_buffers(self, **params_dict):
+        """Format constant parameters of this distribution as buffers.
 
         Parameters
         ----------
@@ -378,7 +419,6 @@ class DistributionBase(Distribution):
         """
 
         self.replace_params_dict = {}
-        self.constant_params_dict = {}
 
         for key in params_dict.keys():
             if type(params_dict[key]) is str:
@@ -386,10 +426,27 @@ class DistributionBase(Distribution):
                     self.replace_params_dict[params_dict[key]] = key
                 else:
                     raise ValueError
-            elif isinstance(params_dict[key], numbers.Number) or isinstance(params_dict[key], torch.Tensor):
-                self.constant_params_dict[key] = params_dict[key]
+            elif isinstance(params_dict[key], torch.Tensor):
+                features = params_dict[key]
+                features_checked = self._check_features_shape(features)
+                self.register_buffer(key, features_checked)
             else:
                 raise ValueError
+
+    def _check_features_shape(self, features):
+        # scalar
+        if features.size() == torch.Size():
+            features = features.expand(self.features_shape)
+
+        if self.features_shape == torch.Size():
+            self._features_shape = features.shape
+
+        if features.size() == self.features_shape:
+            batches = features.unsqueeze(0)
+            return batches
+
+        raise ValueError("the shape of a given parameter {} and features_shape {} "
+                         "do not match.".format(features.size(), self.features_shape))
 
     @property
     def params_keys(self):
@@ -406,17 +463,19 @@ class DistributionBase(Distribution):
         """Return the instance of PyTorch distribution."""
         return self._dist
 
-    def set_dist(self, x={}, sampling=False, **kwargs):
+    def set_dist(self, x_dict={}, sampling=False, batch_n=None, **kwargs):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
         This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
 
         Parameters
         ----------
-        x : :obj:`dict`, defaults to {}.
+        x_dict : :obj:`dict`, defaults to {}.
             Parameters of this distribution.
         sampling : :obj:`bool`, defaults to False.
             Choose whether to use relaxed_* in PyTorch distribution.
+        batch_n : :obj:`int`, defaults to None.
+            Set batch size of parameters.
         **kwargs
             Arbitrary keyword arguments.
 
@@ -424,11 +483,21 @@ class DistributionBase(Distribution):
         -------
 
         """
-        params = self.get_params(x, **kwargs)
+        params = self.get_params(x_dict, **kwargs)
         if set(self.params_keys) != set(params.keys()):
             raise ValueError
 
         self._dist = self.distribution_torch_class(**params)
+
+        # expand batch_n
+        if batch_n:
+            batch_shape = self._dist.batch_shape
+            if batch_shape[0] == 1:
+                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
+            elif batch_shape[0] == batch_n:
+                return
+            else:
+                raise ValueError
 
     def get_sample(self, reparam=False, sample_shape=torch.Size()):
         """Get a sample_shape shaped sample from :attr:`dist`.
@@ -473,36 +542,36 @@ class DistributionBase(Distribution):
         params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
 
-        # append constant_params to dict
         output_dict.update(params_dict)
-        output_dict.update(self.constant_params_dict)
+
+        # append constant parameters to output_dict
+        constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys, return_dict=True)
+        output_dict.update(constant_params_dict)
 
         return output_dict
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
+    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+        _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
+        self.set_dist(_x_dict, sampling=False)
+
+        entropy = self.dist.entropy()
+        if sum_features:
+            entropy = sum_samples(entropy)
+
+        return entropy
+
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # check whether the input is valid or convert it to valid dictionary.
-        x_dict = self._check_input(x)
-
-        # unconditioned
-        if len(self.input_var) == 0:
-            if shape:
-                sample_shape = shape
-            else:
-                if self.dim is None:
-                    sample_shape = (batch_size, )
-                else:
-                    sample_shape = (batch_size, self.dim)
-
-            self.set_dist()
-            output_dict = self.get_sample(reparam=reparam,
-                                          sample_shape=sample_shape)
+        x_dict = self._check_input(x_dict)
+        input_dict = {}
 
         # conditioned
-        else:
-            # remove redundant variables from x_dict.
-            _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
-            self.set_dist(_x_dict)
-            output_dict = self.get_sample(reparam=reparam)
+        if len(self.input_var) != 0:
+            input_dict.update(get_dict_values(x_dict, self.input_var, return_dict=True))
+
+        self.set_dist(input_dict, batch_n=batch_n)
+        output_dict = self.get_sample(reparam=reparam,
+                                      sample_shape=sample_shape)
 
         if return_all:
             x_dict.update(output_dict)
@@ -510,12 +579,12 @@ class DistributionBase(Distribution):
 
         return output_dict
 
-    def sample_mean(self, x={}):
-        self.set_dist(x)
+    def sample_mean(self, x_dict={}):
+        self.set_dist(x_dict)
         return self.dist.mean
 
-    def sample_variance(self, x={}):
-        self.set_dist(x)
+    def sample_variance(self, x_dict={}):
+        self.set_dist(x_dict)
         return self.dist.variance
 
     def forward(self, **params):
@@ -628,29 +697,24 @@ class MultiplyDistribution(Distribution):
     def prob_factorized_text(self):
         return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, return_all=True, reparam=False, **kwargs):
         # sample from the parent distribution
-        parents_x_dict = x
-        child_x_dict = self._parent.sample(x=parents_x_dict,
-                                           shape=shape,
-                                           batch_size=batch_size,
+        parents_x_dict = x_dict
+        child_x_dict = self._parent.sample(x_dict=parents_x_dict, batch_n=batch_n,
                                            return_all=True, reparam=reparam)
-
         # sample from the child distribution
-        output_dict = self._child.sample(x=child_x_dict,
-                                         shape=shape,
-                                         batch_size=batch_size,
+        output_dict = self._child.sample(x_dict=child_x_dict, batch_n=batch_n,
                                          return_all=True, reparam=reparam)
 
         if return_all is False:
-            output_dict = get_dict_values(x, self._var, return_dict=True)
+            output_dict = get_dict_values(x_dict, self._var, return_dict=True)
             return output_dict
 
         return output_dict
 
-    def get_log_prob(self, x, sum_features=True, feature_dims=None):
-        parent_log_prob = self._parent.get_log_prob(x, sum_features=sum_features, feature_dims=feature_dims)
-        child_log_prob = self._child.get_log_prob(x, sum_features=sum_features, feature_dims=feature_dims)
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+        parent_log_prob = self._parent.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
+        child_log_prob = self._child.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
 
         if sum_features:
             return parent_log_prob + child_log_prob
@@ -670,38 +734,38 @@ class ReplaceVarDistribution(Distribution):
 
     Examples
     --------
-    >>> a = DistributionBase(var=["x"], cond_var=["z"])
-    >>> print(a.prob_text)
+    >>> p = DistributionBase(var=["x"], cond_var=["z"])
+    >>> print(p.prob_text)
     p(x|z)
     >>> replace_dict = {'x': 'y'}
-    >>> p_repl = ReplaceVarDistribution(a, replace_dict)
+    >>> p_repl = ReplaceVarDistribution(p, replace_dict)
     >>> print(p_repl.prob_text)
     p(y|z)
 
     """
 
-    def __init__(self, a, replace_dict):
+    def __init__(self, p, replace_dict):
         """
         Parameters
         ----------
-        a : pixyz.Distribution (not pixyz.MultiplyDistribution)
+        p : pixyz.Distribution (not pixyz.MultiplyDistribution)
             Distribution.
 
         replace_dict : dict
             Dictionary.
 
         """
-        if not isinstance(a, Distribution):
-            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(a)))
+        if not isinstance(p, Distribution):
+            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(p)))
 
-        if isinstance(a, MultiplyDistribution):
+        if isinstance(p, MultiplyDistribution):
             raise ValueError("`pixyz.MultiplyDistribution` is not supported for now.")
 
-        if isinstance(a, MarginalizeVarDistribution):
+        if isinstance(p, MarginalizeVarDistribution):
             raise ValueError("`pixyz.MarginalizeVarDistribution` is not supported for now.")
 
-        _cond_var = deepcopy(a.cond_var)
-        _var = deepcopy(a.var)
+        _cond_var = deepcopy(p.cond_var)
+        _var = deepcopy(p.var)
         all_vars = _cond_var + _var
 
         if not (set(replace_dict.keys()) <= set(all_vars)):
@@ -716,48 +780,48 @@ class ReplaceVarDistribution(Distribution):
 
         _cond_var = [replace_dict[var] if var in replace_dict.keys() else var for var in _cond_var]
         _var = [replace_dict[var] if var in replace_dict.keys() else var for var in _var]
-        super().__init__(cond_var=_cond_var, var=_var, name=a.name, dim=a.dim)
+        super().__init__(cond_var=_cond_var, var=_var, name=p.name, features_shape=p.features_shape)
 
-        self._a = a
-        _input_var = [replace_dict[var] if var in replace_dict.keys() else var for var in a.input_var]
+        self.p = p
+        _input_var = [replace_dict[var] if var in replace_dict.keys() else var for var in p.input_var]
         self._input_var = _input_var
 
     def forward(self, *args, **kwargs):
-        return self._a.forward(*args, **kwargs)
+        return self.p.forward(*args, **kwargs)
 
-    def get_params(self, params_dict):
+    def get_params(self, params_dict={}):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
-        return self._a.get_params(params_dict)
+        return self.p.get_params(params_dict)
 
-    def set_dist(self, x={}, sampling=False, **kwargs):
-        x = replace_dict_keys(x, self._replace_inv_cond_var_dict)
-        return self._a.set_dist(x=x, sampling=sampling, **kwargs)
+    def set_dist(self, x_dict={}, sampling=False, batch_n=None, **kwargs):
+        x_dict = replace_dict_keys(x_dict, self._replace_inv_cond_var_dict)
+        return self.p.set_dist(x_dict=x_dict, sampling=sampling, batch_n=batch_n, **kwargs)
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
-        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
-        output_dict = self._a.sample(replaced_input_dict, shape=shape, batch_size=batch_size,
-                                     return_all=False, reparam=reparam)
+        output_dict = self.p.sample(replaced_input_dict, batch_n=batch_n, sample_shape=sample_shape,
+                                    return_all=False, reparam=reparam)
         output_dict = replace_dict_keys(output_dict, self._replace_dict)
 
-        x.update(output_dict)
-        return x
+        x_dict.update(output_dict)
+        return x_dict
 
     def get_log_prob(self, x_dict, **kwargs):
         input_dict = get_dict_values(x_dict, self.cond_var + self.var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
-        return self._a.get_log_prob(input_dict, **kwargs)
+        return self.p.get_log_prob(input_dict, **kwargs)
 
-    def sample_mean(self, x):
-        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
+    def sample_mean(self, x_dict={}):
+        input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
-        return self._a.sample_mean(input_dict)
+        return self.p.sample_mean(input_dict)
 
-    def sample_variance(self, x):
-        input_dict = get_dict_values(x, self.cond_var, return_dict=True)
+    def sample_variance(self, x_dict={}):
+        input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
-        return self._a.sample_variance(input_dict)
+        return self.p.sample_variance(input_dict)
 
     @property
     def input_var(self):
@@ -765,16 +829,13 @@ class ReplaceVarDistribution(Distribution):
 
     @property
     def distribution_name(self):
-        return self._a.distribution_name
-
-    def __repr__(self):
-        return self._a.__repr__()
+        return self.p.distribution_name
 
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)
         except AttributeError:
-            return self._a.__getattribute__(item)
+            return self.p.__getattribute__(item)
 
 
 class MarginalizeVarDistribution(Distribution):
@@ -796,11 +857,11 @@ class MarginalizeVarDistribution(Distribution):
 
     """
 
-    def __init__(self, a, marginalize_list):
+    def __init__(self, p, marginalize_list):
         """
         Parameters
         ----------
-        a : pixyz.Distribution (not pixyz.DistributionBase)
+        p : pixyz.Distribution (not pixyz.DistributionBase)
             Distribution.
 
         marginalize_list : list
@@ -809,14 +870,14 @@ class MarginalizeVarDistribution(Distribution):
         """
         marginalize_list = tolist(marginalize_list)
 
-        if not isinstance(a, Distribution):
-            raise ValueError("Given input must be `pixyz.Distribution`, got {}.".format(type(a)))
+        if not isinstance(p, Distribution):
+            raise ValueError("Given input must be `pixyz.Distribution`, got {}.".format(type(p)))
 
-        if isinstance(a, DistributionBase):
+        if isinstance(p, DistributionBase):
             raise ValueError("`pixyz.DistributionBase` cannot marginalize its variables for now.")
 
-        _var = deepcopy(a.var)
-        _cond_var = deepcopy(a.cond_var)
+        _var = deepcopy(p.var)
+        _cond_var = deepcopy(p.cond_var)
 
         if not((set(marginalize_list)) < set(_var)):
             raise ValueError()
@@ -829,36 +890,36 @@ class MarginalizeVarDistribution(Distribution):
 
         _var = [var for var in _var if var not in marginalize_list]
 
-        super().__init__(cond_var=_cond_var, var=_var, name=a.name, dim=a.dim)
-        self._a = a
+        super().__init__(cond_var=_cond_var, var=_var, name=p.name, features_shape=p.features_shape)
+        self.p = p
         self._marginalize_list = marginalize_list
 
     def forward(self, *args, **kwargs):
-        return self._a.forward(*args, **kwargs)
+        return self.p.forward(*args, **kwargs)
 
-    def get_params(self, params_dict):
-        return self._a.get_params(params_dict)
+    def get_params(self, params_dict={}):
+        return self.p.get_params(params_dict)
 
-    def sample(self, x={}, shape=None, batch_size=1, return_all=True, reparam=False):
-        output_dict = self._a.sample(x=x, shape=shape, batch_size=batch_size, return_all=False,
-                                     reparam=reparam)
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        output_dict = self.p.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
+                                    reparam=reparam)
         output_dict = delete_dict_values(output_dict, self._marginalize_list)
 
         return output_dict
 
-    def sample_mean(self, x):
-        return self._a.sample_mean(x)
+    def sample_mean(self, x_dict={}):
+        return self.p.sample_mean(x_dict)
 
-    def sample_variance(self, x):
-        return self._a.sample_variance(x)
+    def sample_variance(self, x_dict={}):
+        return self.p.sample_variance(x_dict)
 
     @property
     def input_var(self):
-        return self._a.input_var
+        return self.p.input_var
 
     @property
     def distribution_name(self):
-        return self._a.distribution_name
+        return self.p.distribution_name
 
     @property
     def prob_factorized_text(self):
@@ -866,13 +927,13 @@ class MarginalizeVarDistribution(Distribution):
         integral_variables = ["d" + str(var) for var in self._marginalize_list]
         integral_variables = "".join(integral_variables)
 
-        return "{}{}{}".format(integral_symbol, self._a.prob_factorized_text, integral_variables)
+        return "{}{}{}".format(integral_symbol, self.p.prob_factorized_text, integral_variables)
 
     def __repr__(self):
-        return self._a.__repr__()
+        return self.p.__repr__()
 
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)
         except AttributeError:
-            return self._a.__getattribute__(item)
+            return self.p.__getattribute__(item)

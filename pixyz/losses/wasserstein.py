@@ -46,21 +46,21 @@ class WassersteinDistance(Loss):
 
     @property
     def _symbol(self):
-        return sympy.Symbol("W^{{upper}} \\left({}, {} \\right)".format(self._p.prob_text, self._q.prob_text))
+        return sympy.Symbol("W^{{upper}} \\left({}, {} \\right)".format(self.p.prob_text, self.q.prob_text))
 
-    def _get_batch_size(self, x):
-        return get_dict_values(x, self.input_dist.input_var[0])[0].shape[0]
+    def _get_batch_n(self, x_dict):
+        return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
 
-    def _get_eval(self, x, **kwargs):
-        batch_size = self._get_batch_size(x)
+    def _get_eval(self, x_dict, **kwargs):
+        batch_n = self._get_batch_n(x_dict)
 
         # sample from distributions
-        p_x = get_dict_values(self._p.sample(x, batch_size=batch_size), self._p.var)[0]
-        q_x = get_dict_values(self._q.sample(x, batch_size=batch_size), self._q.var)[0]
+        p_x = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.p.var)[0]
+        q_x = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.q.var)[0]
 
         if p_x.shape != q_x.shape:
             raise ValueError("The two distribution variables must have the same shape.")
 
         distance = self.metric(p_x, q_x)
 
-        return distance, x
+        return distance, x_dict
