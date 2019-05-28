@@ -9,7 +9,60 @@ from ..utils import tolist
 
 
 class Loss(object, metaclass=abc.ABCMeta):
+    """Loss class. In Pixyz, all loss classes are required to inherit this class."""
+
     def __init__(self, p, q=None, input_var=None):
+        """
+        Parameters
+        ----------
+        p : pixyz.distributions.Distribution
+            Distribution.
+        q : pixyz.distributions.Distribution, defaults to None
+            Distribution.
+        input_var : :obj:`list` of :obj:`str`, defaults to None
+            Input variables of this loss function.
+            In general, users do not need to set them explicitly
+            because these depend on the given distributions and each loss function.
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import Bernoulli, Normal
+        >>> from pixyz.losses import StochasticReconstructionLoss, KullbackLeibler
+        ...
+        >>> # Set distributions
+        >>> class Inference(Normal):
+        ...     def __init__(self):
+        ...         super().__init__(cond_var=["x"], var=["z"], name="q")
+        ...         self.model_loc = torch.nn.Linear(128, 64)
+        ...         self.model_scale = torch.nn.Linear(128, 64)
+        ...     def forward(self, x):
+        ...         return {"loc": self.model_loc(x), "scale": torch.nn.functional.softplus(self.model_scale(x))}
+        ...
+        >>> class Generator(Bernoulli):
+        ...     def __init__(self):
+        ...         super().__init__(cond_var=["z"], var=["x"], name="p")
+        ...         self.model = torch.nn.Linear(64, 128)
+        ...     def forward(self, z):
+        ...         return {"probs": torch.sigmoid(self.model(z))}
+        ...
+        >>> p = Generator()
+        >>> q = Inference()
+        >>> prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
+        ...                var=["z"], features_shape=[64], name="p_{prior}")
+        ...
+        >>> # Define a loss function (VAE)
+        >>> reconst = StochasticReconstructionLoss(q, p)
+        >>> kl = KullbackLeibler(q, prior)
+        >>> loss_cls = (reconst - kl).mean()
+        >>> print(loss_cls)
+        mean \left(- D_{KL} \left[q(z|x)||p_{prior}(z) \\right] - \mathbb{E}_{q(z|x)} \left[\log p(x|z) \\right] \\right)
+        >>> # Evaluate this loss function
+        >>> data = torch.randn(1, 128)  # Pseudo data
+        >>> loss = loss_cls.eval({"x": data})
+        >>> print(loss)  # doctest: +SKIP
+        tensor(65.5939, grad_fn=<MeanBackward0>)
+        """
         self.p = p
         self.q = q
 
@@ -24,6 +77,7 @@ class Loss(object, metaclass=abc.ABCMeta):
 
     @property
     def input_var(self):
+        """list: Input variables of this distribution."""
         return self._input_var
 
     @property
@@ -124,6 +178,25 @@ class Loss(object, metaclass=abc.ABCMeta):
         return Expectation(p, self, input_var=input_var, sample_shape=sample_shape)
 
     def eval(self, x_dict={}, return_dict=False, **kwargs):
+        """Evaluate the value of the loss function given inputs (:attr:`x_dict`).
+
+        Parameters
+        ----------
+        x_dict : :obj:`dict`, defaults to {}
+            Input variables.
+        return_dict : bool, default to False.
+            Whether to return samples along with the evaluated value of the loss function.
+
+        Returns
+        -------
+        loss : torch.Tensor
+            the evaluated value of the loss function.
+        x_dict : :obj:`dict`
+            All samples generated when evaluating the loss function.
+            If :attr:`return_dict` is False, it is not returned.
+
+        """
+
         if not(set(list(x_dict.keys())) >= set(self._input_var)):
             raise ValueError("Input keys are not valid, got {}.".format(list(x_dict.keys())))
 

@@ -25,6 +25,7 @@ class MMD(Loss):
     >>> print(loss_cls)
     D_{MMD^2} \left[p(z|x)||q(z|x) \right]
     >>> loss = loss_cls.eval({"x": torch.randn(1, 64)})
+    >>> # Use the inverse (multi-)quadric kernel
     >>> loss = MMD(p, q, kernel="inv-multiquadratic").eval({"x": torch.randn(10, 64)})
     """
 
