@@ -198,7 +198,8 @@ class Loss(object, metaclass=abc.ABCMeta):
         """
 
         if not(set(list(x_dict.keys())) >= set(self._input_var)):
-            raise ValueError("Input keys are not valid, got {}.".format(list(x_dict.keys())))
+            raise ValueError("Input keys are not valid, expected {} but got {}.".format(self._input_var,
+                                                                                        list(x_dict.keys())))
 
         loss, x_dict = self._get_eval(x_dict, **kwargs)
 

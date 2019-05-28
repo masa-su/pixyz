@@ -15,7 +15,7 @@ class IterativeLoss(Loss):
 
         \mathcal{L} = \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t),
 
-    where :math:`x_t = f_{slice_step}(x, t)`.
+    where :math:`x_t = f_{slice\_step}(x, t)`.
     """
 
     def __init__(self, step_loss, max_iter=1,
@@ -48,7 +48,7 @@ class IterativeLoss(Loss):
         # TODO: naive implementation
         dummy_loss = sympy.Symbol("dummy_loss")
         _symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 1, self.max_iter))
-        _symbol = _symbol.subs({dummy_loss: self.step_loss.symbol})
+        _symbol = _symbol.subs({dummy_loss: self.step_loss._symbol})
         return _symbol
 
     def slice_step_fn(self, t, x):
