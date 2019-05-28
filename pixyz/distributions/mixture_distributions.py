@@ -28,26 +28,26 @@ class MixtureModel(Distribution):
     >>> p = MixtureModel(distributions=distributions, prior=prior)
     >>> print(p)
     Distribution:
-      p(x) = p_0(x|z=0)prior(z=0) + p_1(x|z=1)prior(z=1) + p_2(x|z=2)prior(z=2)
+      p(x) = p_{0}(x|z=0)prior(z=0) + p_{1}(x|z=1)prior(z=1) + p_{2}(x|z=2)prior(z=2)
     Network architecture:
       MixtureModel(
         name=p, distribution_name=Mixture Model,
         var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([])
         (distributions): ModuleList(
           (0): Normal(
-            name=p_0, distribution_name=Normal,
+            name=p_{0}, distribution_name=Normal,
             var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
           )
           (1): Normal(
-            name=p_1, distribution_name=Normal,
+            name=p_{1}, distribution_name=Normal,
             var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
           )
           (2): Normal(
-            name=p_2, distribution_name=Normal,
+            name=p_{2}, distribution_name=Normal,
             var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
