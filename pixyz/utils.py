@@ -1,4 +1,5 @@
 import torch
+import sympy
 from IPython.display import Math
 import pixyz
 
@@ -200,25 +201,6 @@ def tolist(a):
     return [a]
 
 
-def print_latex(object):
-    """Print formulas in latex format.
-
-    Parameters
-    ----------
-    object : pixyz.distributions.distributions.Distribution, pixyz.losses.losses.Loss or pixyz.models.model.Model.
-
-    """
-
-    if isinstance(object, pixyz.distributions.distributions.Distribution):
-        latex_text = object.prob_joint_factorized_and_text
-    elif isinstance(object, pixyz.losses.losses.Loss):
-        latex_text = object.loss_text
-    elif isinstance(object, pixyz.models.model.Model):
-        latex_text = object.loss_cls.loss_text
-
-    return Math(latex_text)
-
-
 def sum_samples(samples):
     """Sum a given sample across the axes.
 
@@ -255,3 +237,26 @@ def sum_samples(samples):
         return samples
     raise ValueError("The number of sample axes must be any of 1, 2, 3, or 4, "
                      "got %s." % dim)
+
+
+def print_latex(obj):
+    """Print formulas in latex format.
+
+    Parameters
+    ----------
+    obj : pixyz.distributions.distributions.Distribution, pixyz.losses.losses.Loss or pixyz.models.model.Model.
+
+    """
+
+    if isinstance(obj, pixyz.distributions.distributions.Distribution):
+        latex_text = obj.prob_joint_factorized_and_text
+    elif isinstance(obj, pixyz.losses.losses.Loss):
+        latex_text = obj.loss_text
+    elif isinstance(obj, pixyz.models.model.Model):
+        latex_text = obj.loss_cls.loss_text
+
+    return Math(latex_text)
+
+
+def convert_latex_name(name):
+    return sympy.latex(sympy.Symbol(name))
