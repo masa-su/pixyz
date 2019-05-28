@@ -149,7 +149,7 @@ class Distribution(nn.Module):
         elif type(input) is dict:
             if not (set(list(input.keys())) >= set(var)):
                 raise ValueError("Input keys are not valid.")
-            input_dict = input
+            input_dict = input.copy()
 
         else:
             raise ValueError("The type of input is not valid, got %s." % type(input))
@@ -222,6 +222,15 @@ class Distribution(nn.Module):
         torch.Size([20, 10, 2])
         >>> p.sample(batch_n=20, sample_shape=[40, 30])["x"].shape  # (sample_shape, batch_n, features_shape)
         torch.Size([40, 30, 20, 10, 2])
+        >>>
+        >>> # Conditional distribution
+        >>> p = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"], features_shape=[64])
+        >>> sample = p.sample({"y": torch.randn(1, 64)})
+        >>> print(sample.keys()) # input_var + var
+        dict_keys(['y', 'x'])
+        >>> sample = p.sample({"y": torch.randn(1, 64), "a": torch.randn(1, 64)}) # Redundant input ("a")
+        >>> sample.keys() # input_var + var + "a" (redundant input)
+        dict_keys(['y', 'a', 'x'])
 
         """
         raise NotImplementedError
@@ -573,8 +582,8 @@ class DistributionBase(Distribution):
                                       sample_shape=sample_shape)
 
         if return_all:
-            input_dict.update(output_dict)
-            return input_dict
+            x_dict.update(output_dict)
+            return x_dict
 
         return output_dict
 
