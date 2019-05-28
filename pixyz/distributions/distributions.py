@@ -38,7 +38,7 @@ class Distribution(nn.Module):
         self._var = var
 
         self._features_shape = torch.Size(features_shape)
-        self._name = name
+        self._name = self.convert_name(name)
 
         self._prob_text = None
         self._prob_factorized_text = None
@@ -79,13 +79,20 @@ class Distribution(nn.Module):
         """
         return self._cond_var
 
+    @staticmethod
+    def convert_name(name):
+        parts = name.split('_')[::-1]
+        latex_name = parts[0]
+        for part in parts[1:]:
+            latex_name = part + '_' + '{' + latex_name + '}'
+        return latex_name
+
     @property
     def prob_text(self):
         """str: Return a formula of the (joint) probability distribution."""
-
-        _var_text = [','.join(self._var)]
+        _var_text = [','.join([self.convert_name(var_name) for var_name in self._var])]
         if len(self._cond_var) != 0:
-            _var_text += [','.join(self._cond_var)]
+            _var_text += [','.join(self.convert_name(self._cond_var))]
 
         _prob_text = "{}({})".format(
             self._name,

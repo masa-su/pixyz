@@ -113,7 +113,7 @@ class MixtureModel(Distribution):
     @property
     def prob_text(self):
         _prob_text = "{}({})".format(
-            self._name, ','.join(self._var)
+            self._name, ','.join(([self.convert_name(var_name) for var_name in self._var]))
         )
 
         return _prob_text
@@ -217,9 +217,8 @@ class PosteriorMixtureModel(Distribution):
     @property
     def prob_text(self):
         _prob_text = "{}({}|{})".format(
-            self._name, self._hidden_var[0], self._var[0]
+            self._name, self.convert_name(self._hidden_var[0]), self.convert_name(self._var[0])
         )
-
         return _prob_text
 
     @property
