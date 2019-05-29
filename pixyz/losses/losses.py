@@ -356,10 +356,16 @@ class SubLoss(LossOperator):
     >>> loss_cls_2 = Parameter("x")
     >>> loss_cls = loss_cls_1 - loss_cls_2  # equals to SubLoss(loss_cls_1, loss_cls_2)
     >>> print(loss_cls)
-    2 - x
+    - x + 2
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
     -2
+    >>> loss_cls = loss_cls_2 - loss_cls_1  # equals to SubLoss(loss_cls_2, loss_cls_1)
+    >>> print(loss_cls)
+    x - 2
+    >>> loss = loss_cls.eval({"x": 4})
+    >>> print(loss)
+    2
 
     """
     @property
@@ -410,6 +416,13 @@ class DivLoss(LossOperator):
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
     0.5
+    >>> loss_cls = loss_cls_2 / loss_cls_1  # equals to DivLoss(loss_cls_2, loss_cls_1)
+    >>> print(loss_cls)
+    \\frac{x}{2}
+    >>> loss = loss_cls.eval({"x": 4})
+    >>> print(loss)
+    2.0
+
 
     """
     @property
@@ -480,7 +493,7 @@ class AbsLoss(LossSelfOperator):
     >>> from pixyz.losses import LogProb
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
     ...            features_shape=[10])
-    >>> loss_cls = LogProb(p).abs()
+    >>> loss_cls = LogProb(p).abs() # equals to AbsLoss(LogProb(p))
     >>> print(loss_cls)
     |\log p(x)|
     >>> sample_x = torch.randn(2, 10) # Psuedo data
