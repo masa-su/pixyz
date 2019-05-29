@@ -10,7 +10,61 @@ from ..losses import LogProb, Prob
 
 
 class Distribution(nn.Module):
-    """Distribution class. In Pixyz, all distributions are required to inherit this class."""
+    """Distribution class. In Pixyz, all distributions are required to inherit this class.
+
+
+    Examples
+    --------
+    >>> import torch
+    >>> from torch.nn import functional as F
+    >>> from pixyz.distributions import Normal
+    >>> # Marginal distribution
+    >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+    ...             features_shape=[64], name="p1")
+    >>> print(p1)
+    Distribution:
+      p_{1}(x)
+    Network architecture:
+      Normal(
+        name=p_{1}, distribution_name=Normal,
+        var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([64])
+        (loc): torch.Size([1, 64])
+        (scale): torch.Size([1, 64])
+      )
+
+    >>> # Conditional distribution
+    >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
+    ...             features_shape=[64], name="p2")
+    >>> print(p2)
+    Distribution:
+      p_{2}(x|y)
+    Network architecture:
+      Normal(
+        name=p_{2}, distribution_name=Normal,
+        var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([64])
+        (scale): torch.Size([1, 64])
+      )
+
+    >>> # Conditional distribution (by neural networks)
+    >>> class P(Normal):
+    ...     def __init__(self):
+    ...         super().__init__(var=["x"], cond_var=["y"], name="p3")
+    ...         self.model_loc = nn.Linear(128, 64)
+    ...         self.model_scale = nn.Linear(128, 64)
+    ...     def forward(self, y):
+    ...         return {"loc": self.model_loc(y), "scale": F.softplus(self.model_scale(y))}
+    >>> p3 = P()
+    >>> print(p3)
+    Distribution:
+      p_{3}(x|y)
+    Network architecture:
+      P(
+        name=p_{3}, distribution_name=Normal,
+        var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([])
+        (model_loc): Linear(in_features=128, out_features=64, bias=True)
+        (model_scale): Linear(in_features=128, out_features=64, bias=True)
+      )
+    """
 
     def __init__(self, var, cond_var=[], name="p", features_shape=torch.Size()):
         """
@@ -100,7 +154,7 @@ class Distribution(nn.Module):
 
     @property
     def prob_joint_factorized_and_text(self):
-        """str: Return a formula of the factorized probability distribution."""
+        """str: Return a formula of the factorized and the (joint) probability distributions."""
         if self.prob_factorized_text == self.prob_text:
             prob_text = self.prob_text
         else:
@@ -173,14 +227,31 @@ class Distribution(nn.Module):
         Examples
         --------
         >>> from pixyz.distributions import Normal
-        >>> dist_1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[1])
-        >>> print(dist_1.prob_text, dist_1.distribution_name)
-        p(x) Normal
+        >>> dist_1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...                 features_shape=[1])
+        >>> print(dist_1)
+        Distribution:
+          p(x)
+        Network architecture:
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([1])
+            (loc): torch.Size([1, 1])
+            (scale): torch.Size([1, 1])
+          )
         >>> dist_1.get_params()
         {'loc': tensor([[0.]]), 'scale': tensor([[1.]])}
+
         >>> dist_2 = Normal(loc=torch.tensor(0.), scale="z", cond_var=["z"], var=["x"])
-        >>> print(dist_2.prob_text, dist_2.distribution_name)
-        p(x|z) Normal
+        >>> print(dist_2)
+        Distribution:
+          p(x|z)
+        Network architecture:
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+            (loc): torch.Size([1])
+          )
         >>> dist_2.get_params({"z": torch.tensor(1.)})
         {'scale': tensor(1.), 'loc': tensor([0.])}
 
@@ -213,24 +284,54 @@ class Distribution(nn.Module):
         Examples
         --------
         >>> from pixyz.distributions import Normal
-        >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[10, 2])
-        >>> print(p.prob_text, p.distribution_name)
-        p(x) Normal
+        >>> # Marginal distribution
+        >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...            features_shape=[10, 2])
+        >>> print(p)
+        Distribution:
+          p(x)
+        Network architecture:
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([10, 2])
+            (loc): torch.Size([1, 10, 2])
+            (scale): torch.Size([1, 10, 2])
+          )
         >>> p.sample()["x"].shape  # (batch_n=1, features_shape)
         torch.Size([1, 10, 2])
         >>> p.sample(batch_n=20)["x"].shape  # (batch_n, features_shape)
         torch.Size([20, 10, 2])
         >>> p.sample(batch_n=20, sample_shape=[40, 30])["x"].shape  # (sample_shape, batch_n, features_shape)
         torch.Size([40, 30, 20, 10, 2])
-        >>>
+
         >>> # Conditional distribution
-        >>> p = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"], features_shape=[64])
-        >>> sample = p.sample({"y": torch.randn(1, 64)})
-        >>> print(sample.keys()) # input_var + var
-        dict_keys(['y', 'x'])
-        >>> sample = p.sample({"y": torch.randn(1, 64), "a": torch.randn(1, 64)}) # Redundant input ("a")
-        >>> sample.keys() # input_var + var + "a" (redundant input)
-        dict_keys(['y', 'a', 'x'])
+        >>> p = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
+        ...            features_shape=[10])
+        >>> print(p)
+        Distribution:
+          p(x|y)
+        Network architecture:
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([10])
+            (scale): torch.Size([1, 10])
+          )
+        >>> sample_y = torch.randn(1, 10) # Psuedo data
+        >>> sample_a = torch.randn(1, 10) # Psuedo data
+        >>> sample = p.sample({"y": sample_y})
+        >>> print(sample) # input_var + var  # doctest: +SKIP
+        {'y': tensor([[-0.5182,  0.3484,  0.9042,  0.1914,  0.6905,
+                       -1.0859, -0.4433, -0.0255, 0.8198,  0.4571]]),
+         'x': tensor([[-0.7205, -1.3996,  0.5528, -0.3059,  0.5384,
+                       -1.4976, -0.1480,  0.0841,0.3321,  0.5561]])}
+        >>> sample = p.sample({"y": sample_y, "a": sample_a}) # Redundant input ("a")
+        >>> print(sample) # input_var + var + "a" (redundant input)  # doctest: +SKIP
+        {'y': tensor([[ 1.3582, -1.1151, -0.8111,  1.0630,  1.1633,
+                        0.3855,  2.6324, -0.9357, -0.8649, -0.6015]]),
+         'a': tensor([[-0.1874,  1.7958, -1.4084, -2.5646,  1.0868,
+                       -0.7523, -0.0852, -2.4222, -0.3914, -0.9755]]),
+         'x': tensor([[-0.3272, -0.5222, -1.3659,  1.8386,  2.3204,
+                        0.3686,  0.6311, -1.1208, 0.3656, -0.6683]])}
 
         """
         raise NotImplementedError
@@ -243,6 +344,26 @@ class Distribution(nn.Module):
         x_dict : :obj:`dict`, defaults to {}
             Parameters of this distribution.
 
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import Normal
+        >>> # Marginal distribution
+        >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...             features_shape=[10], name="p1")
+        >>> mean = p1.sample_mean()
+        >>> print(mean)
+        tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+
+        >>> # Conditional distribution
+        >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
+        ...             features_shape=[10], name="p2")
+        >>> sample_y = torch.randn(1, 10) # Psuedo data
+        >>> mean = p2.sample_mean({"y": sample_y})
+        >>> print(mean) # doctest: +SKIP
+        tensor([[-0.2189, -1.0310, -0.1917, -0.3085,  1.5190, -0.9037,  1.2559,  0.1410,
+                  1.2810, -0.6681]])
+
         """
         raise NotImplementedError
 
@@ -253,6 +374,25 @@ class Distribution(nn.Module):
         ----------
         x_dict : :obj:`dict`, defaults to {}
             Parameters of this distribution.
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import Normal
+        >>> # Marginal distribution
+        >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...             features_shape=[10], name="p1")
+        >>> var = p1.sample_variance()
+        >>> print(var)
+        tensor([[1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]])
+
+        >>> # Conditional distribution
+        >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
+        ...             features_shape=[10], name="p2")
+        >>> sample_y = torch.randn(1, 10) # Psuedo data
+        >>> var = p2.sample_variance({"y": sample_y})
+        >>> print(var) # doctest: +SKIP
+        tensor([[1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]])
 
         """
         raise NotImplementedError
@@ -274,6 +414,26 @@ class Distribution(nn.Module):
         log_prob : torch.Tensor
             Values of log-probability density/mass function.
 
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import Normal
+        >>> # Marginal distribution
+        >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...             features_shape=[10], name="p1")
+        >>> sample_x = torch.randn(1, 10) # Psuedo data
+        >>> log_prob = p1.log_prob({"x": sample_x})
+        >>> print(log_prob) # doctest: +SKIP
+        tensor([-16.1153])
+
+        >>> # Conditional distribution
+        >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
+        ...             features_shape=[10], name="p2")
+        >>> sample_y = torch.randn(1, 10) # Psuedo data
+        >>> log_prob = p2.log_prob({"x": sample_x, "y": sample_y})
+        >>> print(log_prob) # doctest: +SKIP
+        tensor([-21.5251])
+
         """
         raise NotImplementedError
 
@@ -285,7 +445,7 @@ class Distribution(nn.Module):
         x_dict : dict, defaults to {}
             Input variables.
         sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some dimensions which are specified by `feature_dims`.
+            Whether the output is summed across some dimensions which are specified by :attr:`feature_dims`.
         feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
             Set dimensions to sum across the output.
 
@@ -293,6 +453,25 @@ class Distribution(nn.Module):
         -------
         entropy : torch.Tensor
             Values of entropy.
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import Normal
+        >>> # Marginal distribution
+        >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...             features_shape=[10], name="p1")
+        >>> entropy = p1.get_entropy()
+        >>> print(entropy)
+        tensor([14.1894])
+
+        >>> # Conditional distribution
+        >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
+        ...             features_shape=[10], name="p2")
+        >>> sample_y = torch.randn(1, 10) # Psuedo data
+        >>> entropy = p2.get_entropy({"y": sample_y})
+        >>> print(entropy)
+        tensor([14.1894])
 
         """
         raise NotImplementedError
@@ -312,6 +491,26 @@ class Distribution(nn.Module):
         pixyz.losses.LogProb
             An instance of :class:`pixyz.losses.LogProb`
 
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import Normal
+        >>> # Marginal distribution
+        >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...             features_shape=[10], name="p1")
+        >>> sample_x = torch.randn(1, 10) # Psuedo data
+        >>> log_prob = p1.log_prob().eval({"x": sample_x})
+        >>> print(log_prob) # doctest: +SKIP
+        tensor([-16.1153])
+
+        >>> # Conditional distribution
+        >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
+        ...             features_shape=[10], name="p2")
+        >>> sample_y = torch.randn(1, 10) # Psuedo data
+        >>> log_prob = p2.log_prob().eval({"x": sample_x, "y": sample_y})
+        >>> print(log_prob) # doctest: +SKIP
+        tensor([-21.5251])
+
         """
         return LogProb(self, sum_features=sum_features, feature_dims=feature_dims)
 
@@ -330,6 +529,26 @@ class Distribution(nn.Module):
         -------
         pixyz.losses.Prob
             An instance of :class:`pixyz.losses.Prob`
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import Normal
+        >>> # Marginal distribution
+        >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...             features_shape=[10], name="p1")
+        >>> sample_x = torch.randn(1, 10) # Psuedo data
+        >>> prob = p1.prob().eval({"x": sample_x})
+        >>> print(prob) # doctest: +SKIP
+        tensor([4.0933e-07])
+
+        >>> # Conditional distribution
+        >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
+        ...             features_shape=[10], name="p2")
+        >>> sample_y = torch.randn(1, 10) # Psuedo data
+        >>> prob = p2.prob().eval({"x": sample_x, "y": sample_y})
+        >>> print(prob) # doctest: +SKIP
+        tensor([2.9628e-09])
 
         """
         return Prob(self, sum_features=sum_features, feature_dims=feature_dims)

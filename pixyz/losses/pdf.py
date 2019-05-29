@@ -15,11 +15,16 @@ class LogProb(Loss):
     --------
     >>> import torch
     >>> from pixyz.distributions import Normal
-    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+    ...            features_shape=[10])
     >>> loss_cls = LogProb(p)  # or p.log_prob()
     >>> print(loss_cls)
     \log p(x)
-    >>> loss = loss_cls.eval({"x": torch.randn(1,64)})
+    >>> sample_x = torch.randn(2, 10) # Psuedo data
+    >>> loss = loss_cls.eval({"x": sample_x})
+    >>> print(loss) # doctest: +SKIP
+    tensor([12.9894, 15.5280])
+
     """
 
     def __init__(self, p, sum_features=True, feature_dims=None):
@@ -49,11 +54,15 @@ class Prob(LogProb):
     --------
     >>> import torch
     >>> from pixyz.distributions import Normal
-    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+    ...            features_shape=[10])
     >>> loss_cls = Prob(p)  # or p.prob()
     >>> print(loss_cls)
     p(x)
-    >>> loss = loss_cls.eval({"x": torch.randn(1,64)})
+    >>> sample_x = torch.randn(2, 10) # Psuedo data
+    >>> loss = loss_cls.eval({"x": sample_x})
+    >>> print(loss) # doctest: +SKIP
+    tensor([3.2903e-07, 5.5530e-07])
     """
 
     @property
