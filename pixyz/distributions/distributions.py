@@ -975,7 +975,7 @@ class ReplaceVarDistribution(Distribution):
         """
         Parameters
         ----------
-        p : pixyz.Distribution (not pixyz.MultiplyDistribution)
+        p : :class:`pixyz.distributions.Distribution` (not :class:`pixyz.distributions.MultiplyDistribution`)
             Distribution.
 
         replace_dict : dict
