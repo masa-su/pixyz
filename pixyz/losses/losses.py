@@ -44,7 +44,7 @@ class Loss(object, metaclass=abc.ABCMeta):
     >>> kl = KullbackLeibler(q, prior)
     >>> loss_cls = (reconst - kl).mean()
     >>> print(loss_cls)
-    mean \left(- D_{KL} \left[q(z|x)||p_{prior}(z) \\right] - \mathbb{E}_{q(z|x)} \left[\log p(x|z) \\right] \\right)
+    mean \\left(- D_{KL} \\left[q(z|x)||p_{prior}(z) \\right] - \\mathbb{E}_{q(z|x)} \\left[\\log p(x|z) \\right] \\right)
     >>> # Evaluate this loss function
     >>> data = torch.randn(1, 128)  # Pseudo data
     >>> loss = loss_cls.eval({"x": data})
@@ -495,7 +495,7 @@ class AbsLoss(LossSelfOperator):
     ...            features_shape=[10])
     >>> loss_cls = LogProb(p).abs() # equals to AbsLoss(LogProb(p))
     >>> print(loss_cls)
-    |\log p(x)|
+    |\\log p(x)|
     >>> sample_x = torch.randn(2, 10) # Psuedo data
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP

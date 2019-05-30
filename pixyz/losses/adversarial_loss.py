@@ -202,7 +202,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     tensor(1.3723, grad_fn=<AddBackward0>)
     >>> # For evaluating a discriminator loss, set the `discriminator` option to True.
     >>> loss_d = loss_cls.eval({"x": sample_x}, discriminator=True)
-    >>> print(loss_d, loss)
+    >>> print(loss_d) # doctest: +SKIP
     tensor(1.4990, grad_fn=<AddBackward0>)
     >>> # When training the evaluation metric (discriminator), use the train method.
     >>> train_loss = loss_cls.train({"x": sample_x})
