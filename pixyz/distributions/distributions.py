@@ -837,16 +837,46 @@ class MultiplyDistribution(Distribution):
     >>> a = DistributionBase(var=["x"], cond_var=["z"])
     >>> b = DistributionBase(var=["z"], cond_var=["y"])
     >>> p_multi = MultiplyDistribution(a, b)
-    >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
-    p(x,z|y) p(x|z)p(z|y)
+    >>> print(p_multi)
+    Distribution:
+      p(x,z|y) = p(x|z)p(z|y)
+    Network architecture:
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['z'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([])
+      )
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
     >>> b = DistributionBase(var=["y"], cond_var=["z"])
     >>> p_multi = MultiplyDistribution(a, b)
-    >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
-    p(x,y|z) p(x|z)p(y|z)
+    >>> print(p_multi)
+    Distribution:
+      p(x,y|z) = p(x|z)p(y|z)
+    Network architecture:
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
     >>> b = DistributionBase(var=["y"], cond_var=["a"])
     >>> p_multi = MultiplyDistribution(a, b)
-    >>> print(p_multi.prob_text, p_multi.prob_factorized_text)
-    p(x,y|z,a) p(x|z)p(y|a)
+    >>> print(p_multi)
+    Distribution:
+      p(x,y|z,a) = p(x|z)p(y|a)
+    Network architecture:
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['y'], cond_var=['a'], input_var=['a'], features_shape=torch.Size([])
+      )
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
 
     """
 
@@ -962,12 +992,28 @@ class ReplaceVarDistribution(Distribution):
     Examples
     --------
     >>> p = DistributionBase(var=["x"], cond_var=["z"])
-    >>> print(p.prob_text)
-    p(x|z)
+    >>> print(p)
+    Distribution:
+      p(x|z)
+    Network architecture:
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
     >>> replace_dict = {'x': 'y'}
     >>> p_repl = ReplaceVarDistribution(p, replace_dict)
-    >>> print(p_repl.prob_text)
-    p(y|z)
+    >>> print(p_repl)
+    Distribution:
+      p(y|z)
+    Network architecture:
+      ReplaceVarDistribution(
+        name=p, distribution_name=,
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        (p): DistributionBase(
+          name=p, distribution_name=,
+          var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        )
+      )
 
     """
 
@@ -1076,11 +1122,31 @@ class MarginalizeVarDistribution(Distribution):
     >>> a = DistributionBase(var=["x"], cond_var=["z"])
     >>> b = DistributionBase(var=["y"], cond_var=["z"])
     >>> p_multi = a * b
-    >>> print(p_multi.prob_text)
-    p(x,y|z)
+    >>> print(p_multi)
+    Distribution:
+      p(x,y|z) = p(x|z)p(y|z)
+    Network architecture:
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
     >>> p_marg = MarginalizeVarDistribution(p_multi, ["y"])
-    >>> print(p_marg.prob_text, p_marg.prob_factorized_text)
-    p(x|z) \int p(x|z)p(y|z)dy
+    >>> print(p_marg)
+    Distribution:
+      p(x|z) = \int p(x|z)p(y|z)dy
+    Network architecture:
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
+      DistributionBase(
+        name=p, distribution_name=,
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+      )
 
     """
 
