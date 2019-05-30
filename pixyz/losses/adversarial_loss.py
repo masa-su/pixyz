@@ -31,12 +31,58 @@ class AdversarialLoss(Loss):
         return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
 
     def d_loss(self, y_p, y_q, batch_n):
+        """Evaluate a discriminator loss given outputs of the discriminator.
+
+        Parameters
+        ----------
+        y_p : torch.Tensor
+            Output of discriminator given sample from p.
+        y_q : torch.Tensor
+            Output of discriminator given sample from q.
+        batch_n : int
+            Batch size of inputs.
+
+        Returns
+        -------
+        torch.Tensor
+
+        """
         raise NotImplementedError
 
     def g_loss(self, y_p, y_q, batch_n):
+        """Evaluate a generator loss given outputs of the discriminator.
+
+        Parameters
+        ----------
+        y_p : torch.Tensor
+            Output of discriminator given sample from p.
+        y_q : torch.Tensor
+            Output of discriminator given sample from q.
+        batch_n : int
+            Batch size of inputs.
+
+        Returns
+        -------
+        torch.Tensor
+
+        """
         raise NotImplementedError
 
     def train(self, train_x_dict, **kwargs):
+        """Train the evaluation metric (discriminator).
+
+        Parameters
+        ----------
+        train_x_dict : dict
+            Input variables.
+        **kwargs
+            Arbitrary keyword arguments.
+
+        Returns
+        -------
+        loss : torch.Tensor
+
+        """
         self.d.train()
 
         self.d_optimizer.zero_grad()
@@ -51,6 +97,20 @@ class AdversarialLoss(Loss):
         return loss
 
     def test(self, test_x_dict, **kwargs):
+        """Test the evaluation metric (discriminator).
+
+        Parameters
+        ----------
+        test_x_dict : dict
+            Input variables.
+        **kwargs
+            Arbitrary keyword arguments.
+
+        Returns
+        -------
+        loss : torch.Tensor
+
+        """
         self.d.eval()
 
         with torch.no_grad():
@@ -146,6 +206,10 @@ class AdversarialJensenShannon(AdversarialLoss):
     tensor(1.4990, grad_fn=<AddBackward0>)
     >>> # When training the evaluation metric (discriminator), use the train method.
     >>> train_loss = loss_cls.train({"x": sample_x})
+
+    References
+    ----------
+    [Goodfellow+ 2014] Generative Adversarial Networks
     """
 
     def __init__(self, p, q, discriminator, input_var=None, optimizer=optim.Adam, optimizer_params={},
@@ -234,10 +298,6 @@ class AdversarialKullbackLeibler(AdversarialLoss):
 
     Note that this divergence is minimized to close :math:`p` to :math:`q`.
 
-    Reference
-    ---------
-    [Kim+ 2018] Disentangling by Factorising
-
     Examples
     --------
     >>> import torch
@@ -312,6 +372,10 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     tensor(1.9321, grad_fn=<AddBackward0>)
     >>> # When training the evaluation metric (discriminator), use the train method.
     >>> train_loss = loss_cls.train({"x": sample_x})
+
+    References
+    ----------
+    [Kim+ 2018] Disentangling by Factorising
     """
 
     def __init__(self, p, q, discriminator, **kwargs):
@@ -346,6 +410,20 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         return self.g_loss(y_p, batch_n), x_dict
 
     def g_loss(self, y_p, batch_n):
+        """Evaluate a generator loss given an output of the discriminator.
+
+        Parameters
+        ----------
+        y_p : torch.Tensor
+            Output of discriminator given sample from p.
+        batch_n : int
+            Batch size of inputs.
+
+        Returns
+        -------
+        torch.Tensor
+
+        """
         # set labels
         t_p = torch.ones(batch_n, 1).to(y_p.device)
         t_q = torch.zeros(batch_n, 1).to(y_p.device)
@@ -449,6 +527,10 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     tensor(-0.3802, grad_fn=<NegBackward>)
     >>> # When training the evaluation metric (discriminator), use the train method.
     >>> train_loss = loss_cls.train({"x": sample_x})
+
+    References
+    ----------
+    [Arjovsky+ 2017] Wasserstein GAN
     """
 
     def __init__(self, p, q, discriminator,
