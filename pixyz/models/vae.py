@@ -7,7 +7,11 @@ from ..losses import StochasticReconstructionLoss
 
 class VAE(Model):
     """
-    Variational Autoencoder
+    Variational Autoencoder.
+
+    In VAE class, reconstruction loss over given distributions (encoder and decoder) is set as the default loss class.
+    However, if you want to add additional terms, e.g., the KL divergence between encoder and prior,
+    you need to set it as the `regularizer`, whose default is None.
 
     References
     ----------
@@ -15,7 +19,7 @@ class VAE(Model):
     """
     def __init__(self, encoder, decoder,
                  other_distributions=[],
-                 regularizer=[],
+                 regularizer=None,
                  optimizer=optim.Adam,
                  optimizer_params={}):
 

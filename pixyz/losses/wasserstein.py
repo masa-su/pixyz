@@ -21,6 +21,17 @@ class WassersteinDistance(Loss):
 
     Here, :math:`W'` is the upper of :math:`W` (i.e., :math:`W\leq W'`), and these are equal when both :math:`p`
     and :math:`q` are degenerate (deterministic) distributions.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> p = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"], features_shape=[64], name="p")
+    >>> q = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"], features_shape=[64], name="q")
+    >>> loss_cls = WassersteinDistance(p, q)
+    >>> print(loss_cls)
+    W^{upper} \left(p(z|x), q(z|x) \right)
+    >>> loss = loss_cls.eval({"x": torch.randn(1, 64)})
     """
 
     def __init__(self, p, q, metric=PairwiseDistance(p=2), input_var=None):

@@ -8,6 +8,9 @@ from ..losses import ELBO
 class VI(Model):
     """
     Variational Inference (Amortized inference)
+
+    The ELBO over given distributions (p, approximate_dist) is set as the loss class of this model.
+
     """
     def __init__(self, p, approximate_dist,
                  other_distributions=[],

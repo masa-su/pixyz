@@ -7,6 +7,8 @@ from ..utils import tolist
 class ML(Model):
     """
     Maximum Likelihood (log-likelihood)
+
+    Negative log-likelihood of the given distribution (p) is set as the loss class of this model.
     """
     def __init__(self, p,
                  other_distributions=[],
