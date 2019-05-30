@@ -356,7 +356,7 @@ class SubLoss(LossOperator):
     >>> loss_cls_2 = Parameter("x")
     >>> loss_cls = loss_cls_1 - loss_cls_2  # equals to SubLoss(loss_cls_1, loss_cls_2)
     >>> print(loss_cls)
-    - x + 2
+    2 - x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
     -2
