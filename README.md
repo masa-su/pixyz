@@ -1,12 +1,14 @@
 # Pixyz: A library for developing deep generative models
 
-![logo](https://user-images.githubusercontent.com/11865486/47983581-31c08c80-e117-11e8-8d9d-1efbd920718c.png)
+<img src="https://user-images.githubusercontent.com/11865486/58864169-3706a980-86ef-11e9-82f4-18bb0275271b.png" width="800px">
 
-
-[![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
-[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
-[![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=develop-v0.1.0)](https://docs.pixyz.io/en/develop-v0.1.0/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
+[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz)
+[![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
 [![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=develop%2Fv0.1.0)](https://github.com/masa-su/pixyz/tree/develop/v0.1.0)
+
+[Docs](https://docs.pixyz.io) | [Examples](https://github.com/masa-su/pixyz/tree/master/examples) | [Pixyzoo](https://github.com/masa-su/pixyzoo)
 
 - [What is Pixyz?](#what-is-pixyz)
 - [Installation](#installation)
@@ -15,27 +17,34 @@
 - [Acknowledgements](#acknowledgements)
 
 ## What is Pixyz?
-Pixyz is a high-level deep generative modeling library, based on [PyTorch](https://pytorch.org/). It is developed with a focus on enabling easy implementation of various deep generative models.
+[**Pixyz**](https://github.com/masa-su/pixyz) is a high-level deep generative modeling library, based on [PyTorch](https://pytorch.org/). It is developed with a focus on enabling easy implementation of various deep generative models.
 
 Recently, many papers about deep generative models have been published. However, its reproduction becomes a hard task, for both specialists and practitioners, because such recent models become more complex and there are no unified tools that bridge mathematical formulation of them and implementation. The vision of our library is to enable both specialists and practitioners to implement such complex deep generative models by **just as if writing the formulas provided in these papers**.
 
-Our library supports following typical deep generative models.
+Our library supports the following deep generative models.
 
 * Explicit models (likelihood-based)
   * Variational autoencoders (variational inference)
   * Flow-based models
-  * Autoregressive generative models
+  * Autoregressive generative models (note: not implemented yet)
 * Implicit models
   * Generative adversarial networks
   
-Pixyz enables us to implement these different models **in the same framework** and **in combination with each other**.
+Moreover, Pixyz enables you to implement these different models **in the same framework** and **in combination with each other**.
 
 The overview of Pixyz is as follows. Each API will be discussed below.
-<img src="https://user-images.githubusercontent.com/11865486/58321994-a3b1b680-7e5a-11e9-89dd-334086a89525.png" width="400px">
+<img src="https://user-images.githubusercontent.com/11865486/58321994-a3b1b680-7e5a-11e9-89dd-334086a89525.png" width="600px">
 
 **Note**: Since this library is under development, there are possibilities to have some bugs.
 
 ## Installation
+
+Pixyz can be installed by using `pip`.
+```
+$ pip install pixyz
+```
+
+If installing from source code, execute the following commands.
 ```
 $ git clone https://github.com/masa-su/pixyz.git
 $ pip install -e pixyz
@@ -43,200 +52,185 @@ $ pip install -e pixyz
 
 ## Quick Start
 
-So now, let's create a deep generative model with Pixyz!
+Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model
+<img src="https://latex.codecogs.com/gif.latex?q_{\phi}(z|x)" />
+and a generative model
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x,z)=p_{\theta}(x|z)p(z)" />
+ , each of which is defined by DNN, and this loss function (negative ELBO) is as follows.
 
-Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model q(z|x) and a generative model p(x,z)=p(x|z)p(z), each of which is defined by DNN, and this objective function is as follows.
+<img src="https://latex.codecogs.com/gif.latex?\mathcal{L}(x;\phi,\theta)=-E_{q_{\phi}(z|x)}\left[\log{p_{\theta}(x|z)}\right]+D_{KL}\left[q_{\phi}(z|x)||p_{prior}(z)\right]" /> (1)
 
-<img src="https://latex.codecogs.com/gif.latex?{\cal&space;L}(x;&space;\phi,&space;\theta)&space;=&space;E_{q_\phi(z|x)}[\log\frac{p_\theta(x,z)}{q_\phi(z|x)}]" /> (1)
+In Pixyz, deep generative models are implemented in the following three steps:
+1. [Define distributions(Distribution API）](#1-define-distributionsdistribution-api)
+2. [Set the loss function of a model(Loss API)](#2-set-the-loss-function-of-a-modelloss-api)
+3. [Train the model(Model API)](#3-train-the-modelmodel-api)
 
-### 1. Define the distributions
-First, we need to define two distributions (q(z|x), p(x|z)) with DNNs. In Pixyz, you can do this by implementing DNN architectures just as you do in PyTorch. The main difference is that we should write a class which inherits the `pixyz.distributions.*` class (**Distribution API**), not the `torch.nn.Module` class.
+### 1. Define distributions(Distribution API)
+First, we need to define two distributions (
+<img src="https://latex.codecogs.com/gif.latex?q_{\phi}(z|x)" />
+,
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x|z)" />
+) with DNNs. In Pixyz, you can do this by building DNN modules just as you do in PyTorch. The main difference is that you should inherit the `pixyz.distributions.*` class (**Distribution API**), instead of `torch.nn.Module` .
 
-For example, p(x|z) (Bernoulli) and q(z|x) (normal) can be defined as follows.
+For example, 
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x|z)" />
+(Bernoulli) 
+and
+<img src="https://latex.codecogs.com/gif.latex?q_{\phi}(z|x)" />
+(normal) are implemented as follows.
 
 ```python
 >>> from pixyz.distributions import Bernoulli, Normal
 >>> # inference model (encoder) q(z|x)
 >>> class Inference(Normal):
->>>     def __init__(self):
->>>         super(Inference, self).__init__(cond_var=["x"], var=["z"], name="q")  # var: variables of this distribution, cond_var: coditional variables.
->>> 
->>>         self.fc1 = nn.Linear(784, 512)
->>>         self.fc2 = nn.Linear(512, 512)
->>>         self.fc31 = nn.Linear(512, 64)
->>>         self.fc32 = nn.Linear(512, 64)
->>> 
->>>     def forward(self, x):  # the name of this argument should be same as cond_var.
->>>         h = F.relu(self.fc1(x))
->>>         h = F.relu(self.fc2(h))
->>>         return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}  # return paramaters of the normal distribution
->>> 
->>>     
+...     def __init__(self):
+...         super(Inference, self).__init__(cond_var=["x"], var=["z"], name="q")  # var: variables of this distribution, cond_var: coditional variables.
+...         self.fc1 = nn.Linear(784, 512)
+...         self.fc21 = nn.Linear(512, 64)
+...         self.fc22 = nn.Linear(512, 64)
+... 
+...     def forward(self, x):  # the name of this argument should be same as cond_var.
+...         h = F.relu(self.fc1(x))
+...         return {"loc": self.fc21(h),
+...                 "scale": F.softplus(self.fc22(h))}  # return parameters of the normal distribution
+... 
 >>> # generative model (decoder) p(x|z)    
 >>> class Generator(Bernoulli):
->>>     def __init__(self):
->>>         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
->>> 
->>>         self.fc1 = nn.Linear(64, 512)
->>>         self.fc2 = nn.Linear(512, 512)
->>>         self.fc3 = nn.Linear(512, 128)
->>> 
->>>     def forward(self, z):  # the name of this argument should be same as cond_var.
->>>         h = F.relu(self.fc1(z))
->>>         h = F.relu(self.fc2(h))
->>>         return {"probs": F.sigmoid(self.fc3(h))}    # return a paramater of the Bernoulli distribution
+...     def __init__(self):
+...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+...         self.fc1 = nn.Linear(64, 512)
+...         self.fc2 = nn.Linear(512, 128)
+... 
+...     def forward(self, z):  # the name of this argument should be same as cond_var.
+...         h = F.relu(self.fc1(z))
+...         return {"probs": F.sigmoid(self.fc2(h))}    # return a parameter of the Bernoulli distribution
 ```
-Once defined, we can create these instances from them. 
+Once defined, you can create instances of these classes.
 ```python
 >>> p = Generator()
 >>> q = Inference()
 ```
 
-If you want to use distributions which don't need to be defined with DNNs, you just create new instance from `pixyz.distributions.*`. In VAE, p(z) is usually defined as the standard normal distribution.
+In VAE,
+<img src="https://latex.codecogs.com/gif.latex?p(z)" />
+, a prior of the generative model,  is usually defined as the standard normal distribution, without using DNNs. 
+Such an instance can be created from `pixyz.distributions.*` as
 ```python
->>> loc = torch.tensor(0.)
->>> scale = torch.tensor(1.)
->>> prior = Normal(loc=loc, scale=scale, var=["z"], dim=64, name="p_prior")
+>>> prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
+...                var=["z"], features_dim=[64], name="p_prior")
 ```
 
-If you want to see what kind of distribution and architecture each instance defines, just `print` them!
+If you want to find out what kind of distribution each instance defines and what modules (the network architecture) define it, just `print` them.
 ```python
 >>> print(p)
 Distribution:
-  p(x|z) (Bernoulli)
+  p(x|z)
 Network architecture:
   Generator(
+    name=p, distribution_name=Bernoulli,
+    var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
     (fc1): Linear(in_features=64, out_features=512, bias=True)
     (fc2): Linear(in_features=512, out_features=512, bias=True)
     (fc3): Linear(in_features=512, out_features=784, bias=True)
-)
+  )
 ```
-Conveniently, each instance (distribution) can **perform sampling** and **estimate (log-)likelihood** over given samples regardless of the form of the internal DNN architecture. It will be explained later (see section 2.3).
+If you are working on the iPython environment, you can use `print_latex` to display them in the LaTeX compiled format.
 
-Moreover, in VAE, we should define the joint distribution p(x,z)=p(x|z)p(z) as the generative model. In **Distribution API**, you can directly calculate the product of different distributions! See [some examples](https://github.com/masa-su/pixyz/blob/master/examples/distributions.ipynb) for details.
+![p](https://user-images.githubusercontent.com/11865486/59156055-1c0dae00-8ad0-11e9-9eac-5b9938904a0d.png)
+
+Conveniently, each distribution instance can **perform sampling** over given samples, regardless of the form of the internal DNN modules. 
+```python
+>>> samples_z = prior.sample(batch_n=1)
+>>> print(samples_z)
+{'z': tensor([[ 0.6084,  1.4716,  0.6413,  1.3184, -0.8930,  0.0603,  1.2254,  0.5910, ..., 0.8389]])}
+>>> samples = p.sample(samples_z)
+>>> print(samples)
+{'z': tensor([[ 1.5377,  0.4713,  0.0354,  0.5013,  1.2584,  0.8908,  0.6323,  1.0844, ..., -0.7603]]),
+ 'x': tensor([[0., 1., 0., 1., 0., 0., 1., 1., 0., 0., 1., 1., 1., 1., ..., 0.]])}
+```
+As in this example, samples are represented in dictionary forms in which the keys correspond to random variable names and the values are their realized values.
+
+Moreover, the instance of joint distribution
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x,z)=p_{\theta}(x|z)p(z)" />
+can be created by **the product of distribution instances**. 
 ```python
 >>> p_joint = p * prior
+```
+
+This instance can be checked as
+```python
 >>> print(p_joint)
 Distribution:
-  p(x,z) = p(x|z)p_prior(z)
+  p(x,z) = p(x|z)p_{prior}(z)
 Network architecture:
-  p_prior(z) (Normal): Normal()
-  p(x|z) (Bernoulli): Generator(
-   (fc1): Linear(in_features=64, out_features=512, bias=True)
-   (fc2): Linear(in_features=512, out_features=512, bias=True)
-   (fc3): Linear(in_features=512, out_features=784, bias=True)
- )
+  Normal(
+    name=p_{prior}, distribution_name=Normal,
+    var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([64])
+    (loc): torch.Size([1, 64])
+    (scale): torch.Size([1, 64])
+  )
+  Generator(
+    name=p, distribution_name=Bernoulli,
+    var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+    (fc1): Linear(in_features=64, out_features=512, bias=True)
+    (fc2): Linear(in_features=512, out_features=512, bias=True)
+    (fc3): Linear(in_features=512, out_features=784, bias=True)
+  )
 ```
-This distribution can also perform sampling and likelihood estimation in the same way. Thanks to this API, we can easily implement **even more complicated probabilistic models**.
+![p_joint](https://user-images.githubusercontent.com/11865486/59156030-d81aa900-8acf-11e9-8b8a-ef2d944722b2.png)
 
-### 2. Set the objective function and train the model
-After defining distributions, we should set the objective fuction of the model and train (optimize) it. In Pixyz, there are three ways to do this.
-
-1. Model API
-2. Loss API
-3. Use Distribution API only
-
-We can choose either of these three ways, but upper one is for beginners and lower is for developers/researchers.
-
-#### 2.1. Model API
-The simplest way to create trainable models is to use Model API (`pixyz.models.*`). Our goal in this tutorial is to implement the VAE, so we choose `pixyz.models.VI` (which is for variational inference) and set distributions defined above and the optimizer.
+Also, it can perform sampling in the same way. 
 ```python
->>> from pixyz.models import VI
->>> model = VI(p_joint, q, optimizer=optim.Adam, optimizer_params={"lr":1e-3})
+>>> p_joint.sample(batch_n=1)
+{'z': tensor([[ 1.5377,  0.4713,  0.0354,  0.5013,  1.2584,  0.8908,  0.6323,  1.0844, ..., -0.7603]]),
+ 'x': tensor([[0., 1., 0., 1., 0., 0., 1., 1., 0., 0., 1., 1., 1., 1., ..., 0.]])}
 ```
-Mission complete! To train this model, simply run the `train` method with data as input.
+By constructing the joint distribution in this way, you can easily implement **more complicated generative models**.
+
+### 2. Set the loss function of a model(Loss API)
+Next, we set the objective (loss) function of the model with defined distributions.
+
+**Loss API** (`pixyz.losses.*`) enables you to define such loss function as if just writing mathematic formulas. The loss function of VAE (Eq.(1)) can easily be converted to the code style  as follows.
 ```python
->>> loss = model.train({"x": x_tensor}) # x_tensor is the input data (torch.Tensor)
+>>> from pixyz.losses import KullbackLeibler, LogProb, Expectation as E
+>>> reconst = -E(q, LogProb(p)) # the reconstruction loss (it can also be written as `-p.log_prob().expectation()` or `StochasticReconstructionLoss(q, p)`)
+>>> kl = KullbackLeibler(q, prior) # Kullback-Leibler divergence
+>>> loss_cls = (kl + reconst).mean()
 ```
 
-In addition to VI, we prepared various models for Model API such as GAN, VAE (negative reconstruction error + KL), ML etc.
-
-#### 2.2. Loss API
-In the simple case, it is enough to just use the Model API. But how about this case?
-
-<img src="https://latex.codecogs.com/gif.latex?\sum_{x,y&space;\sim&space;p_{data}(x,&space;y)}&space;\left[E_{q(z|x,y)}\left[\log&space;\frac{p(x,z|y)}{q(z|x,y)}\right]&space;&plus;&space;\alpha&space;\log&space;q(y|x)\right]&space;&plus;&space;\sum_{x_u&space;\sim&space;p_{data}(x_u)}\left[E_{q(z|x_u,y)q(y|x_u)}\left[\log&space;\frac{p(x_u,z|y)}{q(z|x_u,y)q(y|x_u)}\right]\right]" /> (2)
-
-This is the (negative) loss function of semi-supervised VAE [Kingma+ 2015] (note that this loss function is slightly different from what is described in the original paper). It seems that it is too complicated to implement in Model API. 
-
-**Loss API** enables us to implement such complicated models as if just writing mathmatic formulas. If we have already defined distributions which appear in Eq.(2) by Distribution API, we can easily convert Eq.(2) to the code style with `pixyz.losses.*` as follows.
-```python
->>> from pixyz.losses import ELBO, NLL
->>> # The defined distributions are p_joint_u, q_u, p_joint, q, f.
->>> #  p_joint: p(x,z|y) = p(x|z,y)prior(z)
->>> #  p_joint_u: p(x_u,z|y_u) = p(x_u|z,y_u)prior(z)
->>> #  q: p(z,y|x) = q(z|x,y)p(y|x)
->>> #  q_u: p(z,y_u|x_u) = q(z|x_u,y_u)p(y_u|x_u)
->>> #  f: p(y|x)
->>> elbo_u = ELBO(p_joint_u, q_u)
->>> elbo = ELBO(p_joint, q)
->>> nll = NLL(f)
->>> 
->>> loss_cls = -(elbo - (0.1 * nll)).sum() - elbo_u.sum() 
-```
-We can check what format this loss is just by printing!
+Like Distribution API, you can check the formula of the loss function by printing.
 ```python
 >>> print(loss_cls)
--(sum(E_q(z|x,y)[log p(x,z|y)/q(z|x,y)] - log p(y|x) * 0.1)) - sum(E_p(z,y_u|x_u)[log p(x_u,z|y_u)/p(z,y_u|x_u)])
+mean \left(D_{KL} \left[q(z|x)||p_{prior}(z) \right] - \mathbb{E}_{q(z|x)} \left[\log p(x|z) \right] \right) 
 ```
-When you want to estimate a value of the loss function given data, use the `estimate` method.
-```python
->>> loss_tensor = loss_cls.estimate({"x": x_tensor, "y": y_tensor, "x_u": x_u_tensor})
->>> print(loss_tensor)
-tensor(1.00000e+05 * 1.2587, device='cuda:0')
-```
-Since the type of this value is just `torch.Tensor`, you can train it just like a normal way in PyTorch, 
-```python
->>> optimizer = optim.Adam(list(q.parameters())+list(p.parameters())+list(f.parameters()), lr=1e-3)
->>> 
->>> optimizer.zero_grad()
->>> loss_tensor.backward()
->>> optimizer.step()
-```
+![loss](https://user-images.githubusercontent.com/11865486/59156066-3f385d80-8ad0-11e9-9604-ee78a5dd7407.png)
 
-Alternatively, you can set it as the loss function of the `pixyz.Model` class to train (using `pixyz.models.Model`).
+When evaluating this loss function given data, use the `eval` method.
+```python
+>>> loss_tensor = loss_cls.eval({"x": x_tensor}) # x_tensor: input data
+>>> print(loss_tensor)
+tensor(1.00000e+05 * 1.2587)
+```
+### 3. Train the model(Model API)
+Finally, Model API (`pixyz.models.Model`) can train the loss function given the optimizer, distributions to train, and training data.
 ```python
 >>> from pixyz.models import Model
->>> model = Model(loss_cls, distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr":1e-3})
->>> model.train({"x":x, "y":y, "x_u":x_u})
+>>> from torch import optim
+>>> model = Model(loss_cls, distributions=[p, q],
+...               optimizer=optim.Adam, optimizer_params={"lr":1e-3}) # initialize a model
+>>> train_loss = model.train({"x": x_tensor}) # train the model given training data (x_tensor) 
 ```
-
-#### 2.3. Use Distribution API only
-Distribution API itself can perform sampling. The type of arguments and return values in the `sample` method is dictionary format.
-```python
-# p: p(x|z)
-# prior: p(z)
->>> samples_dict = prior.sample()
->>> print(samples_dict)
-{'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
->>> print(p.sample(samples_dict))
-{'x': tensor([[ 0.,  0.,...]], device='cuda:0', 'z': tensor([[-0.5472, -0.7301,...]], device='cuda:0')}
->>> p_joint = p * p_prior  # p(x,z)
->>> print(p_joint.sample())
-{'x': tensor([[ 0.,  1.,...]], device='cuda:0', 'z': tensor([[1.2795,  0.7561,...]], device='cuda:0')}
-```
-
-Moreover, estimating log-likelihood is also possible (using the `log_likelihood` method).
-```python
-# p: p(x|z)
-# data: {"x": x_tensor, "z": z_tensor}
->>> loglike = p.log_likelihood(data)
->>> print(loglike)
-tensor([[-540.9977, -541.6169, -542.1608,...]], device='cuda:0')
-```
-
-By using these functions in Distribution API, ELBO (Eq.(1)) under given data (x_tensor) can also be calculated as follows.
-```python
-# p: p(x|z)
-# q: q(z|x)
-# prior: p(z)
->>> samples_dict = q.sample({"x": x_tensor})  # z~q(z|x)
->>>
->>> p_joint = p * prior  # p(x, z)
->>> elbo = p_joint.log_likelihood(samples_dict) -q.log_likelihood(samples_dict) # log p(x,z)-log q(z|x)
-```
+After training the model, you can perform generation and inference on the model by sampling from
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x,z)" />
+and
+<img src="https://latex.codecogs.com/gif.latex?q_{\phi}(z|x)" />
+, respectively.
 
 ## More information
-For more detailed usage, please check our [sample codes](https://github.com/masa-su/pixyz/tree/master/examples) and the [pixyzoo](https://github.com/masa-su/pixyzoo) repository.
+These frameworks of Pixyz allow the implementation of more complex deep generative models.
+See [sample codes](https://github.com/masa-su/pixyz/tree/master/examples) and the [pixyzoo](https://github.com/masa-su/pixyzoo) repository as examples.
+
+For more detailed usage, please check the [Pixyz documentation](https://docs.pixyz.io).
 
 If you encounter some problems in using Pixyz, please let us know.
 
