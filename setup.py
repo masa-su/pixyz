@@ -31,5 +31,6 @@ setup(
                       "tqdm",
                       "scipy",
                       "sympy",
-                      "ipython"]
+                      "ipython",
+                      "tensorboardX"]
 )
