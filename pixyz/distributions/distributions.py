@@ -1088,7 +1088,7 @@ class MarginalizeVarDistribution(Distribution):
         """
         Parameters
         ----------
-        p : pixyz.Distribution (not pixyz.DistributionBase)
+        p : :class:`pixyz.distributions.Distribution` (not :class:`pixyz.distributions.DistributionBase`)
             Distribution.
 
         marginalize_list : list
@@ -1098,10 +1098,10 @@ class MarginalizeVarDistribution(Distribution):
         marginalize_list = tolist(marginalize_list)
 
         if not isinstance(p, Distribution):
-            raise ValueError("Given input must be `pixyz.Distribution`, got {}.".format(type(p)))
+            raise ValueError("Given input must be `pixyz.distributions.Distribution`, got {}.".format(type(p)))
 
         if isinstance(p, DistributionBase):
-            raise ValueError("`pixyz.DistributionBase` cannot marginalize its variables for now.")
+            raise ValueError("`pixyz.distributions.DistributionBase` cannot be marginalized its variables.")
 
         _var = deepcopy(p.var)
         _cond_var = deepcopy(p.cond_var)
