@@ -15,7 +15,25 @@ class VI(Model):
     def __init__(self, p, approximate_dist,
                  other_distributions=[],
                  optimizer=optim.Adam,
-                 optimizer_params={}):
+                 optimizer_params={},
+                 clip_grad_norm=None,
+                 clip_grad_value=None):
+        """
+        Parameters
+        ----------
+        p : torch.distributions.Distribution
+            Generative model (distribution).
+        approximate_dist : torch.distributions.Distribution
+            Approximate posterior distribution.
+        optimizer : torch.optim
+            Optimization algorithm.
+        optimizer_params : dict
+            Parameters of optimizer
+        clip_grad_norm : float or int
+            Maximum allowed norm of the gradients.
+        clip_grad_value : float or int
+            Maximum allowed value of the gradients.
+        """
 
         # set distributions (for training)
         distributions = [p, approximate_dist] + tolist(other_distributions)
@@ -26,7 +44,8 @@ class VI(Model):
 
         super().__init__(loss, test_loss=loss,
                          distributions=distributions,
-                         optimizer=optimizer, optimizer_params=optimizer_params)
+                         optimizer=optimizer, optimizer_params=optimizer_params,
+                         clip_grad_norm=clip_grad_norm, clip_grad_value=clip_grad_value)
 
     def train(self, train_x_dict={}, **kwargs):
         return super().train(train_x_dict, **kwargs)

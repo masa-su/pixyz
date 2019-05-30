@@ -10,7 +10,7 @@ from ..distributions.distributions import Distribution
 class Model(object):
     """
     This class is for training and testing a loss class.
-    It requires a defined loss class, distributions to train, and optimizer.
+    It requires a defined loss class, distributions to train, and optimizer for initialization.
 
     Examples
     --------
@@ -63,7 +63,26 @@ class Model(object):
                  distributions=[],
                  optimizer=optim.Adam,
                  optimizer_params={},
-                 clip_grad_norm=None, clip_grad_value=None):
+                 clip_grad_norm=None,
+                 clip_grad_value=None):
+        """
+        Parameters
+        ----------
+        loss : pixyz.losses.Loss
+            Loss class for training.
+        test_loss : pixyz.losses.Loss
+            Loss class for testing.
+        distributions : list
+            List of :class:`pixyz.distributions.Distribution`.
+        optimizer : torch.optim
+            Optimization algorithm.
+        optimizer_params : dict
+            Parameters of optimizer
+        clip_grad_norm : float or int
+            Maximum allowed norm of the gradients.
+        clip_grad_value : float or int
+            Maximum allowed value of the gradients.
+        """
 
         # set losses
         self.loss_cls = None
