@@ -9,6 +9,8 @@ class VAE(Model):
     """
     Variational Autoencoder
 
+    References
+    ----------
     [Kingma+ 2013] Auto-Encoding Variational Bayes
     """
     def __init__(self, encoder, decoder,

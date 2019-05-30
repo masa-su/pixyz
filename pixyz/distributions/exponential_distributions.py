@@ -94,7 +94,9 @@ class FactorizedBernoulli(Bernoulli):
     """
     Factorized Bernoulli distribution parameterized by :attr:`probs`.
 
-    See `Generative Models of Visually Grounded Imagination`
+    References
+    ----------
+    [Vedantam+ 2017] Generative Models of Visually Grounded Imagination
 
     """
 

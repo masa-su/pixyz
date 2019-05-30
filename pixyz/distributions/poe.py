@@ -15,7 +15,11 @@ class ProductOfNormal(Normal):
     In this model, :math:`p(z|x)` and :math:`p(a|y)` perform as `experts` and :math:`p(z)` corresponds
     a prior of `experts`.
 
-    See [Vedantam+ 2017] and [Wu+ 2017] for details.
+    References
+    ----------
+    [Vedantam+ 2017] Generative Models of Visually Grounded Imagination
+
+    [Wu+ 2018] Multimodal Generative Models for Scalable Weakly-Supervised Learning
 
     Examples
     --------

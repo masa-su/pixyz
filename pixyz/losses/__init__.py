@@ -29,7 +29,7 @@ from .losses import (
     Expectation,
 )
 
-from .autoregressive import (
+from .iteration import (
     IterativeLoss,
 )
 

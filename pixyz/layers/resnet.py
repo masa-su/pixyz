@@ -10,10 +10,10 @@ class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
-        self.in_norm = nn.BatchNorm2d(in_channels, affine=False)
+        self.in_norm = nn.BatchNorm2d(in_channels)
         self.in_conv = WNConv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False)
 
-        self.out_norm = nn.BatchNorm2d(out_channels, affine=False)
+        self.out_norm = nn.BatchNorm2d(out_channels)
         self.out_conv = WNConv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=True)
 
     def forward(self, x):
@@ -46,7 +46,7 @@ class ResNet(nn.Module):
     def __init__(self, in_channels, mid_channels, out_channels,
                  num_blocks, kernel_size, padding, double_after_norm):
         super().__init__()
-        self.in_norm = nn.BatchNorm2d(in_channels, affine=False)
+        self.in_norm = nn.BatchNorm2d(in_channels)
         self.double_after_norm = double_after_norm
         self.in_conv = WNConv2d(2 * in_channels, mid_channels, kernel_size, padding, bias=True)
         self.in_skip = WNConv2d(mid_channels, mid_channels, kernel_size=1, padding=0, bias=True)
@@ -56,7 +56,7 @@ class ResNet(nn.Module):
         self.skips = nn.ModuleList([WNConv2d(mid_channels, mid_channels, kernel_size=1, padding=0, bias=True)
                                     for _ in range(num_blocks)])
 
-        self.out_norm = nn.BatchNorm2d(mid_channels, affine=False)
+        self.out_norm = nn.BatchNorm2d(mid_channels)
         self.out_conv = WNConv2d(mid_channels, out_channels, kernel_size=1, padding=0, bias=True)
 
     def forward(self, x):
