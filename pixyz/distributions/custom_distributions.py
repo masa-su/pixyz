@@ -7,6 +7,20 @@ class CustomProb(Distribution):
 
     Note that this distribution cannot perform sampling.
 
+    Examples
+    --------
+    >>> import torch
+    >>> # banana shaped distribution
+    >>> def log_prob(z):
+    ...     z1, z2 = torch.chunk(z, chunks=2, dim=1)
+    ...     norm = torch.sqrt(z1 ** 2 + z2 ** 2)
+    ...     exp1 = torch.exp(-0.5 * ((z1 - 2) / 0.6) ** 2)
+    ...     exp2 = torch.exp(-0.5 * ((z1 + 2) / 0.6) ** 2)
+    ...     u = 0.5 * ((norm - 2) / 0.4) ** 2 - torch.log(exp1 + exp2)
+    ...     return -u
+    ...
+    >>> p = CustomProb(log_prob, var=["z"])
+    >>> loss = p.log_prob().eval({"z": torch.randn(10, 2)})
     """
 
     def __init__(self, log_prob_function, var, distribution_name="Custom PDF", **kwargs):
