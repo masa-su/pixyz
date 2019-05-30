@@ -934,7 +934,7 @@ class MultiplyDistribution(Distribution):
                                          return_all=True, reparam=reparam)
 
         if return_all is False:
-            output_dict = get_dict_values(x_dict, self._var, return_dict=True)
+            output_dict = get_dict_values(output_dict, self._var, return_dict=True)
             return output_dict
 
         return output_dict
@@ -1128,7 +1128,7 @@ class MarginalizeVarDistribution(Distribution):
         return self.p.get_params(params_dict)
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
-        output_dict = self.p.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
+        output_dict = self.p.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all,
                                     reparam=reparam)
         output_dict = delete_dict_values(output_dict, self._marginalize_list)
 
