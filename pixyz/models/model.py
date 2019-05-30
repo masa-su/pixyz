@@ -10,7 +10,7 @@ from ..distributions.distributions import Distribution
 class Model(object):
     """
     This class is for training and testing a loss class.
-    It requires a defined loss class, distributions for training, and optimizer.
+    It requires a defined loss class, distributions to train, and optimizer.
 
     Examples
     --------
