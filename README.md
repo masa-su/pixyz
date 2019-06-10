@@ -2,9 +2,10 @@
 
 <img src="https://user-images.githubusercontent.com/11865486/58864169-3706a980-86ef-11e9-82f4-18bb0275271b.png" width="800px">
 
+[![pypi](https://img.shields.io/pypi/v/pixyz.svg)](https://pypi.python.org/pypi/pixyz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
-[![Pytorch Version](https://img.shields.io/badge/pytorch-0.4%20%7C%201.0-yellow.svg)](https://github.com/masa-su/pixyz)
+[![Pytorch Version](https://img.shields.io/badge/pytorch-1.0-yellow.svg)](https://github.com/masa-su/pixyz)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
 [![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=master)](https://github.com/masa-su/pixyz)
 
