@@ -12,13 +12,40 @@ Loss
     :members:
     :undoc-members:
 
-Negative expected value of log-likelihood (entropy)
----------------------------------------------------
+Probability density function
+----------------------------
+
+LogProb
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses
+.. autoclass:: LogProb
+    :members:
+    :undoc-members:
+
+Prob
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Prob
+    :members:
+    :undoc-members:
+
+Expected value
+--------------
+
+Expectation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Expectation
+    :members:
+    :undoc-members:
+
+Entropy
+--------
 
 CrossEntropy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pixyz.losses
 .. autoclass:: CrossEntropy
     :members:
     :undoc-members:
@@ -28,29 +55,19 @@ Entropy
 
 .. autoclass:: Entropy
     :members:
-    :undoc-members:       
+    :undoc-members:
+
+AnalyticalEntropy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: AnalyticalEntropy
+    :members:
+    :undoc-members:
 
 StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: StochasticReconstructionLoss
-    :members:
-    :undoc-members:
-
-LossExpectation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: LossExpectation
-    :members:
-    :undoc-members:
-
-Negative log-likelihood
----------------------------------------------------
-       
-NLL
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: NLL
     :members:
     :undoc-members:
 
@@ -64,7 +81,7 @@ ELBO
     :members:
     :undoc-members:
 
-Divergence
+Statistical distance
 ----------------------------
 
 KullbackLeibler
@@ -74,26 +91,23 @@ KullbackLeibler
     :members:
     :undoc-members:
 
-
-Similarity 
-----------------------------
-    
-SimilarityLoss
+WassersteinDistance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: SimilarityLoss
+.. autoclass:: WassersteinDistance
     :members:
     :undoc-members:
 
-MultiModalContrastivenessLoss
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+MMD
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: MultiModalContrastivenessLoss
+.. autoclass:: MMD
     :members:
     :undoc-members:
 
-Adversarial loss (GAN loss)
-----------------------------
+
+Adversarial statistical distance
+--------------------------------
 
 AdversarialJensenShannon
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -116,6 +130,7 @@ AdversarialWassersteinDistance
     :members:
     :undoc-members:
 
+
 Loss for sequential distributions
 -----------------------------------
 
@@ -134,6 +149,13 @@ Parameter
 
 .. currentmodule:: pixyz.losses.losses
 .. autoclass:: Parameter
+    :members:
+    :undoc-members:
+
+SetLoss
+~~~~~~~~~~~
+
+.. autoclass:: SetLoss
     :members:
     :undoc-members:
 

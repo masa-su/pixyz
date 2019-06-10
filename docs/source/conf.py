@@ -14,16 +14,15 @@
 #
 import os
 import sys
+import sphinx_rtd_theme
+
 # sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../..'))
-
-
-
 
 # -- Project information -----------------------------------------------------
 
 project = 'Pixyz'
-copyright = '2018, masa-su'
+copyright = '2019, masa-su'
 author = 'masa-su'
 
 # The short X.Y version
@@ -43,6 +42,7 @@ release = ''
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx.ext.todo',
     'sphinx.ext.imgmath',
@@ -83,7 +83,6 @@ pygments_style = 'sphinx'
 #
 # html_theme = 'alabaster'
 
-import sphinx_rtd_theme
 html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
@@ -96,7 +95,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -166,4 +165,7 @@ texinfo_documents = [
 ]
 
 autodoc_member_order = 'bysource'
-autodoc_default_flags =  ['show-inheritance']
+autodoc_default_flags = ['show-inheritance']
+
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True

@@ -1,1 +1,2 @@
-__version__ = "0.0.5"
+name = "pixyz"
+__version__ = "0.1.0"

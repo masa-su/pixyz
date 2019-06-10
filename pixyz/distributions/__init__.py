@@ -12,7 +12,7 @@ from .exponential_distributions import (
     Gamma,
 )
 from .custom_distributions import (
-    CustomLikelihoodDistribution,
+    CustomProb,
 )
 
 from .special_distributions import (
@@ -21,23 +21,21 @@ from .special_distributions import (
 )
 
 from .distributions import (
+    Distribution,
     MultiplyDistribution,
+    MarginalizeVarDistribution,
+    ReplaceVarDistribution,
 )
 
-from .flows import (
-    PlanarFlow,
-)
-
-from .real_nvp import (
-    RealNVP,
-)
-
-from .poe import NormalPoE
+from .poe import ProductOfNormal, ElementWiseProductOfNormal
 
 from .mixture_distributions import MixtureModel
 
+from .flow_distribution import TransformedDistribution, InverseTransformedDistribution
+
 __all__ = [
-    'CustomLikelihoodDistribution',
+    'Distribution',
+    'CustomProb',
     'Deterministic',
     'DataDistribution',
     'Normal',
@@ -53,8 +51,12 @@ __all__ = [
     'Gamma',
 
     'MultiplyDistribution',
-    'PlanarFlow',
-    'RealNVP',
-    'NormalPoE',
+    'ReplaceVarDistribution',
+    'MarginalizeVarDistribution',
+    'ProductOfNormal',
+    'ElementWiseProductOfNormal',
     'MixtureModel',
+
+    'TransformedDistribution',
+    'InverseTransformedDistribution',
 ]

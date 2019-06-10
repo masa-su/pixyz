@@ -100,11 +100,34 @@ MixtureModel
     :members:
     :undoc-members:
 
-
-NormalPoE
+ProductOfNormal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: NormalPoE
+.. autoclass:: ProductOfNormal
+    :members:
+    :undoc-members:
+
+ElementWiseProductOfNormal
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: ElementWiseProductOfNormal
+    :members:
+    :undoc-members:
+
+Flow distributions
+------------------
+
+TransformedDistribution
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: TransformedDistribution
+    :members:
+    :undoc-members:
+
+InverseTransformedDistribution
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: InverseTransformedDistribution
     :members:
     :undoc-members:
        
@@ -125,31 +148,31 @@ DataDistribution
     :members:
     :undoc-members:
 
-CustomLikelihoodDistribution
+CustomProb
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: CustomLikelihoodDistribution
+.. autoclass:: CustomProb
     :members:
     :undoc-members:
 
-Flow-based
-------------------------
+..
+    Flow-based
+    ------------------------
+
+    PlanarFlow
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    .. autoclass:: PlanarFlow
+        :members:
+        :undoc-members:
 
 
-PlanarFlow
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-       
-.. autoclass:: PlanarFlow
-    :members:
-    :undoc-members:
+    RealNVP
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-RealNVP
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-       
-.. autoclass:: RealNVP
-    :members:
-    :undoc-members:
+    .. autoclass:: RealNVP
+        :members:
+        :undoc-members:
 
 Operators
 -------------------------------------
@@ -157,7 +180,6 @@ Operators
 ReplaceVarDistribution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: pixyz.distributions.distributions
 .. autoclass:: ReplaceVarDistribution
     :members:
     :undoc-members:
@@ -175,10 +197,3 @@ MultiplyDistribution
 .. autoclass:: MultiplyDistribution
     :members:
     :undoc-members:
-
-Functions
-------------------------
-
-.. currentmodule:: pixyz.distributions.distributions
-.. autofunction:: sum_samples
-

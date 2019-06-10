@@ -1,39 +1,64 @@
-import torch
-
-from ..utils import get_dict_values
-from .distributions import Distribution, sum_samples
+from ..utils import get_dict_values, sum_samples
+from .distributions import Distribution
 
 
-class CustomLikelihoodDistribution(Distribution):
+class CustomProb(Distribution):
+    """This distribution is constructed by user-defined probability density/mass function.
 
-    def __init__(self, var=["x"],  likelihood=None,
-                 **kwargs):
-        if likelihood is None:
-            raise ValueError("You should set the likelihood"
-                             " of this distribution.")
-        self.likelihood = likelihood
-        self.DistributionTorch = None
+    Note that this distribution cannot perform sampling.
+
+    Examples
+    --------
+    >>> import torch
+    >>> # banana shaped distribution
+    >>> def log_prob(z):
+    ...     z1, z2 = torch.chunk(z, chunks=2, dim=1)
+    ...     norm = torch.sqrt(z1 ** 2 + z2 ** 2)
+    ...     exp1 = torch.exp(-0.5 * ((z1 - 2) / 0.6) ** 2)
+    ...     exp2 = torch.exp(-0.5 * ((z1 + 2) / 0.6) ** 2)
+    ...     u = 0.5 * ((norm - 2) / 0.4) ** 2 - torch.log(exp1 + exp2)
+    ...     return -u
+    ...
+    >>> p = CustomProb(log_prob, var=["z"])
+    >>> loss = p.log_prob().eval({"z": torch.randn(10, 2)})
+    """
+
+    def __init__(self, log_prob_function, var, distribution_name="Custom PDF", **kwargs):
+        """
+        Parameters
+        ----------
+        log_prob_function : function
+            User-defined log-probability density/mass function.
+        var : list
+            Variables of this distribution.
+        distribution_name : :obj:`str`, optional
+            Name of this distribution.
+        +*kwargs :
+            Arbitrary keyword arguments.
+
+        """
+        self._log_prob_function = log_prob_function
+        self._distribution_name = distribution_name
 
         super().__init__(var=var, cond_var=[], **kwargs)
 
     @property
-    def input_var(self):
-        """
-        In CustomLikelihoodDistribution, `input_var` is same as `var`.
-        """
+    def log_prob_function(self):
+        """User-defined log-probability density/mass function."""
+        return self._log_prob_function
 
+    @property
+    def input_var(self):
         return self.var
 
     @property
     def distribution_name(self):
-        return "Custom Distribution"
+        return self._distribution_name
 
-    def log_likelihood(self, x_dict):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+        x_dict = get_dict_values(x_dict, self._var, return_dict=True)
+        log_prob = self.log_prob_function(**x_dict)
+        if sum_features:
+            log_prob = sum_samples(log_prob)
 
-        if not set(list(x_dict.keys())) >= set(self._var):
-            raise ValueError("Input's keys are not valid.")
-
-        _x_dict = get_dict_values(x_dict, self._var)
-        log_like = torch.log(self.likelihood(_x_dict[0]))
-        log_like = sum_samples(log_like)
-        return log_like
+        return log_prob
