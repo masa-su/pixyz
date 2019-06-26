@@ -66,12 +66,15 @@ class ProductOfNormal(Normal):
 
     """
 
-    def __init__(self, p=[], name="p", features_shape=torch.Size()):
+    def __init__(self, p=[], cond_var=[], name="p", features_shape=torch.Size()):
         """
         Parameters
         ----------
         p : :obj:`list` of :class:`pixyz.distributions.Normal`.
             List of experts.
+        cond_var : :obj:`list` of :obj:`str`, defaults to []
+            Conditional variables of this distribution.
+            In case that cond_var is not empty, we must set the corresponding inputs to sample variables.
         name : :obj:`str`, defaults to "p"
             Name of this distribution.
             This name is displayed in prob_text and prob_factorized_text.
@@ -84,7 +87,11 @@ class ProductOfNormal(Normal):
             raise ValueError
 
         var = p[0].var
-        cond_var = []
+
+        if len(cond_var) == 0:
+            _cond_var = []
+        else:
+            _cond_var = cond_var
 
         for _p in p:
             if _p.var != var:
@@ -93,13 +100,11 @@ class ProductOfNormal(Normal):
             if _p.distribution_name != "Normal":
                 raise ValueError
 
-            cond_var += _p.cond_var
+            if len(cond_var) == 0:
+                _cond_var += _p.cond_var
 
-        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
-        if len(p) == 1:
-            self.p = p[0]
-        else:
-            self.p = nn.ModuleList(p)
+        super().__init__(cond_var=_cond_var, var=var, name=name, features_shape=features_shape)
+        self.p = nn.ModuleList(p)
 
     @property
     def prob_factorized_text(self):
