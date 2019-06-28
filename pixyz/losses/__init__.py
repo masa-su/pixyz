@@ -11,6 +11,7 @@ from .entropy import (
 
 from .elbo import (
     ELBO,
+    IWELBO,
 )
 
 from .pdf import (
@@ -52,6 +53,7 @@ __all__ = [
     'LogProb',
     'Prob',
     'ELBO',
+    'IWELBO',
     'AdversarialJensenShannon',
     'AdversarialKullbackLeibler',
     'AdversarialWassersteinDistance',
