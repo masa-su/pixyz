@@ -201,13 +201,16 @@ def tolist(a):
     return [a]
 
 
-def sum_samples(samples):
+def sum_samples(samples, feature_dims=None):
     """Sum a given sample across the axes.
 
     Parameters
     ----------
     samples : torch.Tensor
         Input sample. The number of this axes is assumed to be 4 or less.
+
+    feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
+        Set dimensions to sum across the output. (Note: this parameter is not used for now.)
 
     Returns
     -------
@@ -229,14 +232,11 @@ def sum_samples(samples):
     """
 
     dim = samples.dim()
-    if dim == 1:
-        return samples
-    elif dim <= 4:
-        dim_list = list(torch.arange(samples.dim()))
-        samples = torch.sum(samples, dim=dim_list[1:])
-        return samples
-    raise ValueError("The number of sample axes must be any of 1, 2, 3, or 4, "
-                     "got %s." % dim)
+    if dim != 1:
+        if feature_dims is None:
+            feature_dims = list(torch.arange(samples.dim()))[1:]
+        samples = torch.sum(samples, dim=feature_dims)
+    return samples
 
 
 def print_latex(obj):

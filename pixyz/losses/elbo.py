@@ -1,7 +1,7 @@
 import sympy
 import torch
 from .losses import SetLoss, Loss
-
+from ..utils import sum_samples
 
 class ELBO(SetLoss):
     r"""
@@ -27,9 +27,9 @@ class ELBO(SetLoss):
     \mathbb{E}_{p(z|x)} \left[\log p(x|z) - \log p(z|x) \right]
     >>> loss = loss_cls.eval({"x": torch.randn(1, 64)})
     """
-    def __init__(self, p, q, input_var=None):
+    def __init__(self, p, q, input_var=None, sample_shape=torch.Size()):
 
-        loss = (p.log_prob() - q.log_prob()).expectation(q, input_var)
+        loss = (p.log_prob() - q.log_prob()).expectation(q, input_var=input_var, sample_shape=sample_shape)
         super().__init__(loss)
 
 
@@ -55,7 +55,7 @@ class IWELBO(Loss):
     >>> loss = loss_cls.eval({"x": torch.randn(1, 64)})
     """
     def __init__(self, p, q, input_var=None, iw_sample_shape=torch.Size(), sample_shape=torch.Size()):
-        self.w = p.log_prob() - q.log_prob()
+        self.w = p.log_prob(sum_features=False) - q.log_prob(sum_features=False)
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(self.w.input_var) - set(p.var))
@@ -75,11 +75,10 @@ class IWELBO(Loss):
             logsum_w_text = self.w.loss_text
 
         else:
-            logsum_w_text = "\\log \\left(\\frac{{1}}{} \\sum_{{k=1}}^{} \\frac {} {} \\right)".format(
+            logsum_w_text = "\\log \\left(\\frac{{1}}{} \\sum_{{k=1}}^{} {} \\right)".format(
                 "{" + str(self.iw_sample_shape.numel()) + "}",
                 "{" + str(self.iw_sample_shape.numel()) + "}",
-                "{" + self.p.prob_text + "}",
-                "{" + self.q.prob_text + "}")
+                w_text)
 
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(q_text, logsum_w_text))
 
@@ -87,7 +86,7 @@ class IWELBO(Loss):
         samples_dict = self.q.sample(x_dict, sample_shape=self.iw_sample_shape + self.sample_shape,
                                      reparam=True, return_all=True)
 
-        loss, loss_sample_dict = self.w.eval(samples_dict, return_dict=True, **kwargs)  # TODO: eval or _get_eval
+        loss, loss_sample_dict = self.w.eval(samples_dict, return_dict=True, **kwargs)
         samples_dict.update(loss_sample_dict)
 
         # mean over iw_sample_shape
@@ -96,5 +95,7 @@ class IWELBO(Loss):
 
         # sum over sample_shape
         loss = loss.view(self.sample_shape.numel(), -1).mean(dim=0)
+
+        loss = sum_samples(loss)
 
         return loss, samples_dict
