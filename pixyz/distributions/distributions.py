@@ -747,8 +747,7 @@ class DistributionBase(Distribution):
             try:
                 _samples = self.dist.rsample(sample_shape=sample_shape)
             except NotImplementedError:
-                print("You cannot use the re-parameterization trick for this distribution.")
-                raise ValueError
+                raise ValueError("You cannot use the re-parameterization trick for this distribution.")
         else:
             _samples = self.dist.sample(sample_shape=sample_shape)
         samples_dict = {self._var[0]: _samples}
