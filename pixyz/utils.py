@@ -1,4 +1,6 @@
-from collections import OrderedDict, Mapping, Iterable
+from numbers import Number
+from collections.abc import Mapping, Iterable
+from collections import OrderedDict
 import torch
 import sympy
 from IPython.display import Math
@@ -54,12 +56,23 @@ class Sample:
         self.shape_dict = shape_dict if shape_dict else self._default_shape(value)
 
     def _default_shape(self, value):
-        return OrderedDict((('batch', list(value.shape)[:0]), ('feature', list(value.shape)[1:])))
+        if isinstance(value, Number):
+            return OrderedDict()
+        if not isinstance(value, torch.Tensor):
+            raise ValueError
+        if value.dim() == 0:
+            return OrderedDict()
+        elif value.dim() == 1:
+            return OrderedDict((('feature', [value.shape[0]]),))
+        return OrderedDict((('batch', list(value.shape)[:1]),
+                            ('feature', list(value.shape)[1:])))
 
     def detach(self):
         return Sample(self.value.detach(), self.shape_dict)
 
     def slice(self, index, shape_name='time'):
+        if isinstance(index, int):
+            index = [index]
         shape_dict = self.shape_dict.copy()
         shape_dims = self._get_shape_dims(shape_dict, shape_name)
         value = self._slice_value(self.value, index, shape_dims)
@@ -87,25 +100,53 @@ class Sample:
     def n_batch(self):
         return self.shape_dict['batch'][0]
 
+    def __repr__(self):
+        return f"{repr(self.value)} --(shape={repr(list(self.shape_dict.items()))})"
 
-class Samples:
+
+class Samples(Mapping):
     def __init__(self, variables):
         if isinstance(variables, dict):
             variables = variables.items()
+        elif isinstance(variables, Samples):
+            variables = variables._dict.items()
         self._dict = {key: value if isinstance(value, Sample) else Sample(value) for key, value in variables}
+
+    def __iter__(self):
+        return self._dict.__iter__()
 
     def __getitem__(self, var_name):
         return self._dict[var_name].value
 
     def get_shape(self, var_name):
-        return self._dict[var_name].shape
+        return self._dict[var_name].shape_dict
 
     def items(self):
         return ((key, sample.value) for key, sample in self._dict.items())
 
+    def keys(self):
+        return self._dict.keys()
+
+    def __contains__(self, key):
+        return self._dict.__contains__(key)
+
+    def __len__(self):
+        return self._dict.__len__()
+
+    def __eq__(self, other):
+        if not isinstance(other, Samples):
+            return False
+        return self._dict.__eq__(other._dict)
+
+    def __str__(self):
+        return str(dict(self.items()))
+
+    def __repr__(self):
+        return self._dict.__repr__()
+
     def add(self, var_name, value, shape_dict=None):
         if shape_dict and not isinstance(shape_dict, OrderedDict):
-            if isinstance(shape_dict, Mapping) or isinstance(shape_dict, Iterable):
+            if isinstance(shape_dict, Iterable):
                 shape_dict = OrderedDict(shape_dict)
             else:
                 raise ValueError
@@ -127,12 +168,15 @@ class Samples:
     def slice(self, index, shape_name='time'):
         return Samples((var_name, sample.slice(index, shape_name)) for var_name, sample in self._dict.items())
 
-    def get_values(self, var, return_tensors=True):
+    def values(self):
+        return (sample.value for sample in self._dict.values())
+
+    def getitems(self, var, return_tensors=True):
         if return_tensors:
-            return (sample.value for sample in self._dict.values())
+            return list(sample.value for var_name, sample in self._dict.items() if var_name in var)
         return Samples((var_name, sample) for var_name, sample in self._dict.items() if var_name in var)
 
-    def delete_values(self, var):
+    def delitems(self, var):
         return Samples((var_name, sample) for var_name, sample in self._dict.items() if var_name not in var)
 
     def replace_keys(self, replace_list_dict):
@@ -147,12 +191,6 @@ class Samples:
                                 for var_name, sample in self._dict.items() if var_name not in replace_list_dict)
 
         return replaced_sample, remain_sample
-
-    def feature_shape(self, var_name):
-        return self._dict[var_name].feature_shape
-
-    def n_batch(self, var_name):
-        return self._dict[var_name].n_batch
 
 
 def get_dict_values(dicts, keys, return_dict=False):
@@ -179,6 +217,8 @@ def get_dict_values(dicts, keys, return_dict=False):
     >>> get_dict_values({"a":1,"b":2,"c":3}, ["b", "d"], True)
     {'b': 2}
     """
+    if isinstance(dicts, Samples):
+        return dicts.getitems(keys, not return_dict)
     new_dicts = dict((key, dicts[key]) for key in keys if key in list(dicts.keys()))
     if return_dict is False:
         return list(new_dicts.values())
@@ -204,6 +244,8 @@ def delete_dict_values(dicts, keys):
     >>> delete_dict_values({"a":1,"b":2,"c":3}, ["b","d"])
     {'a': 1, 'c': 3}
     """
+    if isinstance(dicts, Samples):
+        return dicts.delitems(keys)
     new_dicts = dict((key, value) for key, value in dicts.items() if key not in keys)
     return new_dicts
 
@@ -219,6 +261,8 @@ def detach_dict(dicts):
     -------
     dict
     """
+    if isinstance(dicts, Samples):
+        return dicts.detach()
     return {k: v.detach() for k, v in dicts.items()}
 
 
@@ -244,6 +288,8 @@ def replace_dict_keys(dicts, replace_list_dict):
     >>> replace_dict_keys({"a":1,"b":2,"c":3}, {"a":"x","e":"y"})  # keys of `replace_list_dict`
     {'x': 1, 'b': 2, 'c': 3}
     """
+    if isinstance(dicts, Samples):
+        return dicts.replace_keys(replace_list_dict)
     replaced_dicts = dict([(replace_list_dict[key], value) if key in list(replace_list_dict.keys())
                            else (key, value) for key, value in dicts.items()])
 
@@ -277,6 +323,8 @@ def replace_dict_keys_split(dicts, replace_list_dict):
     ({'loc': 0}, {'b': 1})
 
     """
+    if isinstance(dicts, Samples):
+        return dicts.replace_keys_split(replace_list_dict)
     replaced_dict = {replace_list_dict[key]: value for key, value in dicts.items()
                      if key in list(replace_list_dict.keys())}
 

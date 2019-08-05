@@ -2,7 +2,7 @@ from copy import deepcopy
 import sympy
 
 from .losses import Loss
-from ..utils import get_dict_values
+from ..utils import get_dict_values, Samples
 
 
 class IterativeLoss(Loss):
@@ -117,9 +117,19 @@ class IterativeLoss(Loss):
         return _symbol
 
     def slice_step_fn(self, t, x):
-        return {k: v[t] for k, v in x.items()}
+        if isinstance(x, Samples):
+            x.slice(t)
+        return Samples({k: v[t] for k, v in x.items()})
 
     def _get_eval(self, x_dict, **kwargs):
+        x_dict = Samples(x_dict)
+        for var_name in self.series_var:
+            shape_dict = x_dict.get_shape(var_name)
+            if 'time' not in shape_dict:
+                shape_dict['time'] = [x_dict[var_name].shape[0]]
+                shape_dict['batch'] = [x_dict[var_name].shape[1]]
+                shape_dict['feature'] = list(x_dict[var_name].shape[2:])
+                shape_dict.move_to_end('time', last=False)
         series_x_dict = get_dict_values(x_dict, self.series_var, return_dict=True)
         step_loss_sum = 0
 
