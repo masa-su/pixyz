@@ -5,7 +5,7 @@ from torch import nn
 from copy import deepcopy
 
 from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
-    tolist, sum_samples, convert_latex_name
+    tolist, sum_samples, convert_latex_name, Samples
 from ..losses import LogProb, Prob
 
 
@@ -193,20 +193,23 @@ class Distribution(nn.Module):
         if var is None:
             var = self.input_var
 
-        if type(input) is torch.Tensor:
-            input_dict = {var[0]: input}
+        if isinstance(input, torch.Tensor):
+            input_dict = Samples({var[0]: input})
 
-        elif type(input) is list:
+        elif isinstance(input, list):
             # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-            input_dict = dict(zip(var, input))
+            input_dict = Samples(zip(var, input))
 
-        elif type(input) is dict:
+        elif isinstance(input, dict) or isinstance(input, Samples):
             if not (set(list(input.keys())) >= set(var)):
                 raise ValueError("Input keys are not valid.")
-            input_dict = input.copy()
+            if isinstance(input, dict):
+                input_dict = Samples(input)
+            else:
+                input_dict = input.copy()
 
         else:
-            raise ValueError("The type of input is not valid, got %s." % type(input))
+            raise ValueError(f"The type of input is not valid, got {type(input)}.")
 
         return input_dict
 
@@ -240,7 +243,7 @@ class Distribution(nn.Module):
             (scale): torch.Size([1, 1])
           )
         >>> dist_1.get_params()
-        {'loc': tensor([[0.]]), 'scale': tensor([[1.]])}
+        {'loc': tensor([[0.]]) --(shape=[('batch', [1]), ('feature', [1])]), 'scale': tensor([[1.]]) --(shape=[('batch', [1]), ('feature', [1])])}
 
         >>> dist_2 = Normal(loc=torch.tensor(0.), scale="z", cond_var=["z"], var=["x"])
         >>> print(dist_2)
@@ -253,7 +256,7 @@ class Distribution(nn.Module):
             (loc): torch.Size([1])
           )
         >>> dist_2.get_params({"z": torch.tensor(1.)})
-        {'scale': tensor(1.), 'loc': tensor([0.])}
+        {'scale': tensor(1.) --(shape=[]), 'loc': tensor([0.]) --(shape=[('feature', [1])])}
 
         """
         raise NotImplementedError()
@@ -768,6 +771,8 @@ class DistributionBase(Distribution):
     def get_params(self, params_dict={}):
         params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
+        if not isinstance(output_dict, Samples):
+            output_dict = Samples(output_dict)
 
         output_dict.update(params_dict)
 
@@ -797,11 +802,18 @@ class DistributionBase(Distribution):
             input_dict.update(get_dict_values(x_dict, self.input_var, return_dict=True))
 
         self.set_dist(input_dict, batch_n=batch_n)
-        output_dict = self.get_sample(reparam=reparam,
-                                      sample_shape=sample_shape)
+        output_dict = Samples(self.get_sample(reparam=reparam,
+                                              sample_shape=sample_shape))
 
         if return_all:
-            x_dict.update(output_dict)
+            x_dict = Samples(x_dict)
+            for var_name, value in output_dict.items():
+                shape_dict = [('n_batch', [value.shape[0]]),
+                              ('feature', list(value.shape[1:]))]
+                if sample_shape != torch.Size():
+                    shape_dict.insert(0, ('sample', list(sample_shape)))
+                x_dict.add(var_name, value, shape_dict=shape_dict)
+            # x_dict.update(output_dict)
             return x_dict
 
         return output_dict

@@ -5,7 +5,7 @@ import torch
 import numbers
 from copy import deepcopy
 
-from ..utils import tolist
+from ..utils import tolist, Samples
 
 
 class Loss(object, metaclass=abc.ABCMeta):
@@ -204,11 +204,14 @@ class Loss(object, metaclass=abc.ABCMeta):
         if not(set(list(x_dict.keys())) >= set(self._input_var)):
             raise ValueError("Input keys are not valid, expected {} but got {}.".format(self._input_var,
                                                                                         list(x_dict.keys())))
-
+        if not isinstance(x_dict, Samples):
+            x_dict = Samples(x_dict)
         loss, x_dict = self._get_eval(x_dict, **kwargs)
 
         if return_dict:
-            return loss, x_dict
+            if not isinstance(x_dict, Samples):
+                x_dict = Samples(x_dict)
+            return loss, Samples(x_dict)
 
         return loss
 
