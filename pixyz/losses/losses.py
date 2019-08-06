@@ -87,7 +87,7 @@ class Loss(object, metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def _symbol(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @property
     def loss_text(self):
@@ -214,7 +214,7 @@ class Loss(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def _get_eval(self, x_dict, **kwargs):
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class ValueLoss(Loss):
@@ -264,7 +264,7 @@ class Parameter(Loss):
     """
     def __init__(self, input_var):
         if not isinstance(input_var, str):
-            raise ValueError
+            raise ValueError()
         self._input_var = tolist(input_var)
 
     def _get_eval(self, x_dict={}, **kwargs):
@@ -439,14 +439,14 @@ class LossSelfOperator(Loss):
         _input_var = []
 
         if isinstance(loss1, type(None)):
-            raise ValueError
+            raise ValueError()
 
         if isinstance(loss1, Loss):
             _input_var = deepcopy(loss1.input_var)
         elif isinstance(loss1, numbers.Number):
             loss1 = ValueLoss(loss1)
         else:
-            raise ValueError
+            raise ValueError()
 
         self._input_var = _input_var
         self.loss1 = loss1

@@ -46,7 +46,7 @@ class WassersteinDistance(Loss):
         elif len(q.input_var) > 0:
             self.input_dist = q
         else:
-            raise NotImplementedError
+            raise NotImplementedError()
 
         self.metric = metric
 

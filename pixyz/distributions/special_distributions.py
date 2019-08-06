@@ -31,7 +31,7 @@ class Deterministic(Distribution):
     >>> p.log_prob().eval(sample) # log_prob is not defined.
     Traceback (most recent call last):
      ...
-    NotImplementedError
+    NotImplementedError()
     """
 
     def __init__(self, **kwargs):

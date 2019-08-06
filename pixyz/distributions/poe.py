@@ -81,17 +81,17 @@ class ProductOfNormal(Normal):
         """
         p = tolist(p)
         if len(p) == 0:
-            raise ValueError
+            raise ValueError()
 
         var = p[0].var
         cond_var = []
 
         for _p in p:
             if _p.var != var:
-                raise ValueError
+                raise ValueError()
 
             if _p.distribution_name != "Normal":
-                raise ValueError
+                raise ValueError()
 
             cond_var += _p.cond_var
 
@@ -225,13 +225,13 @@ class ProductOfNormal(Normal):
         return checked_x
 
     def log_prob(self, sum_features=True, feature_dims=None):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def prob(self, sum_features=True, feature_dims=None):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class ElementWiseProductOfNormal(ProductOfNormal):
@@ -302,7 +302,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
         """
         if len(p.cond_var) != 1:
-            raise ValueError
+            raise ValueError()
 
         super().__init__(p=p, name=name, features_shape=features_shape)
 
