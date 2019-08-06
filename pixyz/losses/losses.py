@@ -6,7 +6,7 @@ import numbers
 from copy import deepcopy
 
 from ..utils import tolist
-from pixyz.distributions.sample_dict import SampleDict
+from ..distributions import SampleDict
 
 
 class Loss(object, metaclass=abc.ABCMeta):

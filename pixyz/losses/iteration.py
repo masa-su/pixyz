@@ -2,7 +2,7 @@ from copy import deepcopy
 import sympy
 
 from .losses import Loss
-from pixyz.distributions.sample_dict import SampleDict
+from ..distributions import SampleDict
 
 
 class IterativeLoss(Loss):
@@ -117,9 +117,7 @@ class IterativeLoss(Loss):
         return _symbol
 
     def slice_step_fn(self, t, x):
-        if isinstance(x, SampleDict):
-            x.slice(t)
-        return SampleDict({k: v[t] for k, v in x.items()})
+        return x.slice(t)
 
     def _get_eval(self, x_dict: SampleDict, **kwargs):
         for var_name in self.series_var:
@@ -128,8 +126,9 @@ class IterativeLoss(Loss):
                 shape_dict['time'] = [x_dict[var_name].shape[0]]
                 shape_dict['batch'] = [x_dict[var_name].shape[1]]
                 shape_dict['feature'] = list(x_dict[var_name].shape[2:])
+                shape_dict.move_to_end('batch', last=False)
                 shape_dict.move_to_end('time', last=False)
-        series_x_dict = x_dict.getitems(self.series_var, return_tensors=False)
+        series_x_dict = x_dict.dict_from_keys(self.series_var, return_tensors=False)
         step_loss_sum = 0
 
         # set max_iter

@@ -1,3 +1,5 @@
+from .sample_dict import ShapeDict, SampleDict, Sample
+
 from .exponential_distributions import (
     Normal,
     Bernoulli,
@@ -33,7 +35,12 @@ from .mixture_distributions import MixtureModel
 
 from .flow_distribution import TransformedDistribution, InverseTransformedDistribution
 
+
 __all__ = [
+    'ShapeDict',
+    'SampleDict',
+    'Sample',
+
     'Distribution',
     'CustomProb',
     'Deterministic',

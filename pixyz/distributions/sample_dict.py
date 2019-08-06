@@ -1,8 +1,19 @@
 from collections import OrderedDict
+from collections.abc import Container
 from numbers import Number
 from typing import Mapping, Iterable
 
 import torch
+
+
+class ShapeDict(OrderedDict):
+    def shape_dims(self, shape_name):
+        start_dim = 0
+        for shape_name2, shape in self.items():
+            if shape_name == shape_name2:
+                break
+            start_dim += len(shape)
+        return list(range(start_dim, start_dim + len(self[shape_name])))
 
 
 class Sample:
@@ -18,22 +29,22 @@ class Sample:
     ...             features_shape=[64], name="p1")
     """
     def __init__(self, value, shape_dict=None):
-        if shape_dict and not isinstance(shape_dict, OrderedDict):
+        if shape_dict and not isinstance(shape_dict, ShapeDict):
             raise ValueError
         self.value = value
         self.shape_dict = shape_dict if shape_dict else self._default_shape(value)
 
     def _default_shape(self, value):
         if isinstance(value, Number):
-            return OrderedDict()
+            return ShapeDict()
         if not isinstance(value, torch.Tensor):
             raise ValueError
         if value.dim() == 0:
-            return OrderedDict()
+            return ShapeDict()
         elif value.dim() == 1:
-            return OrderedDict((('feature', [value.shape[0]]),))
-        return OrderedDict((('batch', list(value.shape)[:1]),
-                            ('feature', list(value.shape)[1:])))
+            return ShapeDict((('feature', [value.shape[0]]),))
+        return ShapeDict((('batch', list(value.shape)[:1]),
+                          ('feature', list(value.shape)[1:])))
 
     def detach(self):
         return Sample(self.value.detach(), self.shape_dict)
@@ -42,18 +53,13 @@ class Sample:
         if isinstance(index, int):
             index = [index]
         shape_dict = self.shape_dict.copy()
-        shape_dims = self._get_shape_dims(shape_dict, shape_name)
+        shape_dims = self.shape_dims(shape_name)
         value = self._slice_value(self.value, index, shape_dims)
         del shape_dict[shape_name]
         return Sample(value, shape_dict)
 
-    def _get_shape_dims(self, shape_dict: OrderedDict, shape_name):
-        start_dim = 0
-        for shape_name2, shape in shape_dict.items():
-            if shape_name == shape_name2:
-                break
-            start_dim += len(shape)
-        return range(start_dim, start_dim + len(shape_dict[shape_name]))
+    def shape_dims(self, shape_name):
+        return self.shape_dict.shape_dims(shape_name)
 
     def _slice_value(self, value, index, shape_dims):
         slices = [slice(None, None, None) if dim not in shape_dims else index[shape_dims.index(dim)]
@@ -67,6 +73,13 @@ class Sample:
     @property
     def n_batch(self):
         return self.shape_dict['batch'][0]
+
+    def sum(self, shape_name):
+        self.value = torch.sum(self.value, dim=self.shape_dims(shape_name))
+        shape_dict = self.shape_dict.copy()
+        del shape_dict[shape_name]
+        self.shape_dict = shape_dict
+        return self.value
 
     def __repr__(self):
         return f"{repr(self.value)} --(shape={repr(list(self.shape_dict.items()))})"
@@ -103,6 +116,9 @@ class SampleDict(Mapping):
     def get_shape(self, var_name):
         return self._dict[var_name].shape_dict
 
+    def get_sample(self, var_name):
+        return self._dict[var_name]
+
     def items(self):
         return ((key, sample.value) for key, sample in self._dict.items())
 
@@ -127,9 +143,9 @@ class SampleDict(Mapping):
         return self._dict.__repr__()
 
     def add(self, var_name, value, shape_dict=None):
-        if shape_dict and not isinstance(shape_dict, OrderedDict):
+        if shape_dict and not isinstance(shape_dict, ShapeDict):
             if isinstance(shape_dict, Iterable):
-                shape_dict = OrderedDict(shape_dict)
+                shape_dict = ShapeDict(shape_dict)
             else:
                 raise ValueError
         self._dict[var_name] = Sample(value, shape_dict)
@@ -145,14 +161,14 @@ class SampleDict(Mapping):
         return SampleDict(self._dict)
 
     def detach(self):
-        """Detach all values in `dicts`.
+        """Detach all values in `SampleDicts`.
 
         Parameters
         ----------
 
         Returns
         -------
-        dict
+        SampleDict
         """
         return SampleDict((var_name, sample.detach()) for var_name, sample in self._dict.items())
 
@@ -162,7 +178,7 @@ class SampleDict(Mapping):
     def values(self):
         return (sample.value for sample in self._dict.values())
 
-    def getitems(self, var, return_tensors=True):
+    def dict_from_keys(self, var, return_tensors=True):
         """Get values from `dicts` specified by `keys`.
 
         When `return_dict` is True, return values are in dictionary format.
@@ -179,34 +195,34 @@ class SampleDict(Mapping):
 
         Examples
         --------
-        >>> SampleDict({"a":1,"b":2,"c":3}).getitems(["b"])
+        >>> SampleDict({"a":1,"b":2,"c":3}).dict_from_keys(["b"])
         [2]
-        >>> SampleDict({"a":1,"b":2,"c":3}).getitems(["b", "d"], return_tensors=False)
+        >>> SampleDict({"a":1,"b":2,"c":3}).dict_from_keys(["b", "d"], return_tensors=False)
         {'b': 2 --(shape=[])}
         """
         if return_tensors:
             return list(sample.value for var_name, sample in self._dict.items() if var_name in var)
         return SampleDict((var_name, sample) for var_name, sample in self._dict.items() if var_name in var)
 
-    def delitems(self, var):
+    def dict_except_for_keys(self, var: Container):
         """Delete values from `dicts` specified by `keys`.
 
         Parameters
         ----------
-        var : list
+        var : Container
 
         Returns
         -------
-        new_dicts : dict
+        new_dicts : SampleDict
 
         Examples
         --------
-        >>> SampleDict({"a":1,"b":2,"c":3}).delitems(["b","d"])
+        >>> SampleDict({"a":1,"b":2,"c":3}).dict_except_for_keys(["b","d"])
         {'a': 1 --(shape=[]), 'c': 3 --(shape=[])}
         """
         return SampleDict((var_name, sample) for var_name, sample in self._dict.items() if var_name not in var)
 
-    def replace_keys(self, replace_list_dict):
+    def dict_with_replaced_keys(self, replace_list_dict):
         """ Replace values in `dicts` according to `replace_list_dict`.
 
         Parameters
@@ -216,20 +232,19 @@ class SampleDict(Mapping):
 
         Returns
         -------
-        replaced_dicts : dict
-            Dictionary.
+        replaced_dicts : SampleDict
 
         Examples
         --------
-        >>> SampleDict({"a":1,"b":2,"c":3}).replace_keys({"a":"x","b":"y"})
+        >>> SampleDict({"a":1,"b":2,"c":3}).dict_with_replaced_keys({"a":"x","b":"y"})
         {'x': 1 --(shape=[]), 'y': 2 --(shape=[]), 'c': 3 --(shape=[])}
-        >>> SampleDict({"a":1,"b":2,"c":3}).replace_keys({"a":"x","e":"y"})  # keys of `replace_list_dict`
+        >>> SampleDict({"a":1,"b":2,"c":3}).dict_with_replaced_keys({"a":"x","e":"y"})  # keys of `replace_list_dict`
         {'x': 1 --(shape=[]), 'b': 2 --(shape=[]), 'c': 3 --(shape=[])}
         """
         return SampleDict((replace_list_dict[var_name] if var_name in replace_list_dict else var_name, sample)
                           for var_name, sample in self._dict.items())
 
-    def replace_keys_split(self, replace_list_dict):
+    def split_by_replace_keys(self, replace_list_dict):
         """ Replace values in `dicts` according to :attr:`replace_list_dict`.
 
         Replaced dict is splitted by :attr:`replaced_dict` and :attr:`remain_dict`.
@@ -250,7 +265,7 @@ class SampleDict(Mapping):
         --------
         >>> replace_list_dict = {'a': 'loc'}
         >>> x_dict = SampleDict({'a': 0, 'b': 1})
-        >>> print(x_dict.replace_keys_split(replace_list_dict))
+        >>> print(x_dict.split_by_replace_keys(replace_list_dict))
         ({'loc': 0 --(shape=[])}, {'b': 1 --(shape=[])})
 
         """
@@ -261,6 +276,22 @@ class SampleDict(Mapping):
                                    for var_name, sample in self._dict.items() if var_name not in replace_list_dict)
 
         return replaced_sample, remain_sample
+
+    @property
+    def max_shape(self):
+        result = []
+        for var_name, sample in self._dict.items():
+            for i, (shape_name, shape) in enumerate(reversed(sample.shape_dict.items())):
+                if len(result) <= i:
+                    result.append((shape_name, shape))
+                    continue
+                if shape_name != result[i][0]:
+                    raise ValueError
+                if len(result[i][1]) == 0:
+                    result[i] = (result[i][0], shape)
+                elif len(result[i][1]) != len(shape):
+                    raise ValueError
+        return ShapeDict(reversed(result))
 
     def feature_shape(self, var_name):
         return self._dict[var_name].feature_shape

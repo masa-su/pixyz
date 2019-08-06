@@ -2,7 +2,7 @@ import sympy
 import torch
 from torch.distributions import kl_divergence
 
-from pixyz.distributions.sample_dict import SampleDict
+from ..distributions import SampleDict
 from .losses import Loss
 
 
@@ -40,10 +40,10 @@ class KullbackLeibler(Loss):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "
                              "got %s and %s." % (self.p.distribution_name, self.q.distribution_name))
 
-        input_dict = x_dict.getitems(self.p.input_var, return_tensors=False)
+        input_dict = x_dict.dict_from_keys(self.p.input_var, return_tensors=False)
         self.p.set_dist(input_dict)
 
-        input_dict = x_dict.getitems(self.q.input_var, return_tensors=False)
+        input_dict = x_dict.dict_from_keys(self.q.input_var, return_tensors=False)
         self.q.set_dist(input_dict)
 
         divergence = kl_divergence(self.p.dist, self.q.dist)

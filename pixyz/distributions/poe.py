@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 from ..utils import tolist
-from pixyz.distributions.sample_dict import SampleDict
+from .sample_dict import SampleDict
 from .exponential_distributions import Normal
 
 
@@ -140,10 +140,8 @@ class ProductOfNormal(Normal):
         loc = []
         scale = []
 
-        if not isinstance(params_dict, SampleDict):
-            params_dict = SampleDict(params_dict)
         for _p in self.p:
-            inputs_dict = params_dict.getitems(_p.cond_var, return_tensors=False)
+            inputs_dict = params_dict.dict_from_keys(_p.cond_var, return_tensors=False)
             if len(inputs_dict) != 0:
                 outputs = _p.get_params(inputs_dict, **kwargs)
                 loc.append(outputs["loc"])
@@ -403,7 +401,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
         Parameters
         ----------
-        params_dict : dict
+        params_dict : SampleDict
         **kwargs
             Arbitrary keyword arguments.
 
@@ -413,9 +411,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         torch.Tensor
 
         """
-        if not isinstance(params_dict, SampleDict):
-            params_dict = SampleDict(params_dict)
-        inputs = params_dict.getitems(self.cond_var)[0]  # (n_batch, n_expert=input_dim)
+        inputs = params_dict.dict_from_keys(self.cond_var)[0]  # (n_batch, n_expert=input_dim)
 
         n_expert = inputs.size()[1]
 

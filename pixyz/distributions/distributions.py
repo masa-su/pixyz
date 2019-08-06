@@ -5,7 +5,7 @@ from torch import nn
 from copy import deepcopy
 
 from ..utils import tolist, sum_samples, convert_latex_name
-from pixyz.distributions.sample_dict import SampleDict
+from .sample_dict import SampleDict, ShapeDict, Sample
 from ..losses import LogProb, Prob
 
 
@@ -634,6 +634,7 @@ class DistributionBase(Distribution):
 
         self._set_buffers(**kwargs)
         self._dist = None
+        self._dist_shape = ShapeDict((('feature', self.features_shape),))
 
     def _set_buffers(self, **params_dict):
         """Format constant parameters of this distribution as buffers.
@@ -717,16 +718,21 @@ class DistributionBase(Distribution):
         if set(self.params_keys) != set(params.keys()):
             raise ValueError()
 
+        self._dist_shape = params.max_shape
+        if 'sample' in self._dist_shape:
+            if self._dist_shape.keys[0] != 'sample':
+                raise ValueError()
         self._dist = self.distribution_torch_class(**params)
 
         # expand batch_n
         if batch_n:
-            batch_shape = self._dist.batch_shape
-            if batch_shape[0] == 1:
-                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
-            elif batch_shape[0] == batch_n:
-                return
-            else:
+            batch_shape = list(self._dist.batch_shape)
+            batch_dim = self._dist_shape.shape_dims('batch')[0]
+            if batch_shape[batch_dim] == 1:
+                batch_shape[batch_dim] = batch_n
+                self._dist = self._dist.expand(torch.Size(batch_shape))
+                self._dist_shape['batch'] = [batch_n]
+            elif batch_shape[batch_dim] != batch_n:
                 raise ValueError()
 
     def get_sample(self, reparam=False, sample_shape=torch.Size()):
@@ -753,17 +759,22 @@ class DistributionBase(Distribution):
                 raise ValueError("You cannot use the re-parameterization trick for this distribution.")
         else:
             _samples = self.dist.sample(sample_shape=sample_shape)
-        samples_dict = SampleDict({self._var[0]: _samples})
+        shape_dict = self._dist_shape.copy()
+        if sample_shape != torch.Size():
+            new_sample_shape = sample_shape + shape_dict['sample'] if 'sample' in shape_dict else sample_shape
+            shape_dict['sample'] = new_sample_shape
+            shape_dict.move_to_end('sample', last=False)
+        samples_dict = SampleDict({self._var[0]: Sample(_samples, shape_dict)})
 
         return samples_dict
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
-        _x_dict = x_dict.getitems(self._cond_var, return_tensors=False)
+        _x_dict = x_dict.dict_from_keys(self._cond_var, return_tensors=False)
         self.set_dist(_x_dict, sampling=False)
 
-        x_targets = x_dict.getitems(self._var)
+        x_targets = x_dict.dict_from_keys(self._var)
         log_prob = self.dist.log_prob(*x_targets)
         if sum_features:
             log_prob = sum_samples(log_prob)
@@ -773,7 +784,7 @@ class DistributionBase(Distribution):
     def get_params(self, params_dict={}):
         if not isinstance(params_dict, SampleDict):
             params_dict = SampleDict(params_dict)
-        params_dict, vars_dict = params_dict.replace_keys_split(self.replace_params_dict)
+        params_dict, vars_dict = params_dict.split_by_replace_keys(self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
         if not isinstance(output_dict, SampleDict):
             output_dict = SampleDict(output_dict)
@@ -781,7 +792,7 @@ class DistributionBase(Distribution):
         output_dict.update(params_dict)
 
         # append constant parameters to output_dict
-        constant_params_dict = SampleDict(self.named_buffers()).getitems(self.params_keys, return_tensors=False)
+        constant_params_dict = SampleDict(self.named_buffers()).dict_from_keys(self.params_keys, return_tensors=False)
         output_dict.update(constant_params_dict)
 
         return output_dict
@@ -789,7 +800,7 @@ class DistributionBase(Distribution):
     def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
-        _x_dict = x_dict.getitems(self._cond_var, return_tensors=False)
+        _x_dict = x_dict.dict_from_keys(self._cond_var, return_tensors=False)
         self.set_dist(_x_dict, sampling=False)
 
         entropy = self.dist.entropy()
@@ -807,20 +818,14 @@ class DistributionBase(Distribution):
 
         # conditioned
         if len(self.input_var) != 0:
-            input_dict.update(x_dict.getitems(self.input_var, return_tensors=False))
+            input_dict.update(x_dict.dict_from_keys(self.input_var, return_tensors=False))
 
         self.set_dist(input_dict, batch_n=batch_n)
         output_dict = SampleDict(self.get_sample(reparam=reparam,
                                                  sample_shape=sample_shape))
 
         if return_all:
-            for var_name, value in output_dict.items():
-                shape_dict = [('n_batch', [value.shape[0]]),
-                              ('feature', list(value.shape[1:]))]
-                if sample_shape != torch.Size():
-                    shape_dict.insert(0, ('sample', list(sample_shape)))
-                x_dict.add(var_name, value, shape_dict=shape_dict)
-            # x_dict.update(output_dict)
+            x_dict.update(output_dict)
             return x_dict
 
         return output_dict
@@ -988,8 +993,8 @@ class MultiplyDistribution(Distribution):
         output_dict = self._child.sample(x_dict=child_x_dict, batch_n=batch_n,
                                          return_all=True, reparam=reparam)
 
-        if return_all is False:
-            output_dict = output_dict.getitems(self._var, return_tensors=False)
+        if not return_all:
+            output_dict = output_dict.dict_from_keys(self._var, return_tensors=False)
             return output_dict
 
         return output_dict
@@ -1092,24 +1097,24 @@ class ReplaceVarDistribution(Distribution):
     def get_params(self, params_dict={}):
         if not isinstance(params_dict, SampleDict):
             params_dict = SampleDict(params_dict)
-        params_dict = params_dict.replace_keys(self._replace_inv_cond_var_dict)
+        params_dict = params_dict.dict_with_replaced_keys(self._replace_inv_cond_var_dict)
         return self.p.get_params(params_dict)
 
     def set_dist(self, x_dict={}, sampling=False, batch_n=None, **kwargs):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
-        x_dict = x_dict.replace_keys(self._replace_inv_cond_var_dict)
+        x_dict = x_dict.dict_with_replaced_keys(self._replace_inv_cond_var_dict)
         return self.p.set_dist(x_dict=x_dict, sampling=sampling, batch_n=batch_n, **kwargs)
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
-        input_dict = x_dict.getitems(self.cond_var, return_tensors=False)
-        replaced_input_dict = input_dict.replace_keys(self._replace_inv_cond_var_dict)
+        input_dict = x_dict.dict_from_keys(self.cond_var, return_tensors=False)
+        replaced_input_dict = input_dict.dict_with_replaced_keys(self._replace_inv_cond_var_dict)
 
         output_dict = self.p.sample(replaced_input_dict, batch_n=batch_n, sample_shape=sample_shape,
                                     return_all=False, reparam=reparam)
-        output_dict = output_dict.replace_keys(self._replace_dict)
+        output_dict = output_dict.dict_with_replaced_keys(self._replace_dict)
 
         x_dict.update(output_dict)
         return x_dict
@@ -1117,22 +1122,22 @@ class ReplaceVarDistribution(Distribution):
     def get_log_prob(self, x_dict, **kwargs):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
-        input_dict = x_dict.getitems(self.cond_var + self.var, return_tensors=False)
-        input_dict = input_dict.replace_keys(self._replace_inv_dict)
+        input_dict = x_dict.dict_from_keys(self.cond_var + self.var, return_tensors=False)
+        input_dict = input_dict.dict_with_replaced_keys(self._replace_inv_dict)
         return self.p.get_log_prob(input_dict, **kwargs)
 
     def sample_mean(self, x_dict={}):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
-        input_dict = x_dict.getitems(self.cond_var, return_tensors=False)
-        input_dict = input_dict.replace_keys(self._replace_inv_cond_var_dict)
+        input_dict = x_dict.dict_from_keys(self.cond_var, return_tensors=False)
+        input_dict = input_dict.dict_with_replaced_keys(self._replace_inv_cond_var_dict)
         return self.p.sample_mean(input_dict)
 
     def sample_variance(self, x_dict={}):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
-        input_dict = x_dict.getitems(self.cond_var, return_tensors=False)
-        input_dict = input_dict.replace_keys(self._replace_inv_cond_var_dict)
+        input_dict = x_dict.dict_from_keys(self.cond_var, return_tensors=False)
+        input_dict = input_dict.dict_with_replaced_keys(self._replace_inv_cond_var_dict)
         return self.p.sample_variance(input_dict)
 
     @property
@@ -1239,7 +1244,7 @@ class MarginalizeVarDistribution(Distribution):
             x_dict = SampleDict(x_dict)
         output_dict = self.p.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all,
                                     reparam=reparam)
-        output_dict = output_dict.delitems(self._marginalize_list)
+        output_dict = output_dict.dict_except_for_keys(self._marginalize_list)
 
         return output_dict
 

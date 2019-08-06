@@ -11,7 +11,7 @@ from torch.distributions import Laplace as LaplaceTorch
 from torch.distributions import Gamma as GammaTorch
 
 from ..utils import sum_samples
-from pixyz.distributions.sample_dict import SampleDict
+from .sample_dict import SampleDict
 from .distributions import DistributionBase
 
 
@@ -109,7 +109,7 @@ class FactorizedBernoulli(Bernoulli):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
         log_prob = super().get_log_prob(x_dict, sum_features=False)
-        [_x] = x_dict.getitems(self._var)
+        [_x] = x_dict.dict_from_keys(self._var)
         log_prob[_x == 0] = 0
         log_prob = sum_samples(log_prob)
         return log_prob
