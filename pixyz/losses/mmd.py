@@ -1,7 +1,7 @@
 import torch
 import sympy
 from .losses import Loss
-from pixyz.distributions.sample_dict import SampleDict
+from ..distributions import SampleDict
 
 
 class MMD(Loss):
@@ -68,8 +68,8 @@ class MMD(Loss):
         batch_n = self._get_batch_n(x_dict)
 
         # sample from distributions
-        p_x = self.p.sample(x_dict, batch_n=batch_n).getitems(self.p.var)[0]
-        q_x = self.q.sample(x_dict, batch_n=batch_n).getitems(self.q.var)[0]
+        p_x = self.p.sample(x_dict, batch_n=batch_n).dict_from_keys(self.p.var)[0]
+        q_x = self.q.sample(x_dict, batch_n=batch_n).dict_from_keys(self.q.var)[0]
 
         if p_x.shape != q_x.shape:
             raise ValueError("The two distribution variables must have the same shape.")

@@ -140,8 +140,10 @@ class MixtureModel(Distribution):
         return PosteriorMixtureModel(self, name=name)
 
     def sample(self, batch_n=None, sample_shape=torch.Size(), return_hidden=False, **kwargs):
+        if sample_shape != torch.Size():
+            raise NotImplementedError
         # sample from prior
-        hidden_output = self.prior.sample(batch_n=batch_n)[self._hidden_var[0]]
+        hidden_output = self.prior.sample(batch_n=batch_n, sample_shape=sample_shape).get_sample(self._hidden_var[0])
 
         var_output = []
         for _hidden_output in hidden_output:
