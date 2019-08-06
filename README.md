@@ -118,7 +118,7 @@ In VAE,
 Such an instance can be created from `pixyz.distributions.*` as
 ```python
 >>> prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
-...                var=["z"], features_dim=[64], name="p_prior")
+...                var=["z"], features_shape=[64], name="p_prior")
 ```
 
 If you want to find out what kind of distribution each instance defines and what modules (the network architecture) define it, just `print` them.
