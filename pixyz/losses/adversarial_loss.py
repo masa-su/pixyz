@@ -16,7 +16,7 @@ class AdversarialLoss(Loss):
         elif len(q.input_var) > 0:
             self.input_dist = q
         else:
-            raise NotImplementedError
+            raise NotImplementedError()
 
         super().__init__(p, q, input_var=input_var)
 
@@ -47,7 +47,7 @@ class AdversarialLoss(Loss):
         torch.Tensor
 
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def g_loss(self, y_p, y_q, batch_n):
         """Evaluate a generator loss given outputs of the discriminator.
@@ -66,7 +66,7 @@ class AdversarialLoss(Loss):
         torch.Tensor
 
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def train(self, train_x_dict, **kwargs):
         """Train the evaluation metric (discriminator).

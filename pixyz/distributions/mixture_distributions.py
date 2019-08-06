@@ -77,7 +77,7 @@ class MixtureModel(Distribution):
 
         """
         if not isinstance(distributions, list):
-            raise ValueError
+            raise ValueError()
         else:
             distributions = nn.ModuleList(distributions)
 
@@ -236,7 +236,7 @@ class PosteriorMixtureModel(Distribution):
         return "Mixture Model (Posterior)"
 
     def sample(self, *args, **kwargs):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_log_prob(self, x_dict, **kwargs):
         # log p(z|x) = log p(x, z) - log p(x)

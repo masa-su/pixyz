@@ -87,7 +87,7 @@ class RelaxedBernoulli(Bernoulli):
             elif batch_shape[0] == batch_n:
                 return
             else:
-                raise ValueError
+                raise ValueError()
 
 
 class FactorizedBernoulli(Bernoulli):
@@ -169,7 +169,7 @@ class RelaxedCategorical(Categorical):
             elif batch_shape[0] == batch_n:
                 return
             else:
-                raise ValueError
+                raise ValueError()
 
     def sample_mean(self, x_dict={}):
         self.set_dist(x_dict, sampling=False)
