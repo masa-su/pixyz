@@ -59,6 +59,9 @@ class PlanarFlow(Flow):
 
         return z
 
+    def inverse(self, z, y=None):
+        raise NotImplementedError()
+
     def extra_repr(self):
         return 'in_features={}, constraint_u={}'.format(
             self.in_features, self.constraint_u
