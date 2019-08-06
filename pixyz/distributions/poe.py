@@ -2,7 +2,8 @@ from __future__ import print_function
 import torch
 from torch import nn
 
-from ..utils import tolist, get_dict_values
+from ..utils import tolist
+from pixyz.distributions.sample_dict import SampleDict
 from .exponential_distributions import Normal
 
 
@@ -126,7 +127,7 @@ class ProductOfNormal(Normal):
 
         Parameters
         ----------
-        params_dict : dict
+        params_dict : SampleDict
         **kwargs
             Arbitrary keyword arguments.
 
@@ -139,8 +140,10 @@ class ProductOfNormal(Normal):
         loc = []
         scale = []
 
+        if not isinstance(params_dict, SampleDict):
+            params_dict = SampleDict(params_dict)
         for _p in self.p:
-            inputs_dict = get_dict_values(params_dict, _p.cond_var, True)
+            inputs_dict = params_dict.getitems(_p.cond_var, return_tensors=False)
             if len(inputs_dict) != 0:
                 outputs = _p.get_params(inputs_dict, **kwargs)
                 loc.append(outputs["loc"])
@@ -152,6 +155,8 @@ class ProductOfNormal(Normal):
         return loc, scale
 
     def get_params(self, params_dict={}, **kwargs):
+        if not isinstance(params_dict, SampleDict):
+            params_dict = SampleDict(params_dict)
         # experts
         if len(params_dict) > 0:
             loc, scale = self._get_expert_params(params_dict, **kwargs)  # (n_expert, n_batch, output_dim)
@@ -160,7 +165,7 @@ class ProductOfNormal(Normal):
             scale = torch.zeros(1)
 
         output_loc, output_scale = self._compute_expert_params(loc, scale)
-        output_dict = {"loc": output_loc, "scale": output_scale}
+        output_dict = SampleDict({"loc": output_loc, "scale": output_scale})
 
         return output_dict
 
@@ -209,15 +214,18 @@ class ProductOfNormal(Normal):
             var = self.input_var
 
         if type(x) is torch.Tensor:
-            checked_x = {var[0]: x}
+            checked_x = SampleDict({var[0]: x})
 
         elif type(x) is list:
             # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-            checked_x = dict(zip(var, x))
+            checked_x = SampleDict(zip(var, x))
 
         elif type(x) is dict:
             # point of modification
-            checked_x = x
+            checked_x = SampleDict(x)
+
+        elif type(x) is SampleDict:
+            checked_x = x.copy()
 
         else:
             raise ValueError("The type of input is not valid, got %s." % type(x))
@@ -311,16 +319,16 @@ class ElementWiseProductOfNormal(ProductOfNormal):
             var = self.input_var
 
         if type(x) is torch.Tensor:
-            checked_x = {var[0]: x}
+            checked_x = SampleDict({var[0]: x})
 
         elif type(x) is list:
             # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-            checked_x = dict(zip(var, x))
+            checked_x = SampleDict(zip(var, x))
 
-        elif type(x) is dict:
+        elif isinstance(x, dict) or isinstance(x, SampleDict):
             if not (set(list(x.keys())) >= set(var)):
                 raise ValueError("Input keys are not valid.")
-            checked_x = x
+            checked_x = x if isinstance(x, SampleDict) else SampleDict(x)
 
         else:
             raise ValueError("The type of input is not valid, got %s." % type(x))
@@ -405,7 +413,9 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         torch.Tensor
 
         """
-        inputs = get_dict_values(params_dict, self.cond_var)[0]  # (n_batch, n_expert=input_dim)
+        if not isinstance(params_dict, SampleDict):
+            params_dict = SampleDict(params_dict)
+        inputs = params_dict.getitems(self.cond_var)[0]  # (n_batch, n_expert=input_dim)
 
         n_expert = inputs.size()[1]
 

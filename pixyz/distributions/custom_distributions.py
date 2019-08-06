@@ -1,4 +1,5 @@
-from ..utils import get_dict_values, sum_samples
+from ..utils import sum_samples
+from pixyz.distributions.sample_dict import SampleDict
 from .distributions import Distribution
 
 
@@ -56,7 +57,9 @@ class CustomProb(Distribution):
         return self._distribution_name
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
-        x_dict = get_dict_values(x_dict, self._var, return_dict=True)
+        if not isinstance(x_dict, SampleDict):
+            x_dict = SampleDict(x_dict)
+        x_dict = x_dict.getitems(self._var, return_tensors=False)
         log_prob = self.log_prob_function(**x_dict)
         if sum_features:
             log_prob = sum_samples(log_prob)

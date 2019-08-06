@@ -2,7 +2,7 @@ import sympy
 from torch import optim, nn
 import torch
 from .losses import Loss
-from ..utils import get_dict_values, detach_dict
+from pixyz.distributions.sample_dict import SampleDict
 
 
 class AdversarialLoss(Loss):
@@ -27,8 +27,8 @@ class AdversarialLoss(Loss):
         params = discriminator.parameters()
         self.d_optimizer = optimizer(params, **optimizer_params)
 
-    def _get_batch_n(self, x_dict):
-        return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
+    def _get_batch_n(self, x_dict: SampleDict):
+        return x_dict.n_batch(self.input_dist.input_var[0])
 
     def d_loss(self, y_p, y_q, batch_n):
         """Evaluate a discriminator loss given outputs of the discriminator.
@@ -226,18 +226,18 @@ class AdversarialJensenShannon(AdversarialLoss):
         return sympy.Symbol("mean(D_{{JS}}^{{Adv}} \\left[{}||{} \\right])".format(self.p.prob_text,
                                                                                    self.q.prob_text))
 
-    def _get_eval(self, x_dict, discriminator=False, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, discriminator=False, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_p_dict = self.p.sample(x_dict, batch_n=batch_n).getitems(self.d.input_var, return_tensors=False)
         # sample x_q from q
-        x_q_dict = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_q_dict = self.q.sample(x_dict, batch_n=batch_n).getitems(self.d.input_var, return_tensors=False)
         if discriminator:
             # sample y_p from d
-            y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict)), self.d.var)[0]
+            y_p = self.d.sample(x_p_dict.detach()).getitems(self.d.var)[0]
             # sample y_q from d
-            y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
+            y_q = self.d.sample(x_q_dict.detach()).getitems(self.d.var)[0]
 
             return self.d_loss(y_p, y_q, batch_n), x_dict
 
@@ -246,8 +246,8 @@ class AdversarialJensenShannon(AdversarialLoss):
         # sample y_q from d
         y_q_dict = self.d.sample(x_q_dict)
 
-        y_p = get_dict_values(y_p_dict, self.d.var)[0]
-        y_q = get_dict_values(y_q_dict, self.d.var)[0]
+        y_p = y_p_dict.getitems(self.d.var)[0]
+        y_q = y_q_dict.getitems(self.d.var)[0]
 
         return self.g_loss(y_p, y_q, batch_n), x_dict
 
@@ -387,25 +387,25 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         return sympy.Symbol("mean(D_{{KL}}^{{Adv}} \\left[{}||{} \\right])".format(self.p.prob_text,
                                                                                    self.q.prob_text))
 
-    def _get_eval(self, x_dict, discriminator=False, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, discriminator=False, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_p_dict = self.p.sample(x_dict, batch_n=batch_n).getitems(self.d.input_var, return_tensors=False)
 
         if discriminator:
             # sample x_q from q
-            x_q_dict = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+            x_q_dict = self.q.sample(x_dict, batch_n=batch_n).getitems(self.d.input_var, return_tensors=False)
 
             # sample y_p from d
-            y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict)), self.d.var)[0]
+            y_p = self.d.sample(x_p_dict.detach()).getitems(self.d.var)[0]
             # sample y_q from d
-            y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
+            y_q = self.d.sample(x_q_dict.detach()).getitems(self.d.var)[0]
 
             return self.d_loss(y_p, y_q, batch_n), x_dict
 
         # sample y from d
-        y_p = get_dict_values(self.d.sample(x_p_dict), self.d.var)[0]
+        y_p = self.d.sample(x_p_dict).getitems(self.d.var)[0]
 
         return self.g_loss(y_p, batch_n), x_dict
 
