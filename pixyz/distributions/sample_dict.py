@@ -1,12 +1,18 @@
 from collections import OrderedDict
 from collections.abc import Container
 from numbers import Number
-from typing import Mapping, Iterable
-
+from typing import Mapping
+import sys
 import torch
 
 
 class ShapeDict(OrderedDict):
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1:
+            if isinstance(args[0], dict) and sys.version_info[0] < 3 or sys.version_info[1] < 7:
+                raise ValueError('')
+        super().__init__(*args, **kwargs)
+
     def shape_dims(self, shape_name):
         start_dim = 0
         for shape_name2, shape in self.items():
@@ -30,7 +36,7 @@ class Sample:
     """
     def __init__(self, value, shape_dict=None):
         if shape_dict and not isinstance(shape_dict, ShapeDict):
-            raise ValueError
+            shape_dict = ShapeDict(shape_dict)
         self.value = value
         self.shape_dict = shape_dict if shape_dict else self._default_shape(value)
 
@@ -52,17 +58,27 @@ class Sample:
     def slice(self, index, shape_name='time'):
         if isinstance(index, int):
             index = [index]
+        if shape_name not in self.shape_dict:
+            return self
         shape_dict = self.shape_dict.copy()
         shape_dims = self.shape_dims(shape_name)
         value = self._slice_value(self.value, index, shape_dims)
-        del shape_dict[shape_name]
+        if all(not isinstance(item, slice) for item in index):
+            del shape_dict[shape_name]
+        else:
+            sliced_shape = []
+            for i, shape_dim in enumerate(shape_dims):
+                if isinstance(index[i], int):
+                    continue
+                sliced_shape.append(len(range(*index[i].indices(self.value.shape[shape_dim]))))
+            shape_dict[shape_name] = sliced_shape
         return Sample(value, shape_dict)
 
     def shape_dims(self, shape_name):
         return self.shape_dict.shape_dims(shape_name)
 
     def _slice_value(self, value, index, shape_dims):
-        slices = [slice(None, None, None) if dim not in shape_dims else index[shape_dims.index(dim)]
+        slices = [slice(None) if dim not in shape_dims else index[shape_dims.index(dim)]
                   for dim in range(value.dim())]
         return value[slices]
 
@@ -86,18 +102,65 @@ class Sample:
 
 
 class SampleDict(Mapping):
-    """Container class of sampled results. Each result has info of meaning of shapes.
+    """
+    Container class of sampled values. Each value has info of meaning of shapes.
 
     Examples
     --------
     >>> import torch
     >>> from torch.nn import functional as F
     >>> from pixyz.distributions import Normal
-    >>> # Marginal distribution
-    >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
-    ...             features_shape=[64], name="p1")
+    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+    ...             features_shape=[5], name="p")
+    >>> sample_dict = p.sample(sample_shape=[3, 4])
+    >>> sample_dict['x'].shape
+    torch.Size([3, 4, 1, 5])
+    >>> sample_dict.get_shape('x')
+    ShapeDict([('sample', [3, 4]), ('batch', [1]), ('feature', [5])])
+    >>> sample_dict = p.sample(batch_n=2)
+    >>> sample_dict.get_shape('x')
+    ShapeDict([('batch', [2]), ('feature', [5])])
+    >>> sample = sample_dict.get_sample('x')
+    >>> type(sample)
+    <class 'pixyz.distributions.sample_dict.Sample'>
+    >>> sample #doctest: +SKIP
+    tensor([[-0.8378,  0.8379,  0.4045,  0.8837, -0.2362],
+            [-1.9989,  0.8083, -1.1591, -1.5242,  0.4656]]) --(shape=[('batch', [2]), ('feature', [5])])
+    >>> sample_dict.add('y', torch.zeros(4, 2, 3), shape_dict=(('sample', [4]), ('batch', [2]), ('feature', [3])))
+    >>> sample_dict.get_shape('y')
+    ShapeDict([('sample', [4]), ('batch', [2]), ('feature', [3])])
+    >>> sample_dict.add('z', Sample(torch.zeros(4, 2, 3), (('sample', [4]), ('batch', [2]), ('feature', [3]))))
+    >>> sample_dict.get_shape('z')
+    ShapeDict([('sample', [4]), ('batch', [2]), ('feature', [3])])
+    >>> sample_dict.n_batch('z')
+    2
+    >>> sample_dict.feature_shape('z')
+    [3]
     """
     def __init__(self, variables):
+        """
+        Initialize SampleDict from mapping of variable's name and the value of variable.
+
+        Parameters
+        ----------
+        variables : Mapping of str and torch.Tensor or Mapping of str and Sample or SampleDict
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import SampleDict
+        >>> sample_dict = SampleDict({'x': torch.zeros(2, 3, 4)})
+        >>> sample_dict.get_shape('x')
+        ShapeDict([('batch', [2]), ('feature', [3, 4])])
+        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
+        ...                                       shape_dict=(('feature', [2, 3, 4]),))})
+        >>> sample_dict.get_shape('x')
+        ShapeDict([('feature', [2, 3, 4])])
+        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
+        ...                                       shape_dict=(('time', [2]), ('batch', [3]), ('feature', [4])))})
+        >>> sample_dict.get_shape('x')
+        ShapeDict([('time', [2]), ('batch', [3]), ('feature', [4])])
+        """
         if isinstance(variables, dict):
             variables = variables.items()
         elif isinstance(variables, SampleDict):
@@ -143,12 +206,21 @@ class SampleDict(Mapping):
         return self._dict.__repr__()
 
     def add(self, var_name, value, shape_dict=None):
+        """
+        Add key and value to SampleDict with shape_dict info.
+
+        Parameters
+        ----------
+        var_name : str
+        value : torch.Tensor or Sample
+        shape_dict: Iterable of tuple or ShapeDict, optional
+        """
         if shape_dict and not isinstance(shape_dict, ShapeDict):
-            if isinstance(shape_dict, Iterable):
-                shape_dict = ShapeDict(shape_dict)
-            else:
-                raise ValueError
-        self._dict[var_name] = Sample(value, shape_dict)
+            shape_dict = ShapeDict(shape_dict)
+        if isinstance(value, Sample):
+            self._dict[var_name] = value
+        else:
+            self._dict[var_name] = Sample(value, shape_dict)
 
     def update(self, variables):
         if isinstance(variables, dict):
@@ -161,10 +233,7 @@ class SampleDict(Mapping):
         return SampleDict(self._dict)
 
     def detach(self):
-        """Detach all values in `SampleDicts`.
-
-        Parameters
-        ----------
+        """Return new SampleDict whose values are detached.
 
         Returns
         -------
@@ -173,6 +242,38 @@ class SampleDict(Mapping):
         return SampleDict((var_name, sample.detach()) for var_name, sample in self._dict.items())
 
     def slice(self, index, shape_name='time'):
+        """
+        Return new SampleDict whose values are sliced by shape_name and index
+        Parameters
+        ----------
+        index : int or list of int or list of slice
+        shape_name : str
+
+        Returns
+        -------
+        SampleDict
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import SampleDict
+        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
+        ...                                       shape_dict=(('time', [2]), ('batch', [3]), ('feature', [4])))})
+        >>> sample_dict.get_shape('x')
+        ShapeDict([('time', [2]), ('batch', [3]), ('feature', [4])])
+        >>> sliced = sample_dict.slice(0)
+        >>> sliced.get_shape('x')
+        ShapeDict([('batch', [3]), ('feature', [4])])
+        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
+        ...                                       shape_dict=(('time', [2, 3]), ('feature', [4])))})
+        >>> sliced = sample_dict.slice([1, slice(None)])
+        >>> sliced.get_shape('x')
+        ShapeDict([('time', [3]), ('feature', [4])])
+        >>> sliced = sample_dict.slice([1, 2])
+        >>> sliced.get_shape('x')
+        ShapeDict([('feature', [4])])
+
+        """
         return SampleDict((var_name, sample.slice(index, shape_name)) for var_name, sample in self._dict.items())
 
     def values(self):
@@ -279,6 +380,27 @@ class SampleDict(Mapping):
 
     @property
     def max_shape(self):
+        """
+        Get max shape which all other values can be broadcasted to.
+
+        Returns
+        -------
+        ShapeDict
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import SampleDict
+        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
+        ...                                       shape_dict=(('time', [2]), ('batch', [3]), ('feature', [4]))),
+        ...                           'mu': Sample(torch.zeros(4),
+        ...                                       shape_dict=(('feature', [4]),)),
+        ...                           'sigma': Sample(torch.zeros(1, 3, 4),
+        ...                                       shape_dict=(('time', [1]), ('batch', [3]), ('feature', [4]))),
+        ...                           })
+        >>> sample_dict.max_shape
+        ShapeDict([('time', [2]), ('batch', [3]), ('feature', [4])])
+        """
         result = []
         for var_name, sample in self._dict.items():
             for i, (shape_name, shape) in enumerate(reversed(sample.shape_dict.items())):
