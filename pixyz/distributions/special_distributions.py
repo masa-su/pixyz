@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 from .distributions import Distribution
-from ..utils import get_dict_values, Samples
+from pixyz.distributions.sample_dict import SampleDict
 
 
 class Deterministic(Distribution):
@@ -42,9 +42,11 @@ class Deterministic(Distribution):
         return "Deterministic"
 
     def sample(self, x_dict={}, return_all=True, **kwargs):
+        if not isinstance(x_dict, SampleDict):
+            x_dict = SampleDict(x_dict)
         x_dict = self._check_input(x_dict)
-        _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
-        output_dict = Samples(self.forward(**_x_dict))
+        _x_dict = x_dict.getitems(self.input_var, return_tensors=False)
+        output_dict = SampleDict(self.forward(**_x_dict))
 
         if set(output_dict.keys()) != set(self._var):
             raise ValueError("Output variables are not same as `var`.")

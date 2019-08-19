@@ -1,7 +1,6 @@
 from torch.nn.modules.distance import PairwiseDistance
 import sympy
 from .losses import Loss
-from ..utils import get_dict_values
 
 
 class WassersteinDistance(Loss):
@@ -60,14 +59,14 @@ class WassersteinDistance(Loss):
         return sympy.Symbol("W^{{upper}} \\left({}, {} \\right)".format(self.p.prob_text, self.q.prob_text))
 
     def _get_batch_n(self, x_dict):
-        return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
+        return x_dict.n_batch(self.input_dist.input_var[0])
 
     def _get_eval(self, x_dict, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample from distributions
-        p_x = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.p.var)[0]
-        q_x = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.q.var)[0]
+        p_x = self.p.sample(x_dict, batch_n=batch_n).getitems(self.p.var)[0]
+        q_x = self.q.sample(x_dict, batch_n=batch_n).getitems(self.q.var)[0]
 
         if p_x.shape != q_x.shape:
             raise ValueError("The two distribution variables must have the same shape.")

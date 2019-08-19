@@ -2,7 +2,7 @@ import sympy
 import torch
 from torch.distributions import kl_divergence
 
-from ..utils import get_dict_values
+from pixyz.distributions.sample_dict import SampleDict
 from .losses import Loss
 
 
@@ -35,15 +35,15 @@ class KullbackLeibler(Loss):
     def _symbol(self):
         return sympy.Symbol("D_{{KL}} \\left[{}||{} \\right]".format(self.p.prob_text, self.q.prob_text))
 
-    def _get_eval(self, x_dict, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         if (not hasattr(self.p, 'distribution_torch_class')) or (not hasattr(self.q, 'distribution_torch_class')):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "
                              "got %s and %s." % (self.p.distribution_name, self.q.distribution_name))
 
-        input_dict = get_dict_values(x_dict, self.p.input_var, True)
+        input_dict = x_dict.getitems(self.p.input_var, return_tensors=False)
         self.p.set_dist(input_dict)
 
-        input_dict = get_dict_values(x_dict, self.q.input_var, True)
+        input_dict = x_dict.getitems(self.q.input_var, return_tensors=False)
         self.q.set_dist(input_dict)
 
         divergence = kl_divergence(self.p.dist, self.q.dist)
@@ -59,7 +59,7 @@ class KullbackLeibler(Loss):
         """
         if (self._p1.distribution_name == "vonMisesFisher" and \
             self._p2.distribution_name == "HypersphericalUniform"):
-            inputs = get_dict_values(x, self._p1.input_var, True)
+            inputs = x.getitems(self._p1.input_var, False)
             params1 = self._p1.get_params(inputs, **kwargs)
 
             hyu_dim = self._p2.dim
@@ -70,7 +70,7 @@ class KullbackLeibler(Loss):
                         "got %s and %s." % (self._p1.distribution_name,
                                             self._p2.distribution_name))
 
-        #inputs = get_dict_values(x, self._p2.input_var, True)
+        #inputs = x.getitems(self._p2.input_var, False)
         #self._p2.set_dist(inputs)
 
         #divergence = kl_divergence(self._p1.dist, self._p2.dist)
