@@ -59,7 +59,7 @@ class CustomProb(Distribution):
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
-        x_dict = x_dict.dict_from_keys(self._var, return_tensors=False)
+        x_dict = x_dict.extract(self._var, return_dict=True)
         log_prob = self.log_prob_function(**x_dict)
         if sum_features:
             log_prob = sum_samples(log_prob)

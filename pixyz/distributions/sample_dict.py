@@ -14,6 +14,30 @@ class ShapeDict(OrderedDict):
         super().__init__(*args, **kwargs)
 
     def shape_dims(self, shape_name):
+        """
+        Return a list of dim which are named as shape_name.
+
+        Parameters
+        ----------
+        shape_name : str
+
+        Returns
+        -------
+        list of int
+
+        Examples
+        --------
+        >>> import torch
+        >>> from pixyz.distributions import ShapeDict
+        >>> shape_dict = ShapeDict([('sample', [4, 6, 2]), ('batch', [8]), ('feature', [3, 2, 9])])
+        >>> shape_dict.shape_dims('sample')
+        [0, 1, 2]
+        >>> shape_dict.shape_dims('batch')
+        [3]
+        >>> shape_dict.shape_dims('feature')
+        [4, 5, 6]
+
+        """
         start_dim = 0
         for shape_name2, shape in self.items():
             if shape_name == shape_name2:
@@ -23,16 +47,9 @@ class ShapeDict(OrderedDict):
 
 
 class Sample:
-    """Sampled result class. It has info of meaning of shapes.
+    """
+    Sampled result class. It has info of meaning of shapes.
 
-    Examples
-    --------
-    >>> import torch
-    >>> from torch.nn import functional as F
-    >>> from pixyz.distributions import Normal
-    >>> # Marginal distribution
-    >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
-    ...             features_shape=[64], name="p1")
     """
     def __init__(self, value, shape_dict=None):
         if shape_dict and not isinstance(shape_dict, ShapeDict):
@@ -91,6 +108,19 @@ class Sample:
         return self.shape_dict['batch'][0]
 
     def sum(self, shape_name):
+        """
+        Sum up over shape_name dims (inplace)
+
+        Parameters
+        ----------
+        shape_name : str
+
+        Returns
+        -------
+        torch.Tensor
+        inplaced sum tensor
+
+        """
         self.value = torch.sum(self.value, dim=self.shape_dims(shape_name))
         shape_dict = self.shape_dict.copy()
         del shape_dict[shape_name]
@@ -109,7 +139,7 @@ class SampleDict(Mapping):
     --------
     >>> import torch
     >>> from torch.nn import functional as F
-    >>> from pixyz.distributions import Normal
+    >>> from pixyz.distributions import Normal, Sample
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
     ...             features_shape=[5], name="p")
     >>> sample_dict = p.sample(sample_shape=[3, 4])
@@ -136,6 +166,10 @@ class SampleDict(Mapping):
     2
     >>> sample_dict.feature_shape('z')
     [3]
+    >>> q = Normal(loc='x', scale=torch.tensor(1.), var=["y"], cond_var=["x"], name="q")
+    >>> sample_dict = q.sample(p.sample(sample_shape=[2]), sample_shape=[3, 4], batch_n=6)
+    >>> sample_dict.get_shape('y')
+    ShapeDict([('sample', [3, 4, 2]), ('batch', [6]), ('feature', [5])])
     """
     def __init__(self, variables):
         """
@@ -256,7 +290,7 @@ class SampleDict(Mapping):
         Examples
         --------
         >>> import torch
-        >>> from pixyz.distributions import SampleDict
+        >>> from pixyz.distributions import SampleDict, Sample
         >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
         ...                                       shape_dict=(('time', [2]), ('batch', [3]), ('feature', [4])))})
         >>> sample_dict.get_shape('x')
@@ -279,7 +313,7 @@ class SampleDict(Mapping):
     def values(self):
         return (sample.value for sample in self._dict.values())
 
-    def dict_from_keys(self, var, return_tensors=True):
+    def extract(self, var, return_dict=True):
         """Get values from `dicts` specified by `keys`.
 
         When `return_dict` is True, return values are in dictionary format.
@@ -288,7 +322,7 @@ class SampleDict(Mapping):
         ----------
         var : list
 
-        return_tensors : bool
+        return_dict : bool
 
         Returns
         -------
@@ -296,12 +330,12 @@ class SampleDict(Mapping):
 
         Examples
         --------
-        >>> SampleDict({"a":1,"b":2,"c":3}).dict_from_keys(["b"])
+        >>> SampleDict({"a":1,"b":2,"c":3}).extract(["b"])
         [2]
-        >>> SampleDict({"a":1,"b":2,"c":3}).dict_from_keys(["b", "d"], return_tensors=False)
+        >>> SampleDict({"a":1,"b":2,"c":3}).extract(["b", "d"], return_dict=True)
         {'b': 2 --(shape=[])}
         """
-        if return_tensors:
+        if not return_dict:
             return list(sample.value for var_name, sample in self._dict.items() if var_name in var)
         return SampleDict((var_name, sample) for var_name, sample in self._dict.items() if var_name in var)
 

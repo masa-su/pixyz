@@ -65,7 +65,7 @@ class TransformedDistribution(Distribution):
         sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all)
 
         # flow transformation
-        _x = sample_dict.dict_from_keys(self.flow_input_var)[0]
+        _x = sample_dict.extract(self.flow_input_var)[0]
         z = self.forward(_x, compute_jacobian=compute_jacobian)
         output_dict = SampleDict({self.var[0]: z})
 
@@ -196,8 +196,8 @@ class InverseTransformedDistribution(Distribution):
         sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all)
 
         # inverse flow transformation
-        _z = sample_dict.dict_from_keys(self.flow_output_var)
-        _y = sample_dict.dict_from_keys(self.cond_var)
+        _z = sample_dict.extract(self.flow_output_var)
+        _y = sample_dict.extract(self.cond_var)
 
         if len(_y) == 0:
             x = self.inverse(_z[0])
@@ -216,8 +216,8 @@ class InverseTransformedDistribution(Distribution):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
         # flow transformation
-        _x = x_dict.dict_from_keys(self.var)
-        _y = x_dict.dict_from_keys(self.cond_var)
+        _x = x_dict.extract(self.var)
+        _y = x_dict.extract(self.cond_var)
 
         if len(_y) == 0:
             z = self.forward(_x[0], compute_jacobian=compute_jacobian)

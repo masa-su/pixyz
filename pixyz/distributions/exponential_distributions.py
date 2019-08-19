@@ -109,7 +109,7 @@ class FactorizedBernoulli(Bernoulli):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
         log_prob = super().get_log_prob(x_dict, sum_features=False)
-        [_x] = x_dict.dict_from_keys(self._var)
+        [_x] = x_dict.extract(self._var)
         log_prob[_x == 0] = 0
         log_prob = sum_samples(log_prob)
         return log_prob
