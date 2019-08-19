@@ -313,7 +313,7 @@ class SampleDict(Mapping):
     def values(self):
         return (sample.value for sample in self._dict.values())
 
-    def extract(self, var, return_dict=True):
+    def extract(self, var, return_dict=False):
         """Get values from `dicts` specified by `keys`.
 
         When `return_dict` is True, return values are in dictionary format.
