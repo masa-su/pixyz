@@ -141,7 +141,7 @@ class ProductOfNormal(Normal):
         scale = []
 
         for _p in self.p:
-            inputs_dict = params_dict.dict_from_keys(_p.cond_var, return_tensors=False)
+            inputs_dict = params_dict.extract(_p.cond_var, return_dict=True)
             if len(inputs_dict) != 0:
                 outputs = _p.get_params(inputs_dict, **kwargs)
                 loc.append(outputs["loc"])
@@ -411,7 +411,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         torch.Tensor
 
         """
-        inputs = params_dict.dict_from_keys(self.cond_var)[0]  # (n_batch, n_expert=input_dim)
+        inputs = params_dict.extract(self.cond_var)[0]  # (n_batch, n_expert=input_dim)
 
         n_expert = inputs.size()[1]
 

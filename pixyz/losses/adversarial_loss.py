@@ -230,14 +230,14 @@ class AdversarialJensenShannon(AdversarialLoss):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = self.p.sample(x_dict, batch_n=batch_n).dict_from_keys(self.d.input_var, return_tensors=False)
+        x_p_dict = self.p.sample(x_dict, batch_n=batch_n).extract(self.d.input_var, return_dict=True)
         # sample x_q from q
-        x_q_dict = self.q.sample(x_dict, batch_n=batch_n).dict_from_keys(self.d.input_var, return_tensors=False)
+        x_q_dict = self.q.sample(x_dict, batch_n=batch_n).extract(self.d.input_var, return_dict=True)
         if discriminator:
             # sample y_p from d
-            y_p = self.d.sample(x_p_dict.detach()).dict_from_keys(self.d.var)[0]
+            y_p = self.d.sample(x_p_dict.detach()).extract(self.d.var)[0]
             # sample y_q from d
-            y_q = self.d.sample(x_q_dict.detach()).dict_from_keys(self.d.var)[0]
+            y_q = self.d.sample(x_q_dict.detach()).extract(self.d.var)[0]
 
             return self.d_loss(y_p, y_q, batch_n), x_dict
 
@@ -246,8 +246,8 @@ class AdversarialJensenShannon(AdversarialLoss):
         # sample y_q from d
         y_q_dict = self.d.sample(x_q_dict)
 
-        y_p = y_p_dict.dict_from_keys(self.d.var)[0]
-        y_q = y_q_dict.dict_from_keys(self.d.var)[0]
+        y_p = y_p_dict.extract(self.d.var)[0]
+        y_q = y_q_dict.extract(self.d.var)[0]
 
         return self.g_loss(y_p, y_q, batch_n), x_dict
 
@@ -391,21 +391,21 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = self.p.sample(x_dict, batch_n=batch_n).dict_from_keys(self.d.input_var, return_tensors=False)
+        x_p_dict = self.p.sample(x_dict, batch_n=batch_n).extract(self.d.input_var, return_dict=True)
 
         if discriminator:
             # sample x_q from q
-            x_q_dict = self.q.sample(x_dict, batch_n=batch_n).dict_from_keys(self.d.input_var, return_tensors=False)
+            x_q_dict = self.q.sample(x_dict, batch_n=batch_n).extract(self.d.input_var, return_dict=True)
 
             # sample y_p from d
-            y_p = self.d.sample(x_p_dict.detach()).dict_from_keys(self.d.var)[0]
+            y_p = self.d.sample(x_p_dict.detach()).extract(self.d.var)[0]
             # sample y_q from d
-            y_q = self.d.sample(x_q_dict.detach()).dict_from_keys(self.d.var)[0]
+            y_q = self.d.sample(x_q_dict.detach()).extract(self.d.var)[0]
 
             return self.d_loss(y_p, y_q, batch_n), x_dict
 
         # sample y from d
-        y_p = self.d.sample(x_p_dict).dict_from_keys(self.d.var)[0]
+        y_p = self.d.sample(x_p_dict).extract(self.d.var)[0]
 
         return self.g_loss(y_p, batch_n), x_dict
 

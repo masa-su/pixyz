@@ -182,7 +182,7 @@ class Loss(object, metaclass=abc.ABCMeta):
         """
         return Expectation(p, self, input_var=input_var, sample_shape=sample_shape)
 
-    def eval(self, x_dict={}, return_dict=False, **kwargs):
+    def eval(self, x_dict={}, return_dict=True, **kwargs):
         """Evaluate the value of the loss function given inputs (:attr:`x_dict`).
 
         Parameters

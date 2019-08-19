@@ -45,7 +45,7 @@ class Deterministic(Distribution):
         if not isinstance(x_dict, SampleDict):
             x_dict = SampleDict(x_dict)
         x_dict = self._check_input(x_dict)
-        _x_dict = x_dict.dict_from_keys(self.input_var, return_tensors=False)
+        _x_dict = x_dict.extract(self.input_var, return_dict=True)
         output_dict = SampleDict(self.forward(**_x_dict))
 
         if set(output_dict.keys()) != set(self._var):

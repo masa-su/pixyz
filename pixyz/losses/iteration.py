@@ -128,7 +128,7 @@ class IterativeLoss(Loss):
                 shape_dict['feature'] = list(x_dict[var_name].shape[2:])
                 shape_dict.move_to_end('batch', last=False)
                 shape_dict.move_to_end('time', last=False)
-        series_x_dict = x_dict.dict_from_keys(self.series_var, return_tensors=False)
+        series_x_dict = x_dict.extract(self.series_var, return_dict=True)
         step_loss_sum = 0
 
         # set max_iter
