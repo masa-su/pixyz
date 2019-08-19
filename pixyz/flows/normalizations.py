@@ -24,9 +24,9 @@ class BatchNorm1d(Flow):
     >>> # reconstruction
     >>> _x = f.inverse(f(x))
     >>> # check this reconstruction
-    >>> diff = torch.sum(torch.abs(_x-x)).data
+    >>> diff = torch.sum(torch.abs(_x-x)).item()
     >>> diff < 0.1
-    tensor(1, dtype=torch.uint8)
+    True
     """
     def __init__(self, in_features, momentum=0.0):
         super().__init__(in_features)
@@ -97,9 +97,9 @@ class BatchNorm2d(BatchNorm1d):
     >>> # reconstruction
     >>> _x = f.inverse(f(x))
     >>> # check this reconstruction
-    >>> diff = torch.sum(torch.abs(_x-x)).data
+    >>> diff = torch.sum(torch.abs(_x-x)).item()
     >>> diff < 0.1
-    tensor(1, dtype=torch.uint8)
+    True
     """
     def __init__(self, in_features, momentum=0.0):
         super().__init__(in_features, momentum)
