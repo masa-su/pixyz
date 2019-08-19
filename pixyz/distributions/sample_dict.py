@@ -9,7 +9,7 @@ import torch
 class ShapeDict(OrderedDict):
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
-            if isinstance(args[0], dict) and sys.version_info[0] < 3 or sys.version_info[1] < 7:
+            if isinstance(args[0], dict) and (sys.version_info[0] < 3 or sys.version_info[1] < 7):
                 raise ValueError('')
         super().__init__(*args, **kwargs)
 
