@@ -41,14 +41,14 @@ class MMD(Loss):
         elif len(q.input_var) > 0:
             self.input_dist = q
         else:
-            raise NotImplementedError
+            raise NotImplementedError()
 
         if kernel == "gaussian":
             self.kernel = gaussian_rbf_kernel
         elif kernel == "inv-multiquadratic":
             self.kernel = inverse_multiquadratic_rbf_kernel
         else:
-            raise NotImplementedError
+            raise NotImplementedError()
 
         self.kernel_params = kernel_params
 
@@ -97,7 +97,7 @@ def pairwise_distance_matrix(x, y, metric="euclidean"):
     if metric == "euclidean":
         return torch.sum((x[:, None, :] - y[None, :, :]) ** 2, dim=-1)
 
-    raise NotImplementedError
+    raise NotImplementedError()
 
 
 def gaussian_rbf_kernel(x, y, sigma_sqr=2., **kwargs):

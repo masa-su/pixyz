@@ -256,7 +256,7 @@ class Distribution(nn.Module):
         {'scale': tensor(1.), 'loc': tensor([0.])}
 
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
                reparam=False):
@@ -334,7 +334,7 @@ class Distribution(nn.Module):
                         0.3686,  0.6311, -1.1208, 0.3656, -0.6683]])}
 
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def sample_mean(self, x_dict={}):
         """Return the mean of the distribution.
@@ -365,7 +365,7 @@ class Distribution(nn.Module):
                   1.2810, -0.6681]])
 
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def sample_variance(self, x_dict={}):
         """Return the variance of the distribution.
@@ -395,7 +395,7 @@ class Distribution(nn.Module):
         tensor([[1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]])
 
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         """Giving variables, this method returns values of log-pdf.
@@ -435,7 +435,7 @@ class Distribution(nn.Module):
         tensor([-21.5251])
 
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
         """Giving variables, this method returns values of entropy.
@@ -474,7 +474,7 @@ class Distribution(nn.Module):
         tensor([14.1894])
 
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def log_prob(self, sum_features=True, feature_dims=None):
         """Return an instance of :class:`pixyz.losses.LogProb`.
@@ -556,7 +556,7 @@ class Distribution(nn.Module):
     def forward(self, *args, **kwargs):
         """When this class is inherited by DNNs, this method should be overrided."""
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def replace_var(self, **replace_dict):
         """Return an instance of :class:`pixyz.distributions.ReplaceVarDistribution`.
@@ -652,13 +652,13 @@ class DistributionBase(Distribution):
                 if params_dict[key] in self._cond_var:
                     self.replace_params_dict[params_dict[key]] = key
                 else:
-                    raise ValueError
+                    raise ValueError()
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
                 self.register_buffer(key, features_checked)
             else:
-                raise ValueError
+                raise ValueError()
 
     def _check_features_shape(self, features):
         # scalar
@@ -678,12 +678,12 @@ class DistributionBase(Distribution):
     @property
     def params_keys(self):
         """list: Return the list of parameter names for this distribution."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @property
     def distribution_torch_class(self):
         """Return the class of PyTorch distribution."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @property
     def dist(self):
@@ -712,7 +712,7 @@ class DistributionBase(Distribution):
         """
         params = self.get_params(x_dict, **kwargs)
         if set(self.params_keys) != set(params.keys()):
-            raise ValueError
+            raise ValueError()
 
         self._dist = self.distribution_torch_class(**params)
 
@@ -724,7 +724,7 @@ class DistributionBase(Distribution):
             elif batch_shape[0] == batch_n:
                 return
             else:
-                raise ValueError
+                raise ValueError()
 
     def get_sample(self, reparam=False, sample_shape=torch.Size()):
         """Get a sample_shape shaped sample from :attr:`dist`.
@@ -746,7 +746,7 @@ class DistributionBase(Distribution):
         if reparam:
             try:
                 _samples = self.dist.rsample(sample_shape=sample_shape)
-            except NotImplementedError:
+            except NotImplementedError():
                 raise ValueError("You cannot use the re-parameterization trick for this distribution.")
         else:
             _samples = self.dist.sample(sample_shape=sample_shape)
@@ -1042,7 +1042,7 @@ class ReplaceVarDistribution(Distribution):
         all_vars = _cond_var + _var
 
         if not (set(replace_dict.keys()) <= set(all_vars)):
-            raise ValueError
+            raise ValueError()
 
         _replace_inv_cond_var_dict = {replace_dict[var]: var for var in _cond_var if var in replace_dict.keys()}
         _replace_inv_dict = {value: key for key, value in replace_dict.items()}
