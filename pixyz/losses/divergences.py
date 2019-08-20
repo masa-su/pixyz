@@ -59,7 +59,7 @@ class KullbackLeibler(Loss):
         """
         if (self._p1.distribution_name == "vonMisesFisher" and \
             self._p2.distribution_name == "HypersphericalUniform"):
-            inputs = x.getitems(self._p1.input_var, False)
+            inputs = x.extract(self._p1.input_var, False)
             params1 = self._p1.get_params(inputs, **kwargs)
 
             hyu_dim = self._p2.dim
@@ -70,7 +70,7 @@ class KullbackLeibler(Loss):
                         "got %s and %s." % (self._p1.distribution_name,
                                             self._p2.distribution_name))
 
-        #inputs = x.getitems(self._p2.input_var, False)
+        #inputs = x.extract(self._p2.input_var, False)
         #self._p2.set_dist(inputs)
 
         #divergence = kl_divergence(self._p1.dist, self._p2.dist)
