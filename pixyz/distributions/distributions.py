@@ -1070,12 +1070,12 @@ class ReplaceVarDistribution(Distribution):
         x_dict = replace_dict_keys(x_dict, self._replace_inv_cond_var_dict)
         return self.p.set_dist(x_dict=x_dict, sampling=sampling, batch_n=batch_n, **kwargs)
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
         output_dict = self.p.sample(replaced_input_dict, batch_n=batch_n, sample_shape=sample_shape,
-                                    return_all=False, reparam=reparam)
+                                    return_all=False, reparam=reparam, **kwargs)
         output_dict = replace_dict_keys(output_dict, self._replace_dict)
 
         x_dict.update(output_dict)
@@ -1193,9 +1193,9 @@ class MarginalizeVarDistribution(Distribution):
     def get_params(self, params_dict={}):
         return self.p.get_params(params_dict)
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         output_dict = self.p.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all,
-                                    reparam=reparam)
+                                    reparam=reparam, **kwargs)
         output_dict = delete_dict_values(output_dict, self._marginalize_list)
 
         return output_dict
