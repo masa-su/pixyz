@@ -1,4 +1,4 @@
-from .sample_dict import ShapeDict, SampleDict, Sample
+from .sample_dict import SampleDict
 
 from .exponential_distributions import (
     Normal,
@@ -37,9 +37,7 @@ from .flow_distribution import TransformedDistribution, InverseTransformedDistri
 
 
 __all__ = [
-    'ShapeDict',
     'SampleDict',
-    'Sample',
 
     'Distribution',
     'CustomProb',

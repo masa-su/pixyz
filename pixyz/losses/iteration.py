@@ -1,5 +1,6 @@
 from copy import deepcopy
 import sympy
+import torch
 
 from .losses import Loss
 from ..distributions import SampleDict
@@ -117,17 +118,12 @@ class IterativeLoss(Loss):
         return _symbol
 
     def slice_step_fn(self, t, x):
-        return x.slice(t)
+        return x.slice(t, self.series_var)
 
     def _get_eval(self, x_dict: SampleDict, **kwargs):
-        for var_name in self.series_var:
-            shape_dict = x_dict.get_shape(var_name)
-            if 'time' not in shape_dict:
-                shape_dict['time'] = [x_dict[var_name].shape[0]]
-                shape_dict['batch'] = [x_dict[var_name].shape[1]]
-                shape_dict['feature'] = list(x_dict[var_name].shape[2:])
-                shape_dict.move_to_end('batch', last=False)
-                shape_dict.move_to_end('time', last=False)
+        # TODO: -多分update_valueのvalueのテンソルを増やせばOK
+        # TODO: -再帰パラメータの初期化は外部にあるので，それをユーザに増やしてもらって平均してもらうべき
+        # TODO: -つまりIterativeLoss.expectation(init_dist, sample_shape)がよい
         series_x_dict = x_dict.extract(self.series_var, return_dict=True)
         step_loss_sum = 0
 
@@ -152,7 +148,7 @@ class IterativeLoss(Loss):
             # evaluate
             step_loss, samples = self.step_loss.eval(x_dict, return_dict=True)
             x_dict.update(samples)
-            if mask is not None:
+            if mask:
                 step_loss *= mask[t]
             step_loss_sum += step_loss
 

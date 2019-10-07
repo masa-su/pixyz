@@ -649,13 +649,16 @@ class Expectation(Loss):
         p_text = "{" + self.p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict=None, **kwargs):
+        x_dict = SampleDict.from_arg(x_dict)
         samples_dict = self.p.sample(x_dict, sample_shape=self.sample_shape, reparam=True, return_all=True)
 
         loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)  # TODO: eval or _get_eval
         samples_dict.update(loss_sample_dict)
 
         # sum over sample_shape
-        loss = loss.view(self.sample_shape.numel(), -1).mean(dim=0)
+        loss = loss.mean(dim=range(*samples_dict.sample_dims))
 
+        # 増えたsampleが外側に解放されても大丈夫か？
+        # 多分，iterativeLossのときに問題になるぞ -- ならない
         return loss, samples_dict
