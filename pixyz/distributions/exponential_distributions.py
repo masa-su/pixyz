@@ -10,7 +10,6 @@ from torch.distributions import Beta as BetaTorch
 from torch.distributions import Laplace as LaplaceTorch
 from torch.distributions import Gamma as GammaTorch
 
-from ..utils import sum_samples
 from .sample_dict import SampleDict
 from .distributions import DistributionBase
 
@@ -36,7 +35,7 @@ class Bernoulli(DistributionBase):
 
     @property
     def params_keys(self):
-        return ["probs"]
+        return ["probs", "logits"]
 
     @property
     def distribution_torch_class(self):
@@ -73,9 +72,9 @@ class RelaxedBernoulli(Bernoulli):
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def set_dist(self, x_dict={}, sampling=True, batch_n=None, **kwargs):
+    def set_dist(self, x_dict={}, relaxing=True, batch_n=None, **kwargs):
         params = self.get_params(x_dict)
-        if sampling is True:
+        if relaxing is True:
             self._dist = self.relaxed_distribution_torch_class(temperature=self.temperature, **params)
         else:
             self._dist = self.distribution_torch_class(**params)
@@ -106,12 +105,16 @@ class FactorizedBernoulli(Bernoulli):
         return "FactorizedBernoulli"
 
     def get_log_prob(self, x_dict):
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
-        log_prob = super().get_log_prob(x_dict, sum_features=False)
-        [_x] = x_dict.extract(self._var)
-        log_prob[_x == 0] = 0
-        log_prob = sum_samples(log_prob)
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self._cond_var)
+        _x_dict = x_dict.from_variables(self._cond_var)
+        self.set_dist(_x_dict)
+
+        x_target = x_dict[self.var[0]]
+        new_ndim = x_target.ndim - len(self._dist.batch_shape) - len(self._dist.event_shape)
+        log_prob = self.dist.log_prob(x_target)
+        log_prob[x_target == 0] = 0
+        # sum over iid dims
+        log_prob = log_prob.sum(dim=range(new_ndim, new_ndim + len(self.iid_info[0])))
         return log_prob
 
 
@@ -120,7 +123,7 @@ class Categorical(DistributionBase):
 
     @property
     def params_keys(self):
-        return ["probs"]
+        return ["probs", "logits"]
 
     @property
     def distribution_torch_class(self):
@@ -157,9 +160,9 @@ class RelaxedCategorical(Categorical):
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def set_dist(self, x_dict={}, sampling=True, batch_n=None, **kwargs):
+    def set_dist(self, x_dict={}, relaxing=True, batch_n=None, **kwargs):
         params = self.get_params(x_dict)
-        if sampling is True:
+        if relaxing is True:
             self._dist = self.relaxed_distribution_torch_class(temperature=self.temperature, **params)
         else:
             self._dist = self.distribution_torch_class(**params)
@@ -175,11 +178,11 @@ class RelaxedCategorical(Categorical):
                 raise ValueError()
 
     def sample_mean(self, x_dict={}):
-        self.set_dist(x_dict, sampling=False)
+        self.set_dist(x_dict, relaxing=False)
         return self.dist.mean
 
     def sample_variance(self, x_dict={}):
-        self.set_dist(x_dict, sampling=False)
+        self.set_dist(x_dict, relaxing=False)
         return self.dist.variance
 
 
@@ -197,7 +200,7 @@ class Multinomial(DistributionBase):
 
     @property
     def params_keys(self):
-        return ["probs"]
+        return ["probs", "logits", "total_count"]
 
     @property
     def distribution_torch_class(self):

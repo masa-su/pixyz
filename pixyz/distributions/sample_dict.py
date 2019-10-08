@@ -95,7 +95,7 @@ class SampleDict(dict):
         if value.shape[:len(self.sample_shape)] != self.sample_shape:
             raise ValueError(f"the sample shape of value does not match. value: {value},"
                              f" expected: {self.sample_shape}, actual: {value.shape[:len(self.sample_shape)]}")
-        super()[var_name] = value
+        super().__setitem__(var_name, value)
 
     @staticmethod
     def _check_dict_type(target):

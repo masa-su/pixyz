@@ -41,10 +41,8 @@ class Deterministic(Distribution):
     def distribution_name(self):
         return "Deterministic"
 
-    def sample(self, x_dict={}, return_all=True, **kwargs):
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
-        x_dict = self._check_input(x_dict)
+    def sample(self, x_dict=None, return_all=True, **kwargs):
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         _x_dict = x_dict.extract(self.input_var, return_dict=True)
         output_dict = SampleDict(self.forward(**_x_dict))
 
@@ -89,8 +87,8 @@ class DataDistribution(Distribution):
     def distribution_name(self):
         return "Data distribution"
 
-    def sample(self, x_dict={}, **kwargs):
-        output_dict = self._check_input(x_dict)
+    def sample(self, x_dict=None, **kwargs):
+        output_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         return output_dict
 
     def sample_mean(self, x_dict):

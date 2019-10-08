@@ -27,8 +27,7 @@ class KullbackLeibler(Loss):
     >>> loss = loss_cls.eval()
     """
 
-    def __init__(self, p, q, input_var=None, dim=None):
-        self.dim = dim
+    def __init__(self, p, q, input_var=None):
         super().__init__(p, q, input_var)
 
     @property
@@ -40,20 +39,20 @@ class KullbackLeibler(Loss):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "
                              "got %s and %s." % (self.p.distribution_name, self.q.distribution_name))
 
-        input_dict = x_dict.extract(self.p.input_var, return_dict=True)
+        # TODO: 基本的なVAEの使用で例外になってしまう＋set_distなどの継承が複雑になるので，iid_dimsのサポートをやめる
+        if self.p.iid_info != self.q.iid_info:
+            raise NotImplementedError("Divergence between different iid shape distributions is not supported.")
+
+        input_dict = x_dict.from_variables(self.p.input_var)
         self.p.set_dist(input_dict)
 
-        input_dict = x_dict.extract(self.q.input_var, return_dict=True)
+        input_dict = x_dict.from_variables(self.q.input_var)
         self.q.set_dist(input_dict)
 
         divergence = kl_divergence(self.p.dist, self.q.dist)
 
-        if self.dim:
-            divergence = torch.sum(divergence, dim=self.dim)
-            return divergence, x_dict
-
-        dim_list = list(torch.arange(divergence.dim()))
-        divergence = torch.sum(divergence, dim=dim_list[1:])
+        dim_list = list(torch.arange(divergence.ndim))
+        divergence = torch.sum(divergence, dim=dim_list[len(x_dict.sample_shape):])
         return divergence, x_dict
 
         """

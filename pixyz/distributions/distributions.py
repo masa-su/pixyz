@@ -85,11 +85,13 @@ class Distribution(nn.Module):
         """
         super().__init__()
 
+        cond_var = list(cond_var)
+        var = list(var)
         _vars = cond_var + var
         if len(_vars) != len(set(_vars)):
             raise ValueError("There are conflicted variables.")
 
-        self._cond_var = list(cond_var)
+        self._cond_var = cond_var
         self._var = var
 
         self._name = convert_latex_name(name)
@@ -572,21 +574,20 @@ class Distribution(nn.Module):
 class DistributionBase(Distribution):
     """Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class."""
 
-    def __init__(self, cond_var=(), var=("x",), name="p", iid_shape=torch.Size(), iid_dims=(), **params_dict):
+    def __init__(self, cond_var=(), var=("x",), name="p", features_shape=None, **params_dict):
         super().__init__(cond_var=cond_var, var=var, name=name)
         if len(var) != 1:
             raise ValueError("multiple var distribution is not supported.")
 
         self._set_buffers(**params_dict)
         self._dist = None
-        # -たぶん_dist_shapeはもういらない（set_distとget_sample内部でshapeが必要なくなったため)
-        # self._dist_shape = None
-        if len(iid_dims) == 0:
-            iid_dims = range(len(iid_shape))
-        elif len(iid_dims) != len(iid_shape):
-            raise ValueError("the length of iid_dims and iid_shape must be the same.")
-        self._iid_info = (iid_dims, iid_shape)
-        self._features_shape = None
+        # if len(iid_dims) == 0:
+        #     iid_dims = range(len(iid_shape))
+        # elif len(iid_dims) != len(iid_shape):
+        #     raise ValueError("the length of iid_dims and iid_shape must be the same.")
+        # self.iid_info = (iid_dims, iid_shape)
+        self._features_shape = features_shape
+        self._is_iid_dist = (features_shape is None)
 
     @property
     def features_shape(self):
@@ -615,16 +616,6 @@ class DistributionBase(Distribution):
                     raise ValueError(f"a given parameter {value} is not in cond_var of the distribution.")
                 self.replace_params_dict[value] = key
             elif torch.is_tensor(value):
-                # features = value
-                # # scalar
-                # if features.size() == torch.Size():
-                #     features = features.expand(self.features_shape)
-                # elif features.size() != self.features_shape:
-                #     raise ValueError(f"the shape of a given parameter {features.size()}"
-                #                      f" and features_shape {self.features_shape} do not match.")
-                # # for batch
-                # features_checked = features.unsqueeze(0)
-                # self.register_buffer(key, features_checked)
                 self.register_buffer(key, value)
             else:
                 raise ValueError(f"only Tensor or str parameters are supported. ({key}:{type(value)} is given.)")
@@ -644,7 +635,7 @@ class DistributionBase(Distribution):
         """Return the instance of PyTorch distribution."""
         return self._dist
 
-    def set_dist_and_shape(self, x_dict=None, relaxing=False):
+    def set_dist(self, x_dict=None, relaxing=False):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
         This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
@@ -665,24 +656,31 @@ class DistributionBase(Distribution):
 
         """
         params = self.get_params(x_dict)
-        if set(self.params_keys) != set(params.keys()):
-            raise ValueError(f"params keys don't match. expected: {self.params_keys}, actual: {params.keys()}")
+        # if set(self.params_keys) != set(params.keys()):
+        #     raise ValueError(f"params keys don't match. expected: {self.params_keys}, actual: {params.keys()}")
         input_sample_shape = params.sample_shape
 
         # self._dist_shape = SampleDict.max_shape_(params)
         self._dist = self.distribution_torch_class(**params)
-        iid_dims, iid_shape = self._iid_info
-        # -squeeze可能な次元に吸収されてしまう問題があった（今はshape全体を指定しているので無い）
-        # expand _dist for iid distribution and ancestral sampling
-        self._dist.expand(list(chain(iid_shape, input_sample_shape, self._dist.batch_shape[len(input_sample_shape):])))
+        # iid_dims, iid_shape = self.iid_info
+        # TODO: iidの問題が未解決（paramsのexpandでdistribution expandでのshapeの問題を解決したが，MultidimentionalNormalDistributionでのiid指定ができない＋今までの面倒なshapeソートの名残が残っている）
+        if self._is_iid_dist:
+            if self._dist.batch_shape != input_sample_shape:
+                raise ValueError("torch distribution got wrong parameter which has too many features_shape.")
+            self._dist = self.distribution_torch_class(**params)
+            self._dist.expand(input_sample_shape + self.features_shape)
+        else:
+            # -squeeze可能な次元に吸収されてしまう問題があった（今はshape全体を指定しているので無い）
+            # expand _dist for iid distribution and ancestral sampling
+            self._dist.expand(input_sample_shape + self._dist.batch_shape[len(input_sample_shape):])
 
-        # SampleDist.features_dims(params, self.var[0]) can not be used because params don't have self.var[0]
-        features_dims = (SampleDict.sample_dims_(params)[-1], None)
-        # TODO: shapeの型をtorch.Size()に揃えるべきか？
-        self._features_shape = torch.Size(chain(self._dist.batch_shape[slice(*features_dims)], self._dist.event_shape))
-        # TODO: features_shapeをevent_shapeにリネームしたくなってきた(pytorchと統一)
+            # SampleDist.features_dims(params, self.var[0]) can not be used because params don't have self.var[0]
+            features_dims = (SampleDict.sample_dims_(params)[-1], None)
+            # TODO: shapeの型をtorch.Size()に揃えるべきか？
+            self._features_shape = self._dist.batch_shape[slice(*features_dims)] + self._dist.event_shape
+            # TODO: features_shapeをevent_shapeにリネームしたくなってきた(pytorchと統一)
 
-        # -本当にbatch_nオプションを削除してよかったのか確認する
+            # -本当にbatch_nオプションを削除してよかったのか確認する
 
     def _get_sample(self, reparam=False, sample_shape=torch.Size()):
         """Get a sample_shape shaped sample from :attr:`dist`.
@@ -711,17 +709,23 @@ class DistributionBase(Distribution):
 
         return samples
 
+    def sum_over_iid_dims(self, torch_loss, given_dict):
+        x_target = given_dict[self.var[0]]
+        new_ndim = x_target.ndim - len(self._dist.batch_shape) - len(self._dist.event_shape)
+        # sum over iid dims
+        torch_loss = torch_loss.sum(dim=range(new_ndim, new_ndim + len(self.iid_info[0])))
+        return torch_loss
+
     # TODO: 本当はここにSampleDictやproduct_infoに関する知識を含めないことで拡張しやすくしたいが，難しい
     def get_log_prob(self, x_dict):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self._cond_var)
         _x_dict = x_dict.from_variables(self._cond_var)
-        self.set_dist_and_shape(_x_dict)
+        self.set_dist(_x_dict)
 
         x_target = x_dict[self.var[0]]
-        new_ndim = x_target.ndim - len(self._dist.batch_shape) - len(self._dist.event_shape)
+        # TODO: -iid_shapeについてソートしていない
         log_prob = self.dist.log_prob(x_target)
-        # sum over iid dims
-        log_prob = log_prob.sum(dim=range(new_ndim, new_ndim + len(self._iid_info[0])))
+        # log_prob = self.sum_over_iid_dims(log_prob, x_dict)
 
         return log_prob
 
@@ -778,8 +782,14 @@ class DistributionBase(Distribution):
         params_dict.update(output_dict)
 
         # append constant parameters to output_dict
-        constant_params_dict = SampleDict.from_variables_({**self.named_buffers()}, self.params_keys)
+        constant_params_dict = SampleDict({**self.named_buffers()}).from_variables(self.params_keys)
         params_dict.update(constant_params_dict)
+
+        # unsqueeze params for iid dims
+        if self._is_iid_dist:
+            for key in params_dict.keys():
+                params_dict[key] = params_dict[key][
+                    (slice(None),)*params_dict[key].ndim + (None,)*len(self.features_shape)]
 
         return params_dict
 
@@ -787,20 +797,20 @@ class DistributionBase(Distribution):
         # TODO: いくつかの派生先ではkwargsが使われていたのでチェックする
         x_dict = SampleDict.from_arg(x_dict, required_keys=self._cond_var)
         _x_dict = x_dict.from_variables(self._cond_var)
-        self.set_dist_and_shape(_x_dict, relaxing=False)
+        self.set_dist(_x_dict, relaxing=False)
 
         entropy = self.dist.entropy()
         # sum over iid dims
-        entropy = entropy.sum(dim=range(len(self._iid_info[0])))
+        entropy = entropy.sum(dim=range(len(self.iid_info[0])))
         # TODO: sum_featuresオプションをなくして（旧来実装の互換が）大丈夫だったか？
 
         return entropy
 
-    def _sort_iid_dims(self, tensor, sample_ndim=0):
+    def sort_iid_dims(self, torch_sample, sample_ndim=0):
         offset = sample_ndim
-        for dim, iid_dim in enumerate(self._iid_info[0]):
-            tensor = tensor.transpose(offset + dim, offset + iid_dim)
-        return tensor
+        for dim, iid_dim in enumerate(self.iid_info[0]):
+            torch_sample = torch_sample.transpose(offset + dim, offset + iid_dim)
+        return torch_sample
 
     def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # global_sample: x_dictに含まれるinput_sample_shapeについて，ブロードキャストではなくサンプルするかどうか
@@ -821,12 +831,12 @@ class DistributionBase(Distribution):
         # batch_shapeは廃止できない，2つ目の事前分布がdictからパラメータを受け取るとbatch_dimがある
         # SampleDictの仕様を変更し，unsqueezeせずにgivenするようにすると，sample_shapeのみで良くなるが
         # 自分で(4,1,1,1)のようにユーザーが型を合わせる必要が出てくる
-        self.set_dist_and_shape(input_dict)
+        self.set_dist(input_dict)
         sample = self._get_sample(reparam=reparam, sample_shape=sample_shape)
         # output shape is (sample_shape, iid_shape, input_sample_shape, other_features_shape).
 
         # iid_shape is restricted to be located at head of shape in pytorch distribution.
-        sample = self._sort_iid_dims(sample, sample_ndim=len(sample_shape))
+        sample = self.sort_iid_dims(sample, sample_ndim=len(sample_shape))
         # output shape is (sample_shape, input_sample_shape, features_shape(iid_shape & other_features_shape)).
 
         x_dict.update(SampleDict({self.var[0]: sample}, sample_shape=sample_shape + input_sample_shape))
@@ -836,14 +846,14 @@ class DistributionBase(Distribution):
     def sample_mean(self, x_dict=None):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         input_sample_dims = x_dict.sample_dims
-        self.set_dist_and_shape(x_dict)
-        return self._sort_iid_dims(self.dist.mean, sample_ndim=input_sample_dims[1])
+        self.set_dist(x_dict)
+        return self.sort_iid_dims(self.dist.mean, sample_ndim=input_sample_dims[1])
 
     def sample_variance(self, x_dict=None):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         input_sample_dims = x_dict.sample_dims
-        self.set_dist_and_shape(x_dict)
-        return self._sort_iid_dims(self.dist.variance, sample_ndim=input_sample_dims[1])
+        self.set_dist(x_dict)
+        return self.sort_iid_dims(self.dist.variance, sample_ndim=input_sample_dims[1])
 
     def forward(self, **params):
         return params
@@ -1107,7 +1117,7 @@ class ReplaceVarDistribution(Distribution):
 
     def set_dist_and_shape(self, x_dict=None, relaxing=False):
         x_dict = SampleDict.replaced_dict_(x_dict, self._replace_inv_cond_var_dict)
-        return self.p.set_dist_and_shape(x_dict=x_dict, relaxing=relaxing)
+        return self.p.set_dist(x_dict=x_dict, relaxing=relaxing)
 
     def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
