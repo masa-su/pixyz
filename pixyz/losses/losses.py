@@ -182,7 +182,7 @@ class Loss(object, metaclass=abc.ABCMeta):
         """
         return Expectation(p, self, input_var=input_var, sample_shape=sample_shape)
 
-    def eval(self, x_dict={}, return_dict=False, **kwargs):
+    def eval(self, x_dict=None, return_dict=False, **kwargs):
         """Evaluate the value of the loss function given inputs (:attr:`x_dict`).
 
         Parameters
@@ -201,20 +201,10 @@ class Loss(object, metaclass=abc.ABCMeta):
             If :attr:`return_dict` is False, it is not returned.
 
         """
-
-        if not(set(list(x_dict.keys())) >= set(self._input_var)):
-            raise ValueError("Input keys are not valid, expected {} but got {}.".format(self._input_var,
-                                                                                        list(x_dict.keys())))
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self._input_var)
         loss, x_dict = self._get_eval(x_dict, **kwargs)
 
-        if return_dict:
-            if not isinstance(x_dict, SampleDict):
-                x_dict = SampleDict(x_dict)
-            return loss, SampleDict(x_dict)
-
-        return loss
+        return (loss, x_dict) if return_dict else loss
 
     @abc.abstractmethod
     def _get_eval(self, x_dict: SampleDict, **kwargs):
@@ -657,7 +647,9 @@ class Expectation(Loss):
         samples_dict.update(loss_sample_dict)
 
         # sum over sample_shape
-        loss = loss.mean(dim=range(*samples_dict.sample_dims))
+        dim = list(range(*samples_dict.sample_dims))
+        if dim:
+            loss = loss.mean(dim=dim)
 
         # 増えたsampleが外側に解放されても大丈夫か？
         # 多分，iterativeLossのときに問題になるぞ -- ならない

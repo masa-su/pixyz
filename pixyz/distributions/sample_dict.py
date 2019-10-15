@@ -84,16 +84,26 @@ class SampleDict(dict):
         for key, value in chain(variables, kwargs.items()):
             self[key] = value
 
+    @staticmethod
+    def is_broadcastable_to(from_shape, to_shape):
+        for a, b in zip(from_shape[::-1], to_shape[::-1]):
+            if a == 1 or a == b:
+                pass
+            else:
+                return False
+        return True
+
     def __setitem__(self, var_name, value):
         # dimやshapeチェックが入る
         # sample_shapeが拡張されていた場合は，全体をunsqueezeする -> setではsample_shape情報がないのでできない
         # unsqueezeしなくてもpytorch演算では問題が生じないが，処理が簡便になる
-        if len(self.sample_shape):
-            warnings.warn("SampleDict.__setitem__ should not be used when SampleDict has some sample_shape.")
+        # if len(self.sample_shape):
+        #     warnings.warn("SampleDict.__setitem__ should not be used when SampleDict has some sample_shape.")
         if not torch.is_tensor(value):
             raise ValueError("the item of SampleDict must be torch.tensor.")
-        if value.shape[:len(self.sample_shape)] != self.sample_shape:
-            raise ValueError(f"the sample shape of value does not match. value: {value},"
+        # TODO: shapeの合致ではなく，broadcastableを見るべき
+        if not self.is_broadcastable_to(value.shape[:len(self.sample_shape)], self.sample_shape):
+            raise ValueError(f"the sample shape of value does not match. var_name: {var_name},"
                              f" expected: {self.sample_shape}, actual: {value.shape[:len(self.sample_shape)]}")
         super().__setitem__(var_name, value)
 
@@ -206,7 +216,7 @@ class SampleDict(dict):
 
     def __str__(self):
         # TODO: sample_dims情報も表示する
-        return str(super())
+        return super().__str__()
 
     def __repr__(self):
 
@@ -233,19 +243,24 @@ class SampleDict(dict):
 
         if n_unsqueeze < 0:
             for key in self:
-                super()[key] = self[key][(None,) * -n_unsqueeze]
-            self._sample_shape = target_sample_shape[:-len(self.sample_shape)] + self.sample_shape
+                super().__setitem__(key, self[key][(None,) * -n_unsqueeze])
+            if self.sample_shape:
+                self._sample_shape = target_sample_shape[:-len(self.sample_shape)] + self.sample_shape
+            else:
+                self._sample_shape = target_sample_shape
 
         if isinstance(variables, dict):
             variables = variables.items()
         for key, value in chain(variables, kwargs.items()):
             tensor = value if torch.is_tensor(value) else torch.tensor(value)
             # shapeの合致やunsqueezeなどを行い計算可能な状態に統一する
-            assert tensor.shape[:ndim_target_s] == self.sample_shape[-ndim_target_s:], \
+            assert self.is_broadcastable_to(tensor.shape[:ndim_target_s], self.sample_shape[-ndim_target_s:]), \
                 f"the sample shape of a new item does not match. item: {value}," \
                 f" expected shape: {self.sample_shape[-ndim_target_s:]}, actual shape: {tensor.shape[:ndim_target_s]}"
-            if n_unsqueeze > 0:
-                super()[key] = tensor[(None,) * n_unsqueeze]
+            if n_unsqueeze >= 0:
+                super().__setitem__(key, tensor[(None,) * n_unsqueeze])
+            else:
+                super().__setitem__(key, tensor)
 
     def copy(self):
         return SampleDict(self)
@@ -288,7 +303,7 @@ class SampleDict(dict):
         value_list = None
         if torch.is_tensor(arg) or isinstance(arg, Number):
             value_list = [arg]
-        elif isinstance(arg, Iterable):
+        elif isinstance(arg, Iterable) and not isinstance(arg, dict):
             value_list = arg
 
         if value_list:

@@ -586,8 +586,10 @@ class DistributionBase(Distribution):
         # elif len(iid_dims) != len(iid_shape):
         #     raise ValueError("the length of iid_dims and iid_shape must be the same.")
         # self.iid_info = (iid_dims, iid_shape)
-        self._features_shape = features_shape
-        self._is_iid_dist = (features_shape is None)
+        self._features_shape = None if features_shape is None else torch.Size(features_shape)
+        self.is_iid = (features_shape is not None)
+        # it means distribution is not like MultivariateNormal
+        self.is_conditional_independent = True
 
     @property
     def features_shape(self):
@@ -664,8 +666,9 @@ class DistributionBase(Distribution):
         self._dist = self.distribution_torch_class(**params)
         # iid_dims, iid_shape = self.iid_info
         # TODO: iidの問題が未解決（paramsのexpandでdistribution expandでのshapeの問題を解決したが，MultidimentionalNormalDistributionでのiid指定ができない＋今までの面倒なshapeソートの名残が残っている）
-        if self._is_iid_dist:
-            if self._dist.batch_shape != input_sample_shape:
+        if self.is_iid:
+            if len(self.features_shape) == 0 and self._dist.batch_shape != input_sample_shape \
+                    or self._dist.batch_shape[:-len(self.features_shape)] != input_sample_shape:
                 raise ValueError("torch distribution got wrong parameter which has too many features_shape.")
             self._dist = self.distribution_torch_class(**params)
             self._dist.expand(input_sample_shape + self.features_shape)
@@ -709,12 +712,12 @@ class DistributionBase(Distribution):
 
         return samples
 
-    def sum_over_iid_dims(self, torch_loss, given_dict):
-        x_target = given_dict[self.var[0]]
-        new_ndim = x_target.ndim - len(self._dist.batch_shape) - len(self._dist.event_shape)
-        # sum over iid dims
-        torch_loss = torch_loss.sum(dim=range(new_ndim, new_ndim + len(self.iid_info[0])))
-        return torch_loss
+    # def sum_over_iid_dims(self, torch_loss, given_dict):
+    #     x_target = given_dict[self.var[0]]
+    #     new_ndim = x_target.ndim - len(self._dist.batch_shape) - len(self._dist.event_shape)
+    #     # sum over iid dims
+    #     torch_loss = torch_loss.sum(dim=range(new_ndim, new_ndim + len(self.iid_info[0])))
+    #     return torch_loss
 
     # TODO: 本当はここにSampleDictやproduct_infoに関する知識を含めないことで拡張しやすくしたいが，難しい
     def get_log_prob(self, x_dict):
@@ -726,7 +729,10 @@ class DistributionBase(Distribution):
         # TODO: -iid_shapeについてソートしていない
         log_prob = self.dist.log_prob(x_target)
         # log_prob = self.sum_over_iid_dims(log_prob, x_dict)
-
+        if self.is_iid:
+            dim = list(range(*x_dict.features_dims(self.var[0])))
+            if dim:
+                log_prob = log_prob.sum(dim=dim)
         return log_prob
 
     def get_params(self, params_dict=None):
@@ -782,11 +788,11 @@ class DistributionBase(Distribution):
         params_dict.update(output_dict)
 
         # append constant parameters to output_dict
-        constant_params_dict = SampleDict({**self.named_buffers()}).from_variables(self.params_keys)
+        constant_params_dict = SampleDict(dict(self.named_buffers())).from_variables(self.params_keys)
         params_dict.update(constant_params_dict)
 
         # unsqueeze params for iid dims
-        if self._is_iid_dist:
+        if self.is_iid:
             for key in params_dict.keys():
                 params_dict[key] = params_dict[key][
                     (slice(None),)*params_dict[key].ndim + (None,)*len(self.features_shape)]
@@ -801,16 +807,18 @@ class DistributionBase(Distribution):
 
         entropy = self.dist.entropy()
         # sum over iid dims
-        entropy = entropy.sum(dim=range(len(self.iid_info[0])))
+        if self.is_iid:
+            features_dim_offset = len(_x_dict.sample_shape)
+            entropy = entropy.sum(dim=range(features_dim_offset, features_dim_offset + len(self.features_shape)))
         # TODO: sum_featuresオプションをなくして（旧来実装の互換が）大丈夫だったか？
 
         return entropy
 
-    def sort_iid_dims(self, torch_sample, sample_ndim=0):
-        offset = sample_ndim
-        for dim, iid_dim in enumerate(self.iid_info[0]):
-            torch_sample = torch_sample.transpose(offset + dim, offset + iid_dim)
-        return torch_sample
+    # def sort_iid_dims(self, torch_sample, sample_ndim=0):
+    #     offset = sample_ndim
+    #     for dim, iid_dim in enumerate(self.iid_info[0]):
+    #         torch_sample = torch_sample.transpose(offset + dim, offset + iid_dim)
+    #     return torch_sample
 
     def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # global_sample: x_dictに含まれるinput_sample_shapeについて，ブロードキャストではなくサンプルするかどうか
@@ -833,11 +841,12 @@ class DistributionBase(Distribution):
         # 自分で(4,1,1,1)のようにユーザーが型を合わせる必要が出てくる
         self.set_dist(input_dict)
         sample = self._get_sample(reparam=reparam, sample_shape=sample_shape)
-        # output shape is (sample_shape, iid_shape, input_sample_shape, other_features_shape).
+        # (obsolete) output shape is (sample_shape, iid_shape, input_sample_shape, other_features_shape).
+        # output shape is (sample_shape, input_sample_shape, features_shape).
 
-        # iid_shape is restricted to be located at head of shape in pytorch distribution.
-        sample = self.sort_iid_dims(sample, sample_ndim=len(sample_shape))
-        # output shape is (sample_shape, input_sample_shape, features_shape(iid_shape & other_features_shape)).
+        # # iid_shape is restricted to be located at head of shape in pytorch distribution.
+        # sample = self.sort_iid_dims(sample, sample_ndim=len(sample_shape))
+        # # output shape is (sample_shape, input_sample_shape, features_shape(iid_shape & other_features_shape)).
 
         x_dict.update(SampleDict({self.var[0]: sample}, sample_shape=sample_shape + input_sample_shape))
 
@@ -847,13 +856,15 @@ class DistributionBase(Distribution):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         input_sample_dims = x_dict.sample_dims
         self.set_dist(x_dict)
-        return self.sort_iid_dims(self.dist.mean, sample_ndim=input_sample_dims[1])
+        # return self.sort_iid_dims(self.dist.mean, sample_ndim=input_sample_dims[1])
+        return self.dist.mean
 
     def sample_variance(self, x_dict=None):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         input_sample_dims = x_dict.sample_dims
         self.set_dist(x_dict)
-        return self.sort_iid_dims(self.dist.variance, sample_ndim=input_sample_dims[1])
+        # return self.sort_iid_dims(self.dist.variance, sample_ndim=input_sample_dims[1])
+        return self.dist.variance
 
     def forward(self, **params):
         return params
