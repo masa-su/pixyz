@@ -5,8 +5,8 @@ import torch
 import numbers
 from copy import deepcopy
 
-from ..utils import tolist
-from ..distributions import SampleDict
+from pixyz.utils import tolist
+from pixyz.distributions import SampleDict
 
 
 class Loss(object, metaclass=abc.ABCMeta):
@@ -225,15 +225,17 @@ class ValueLoss(Loss):
     2
     >>> loss = loss_cls.eval()
     >>> print(loss)
-    2
+    tensor(2.)
 
     """
     def __init__(self, loss1):
-        self.loss1 = loss1
+        self.loss1 = loss1  # if torch.is_tensor(loss1) else torch.tensor(loss1, dtype=torch.float)
         self._input_var = []
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        return self.loss1, x_dict
+    def _get_eval(self, x_dict=None, **kwargs):
+        if x_dict is None:
+            x_dict = {}
+        return torch.tensor(self.loss1, dtype=torch.float), x_dict
 
     @property
     def _symbol(self):
@@ -253,7 +255,7 @@ class Parameter(Loss):
     x
     >>> loss = loss_cls.eval({"x": 2})
     >>> print(loss)
-    2
+    tensor(2.)
 
     """
     def __init__(self, input_var):
@@ -261,7 +263,7 @@ class Parameter(Loss):
             raise ValueError()
         self._input_var = tolist(input_var)
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict, **kwargs):
         return x_dict[self._input_var[0]], x_dict
 
     @property
@@ -277,7 +279,7 @@ class LossOperator(Loss):
             _input_var += deepcopy(loss1.input_var)
         elif isinstance(loss1, numbers.Number):
             loss1 = ValueLoss(loss1)
-        elif isinstance(loss2, type(None)):
+        elif loss2 is None:
             pass
         else:
             raise ValueError("{} cannot be operated with {}.".format(type(loss1), type(loss2)))
@@ -286,7 +288,7 @@ class LossOperator(Loss):
             _input_var += deepcopy(loss2.input_var)
         elif isinstance(loss2, numbers.Number):
             loss2 = ValueLoss(loss2)
-        elif isinstance(loss2, type(None)):
+        elif loss2 is None:
             pass
         else:
             raise ValueError("{} cannot be operated with {}.".format(type(loss2), type(loss1)))
@@ -297,14 +299,14 @@ class LossOperator(Loss):
         self.loss1 = loss1
         self.loss2 = loss2
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        if not isinstance(self.loss1, type(None)):
+    def _get_eval(self, x_dict=None, **kwargs):
+        if self.loss1 is not None:
             loss1, x1 = self.loss1._get_eval(x_dict, **kwargs)
         else:
             loss1 = 0
             x1 = {}
 
-        if not isinstance(self.loss2, type(None)):
+        if self.loss2 is not None:
             loss2, x2 = self.loss2._get_eval(x_dict, **kwargs)
         else:
             loss2 = 0
@@ -328,14 +330,14 @@ class AddLoss(LossOperator):
     x + 2
     >>> loss = loss_cls.eval({"x": 3})
     >>> print(loss)
-    5
+    tensor(5.)
 
     """
     @property
     def _symbol(self):
         return self.loss1._symbol + self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict=None, **kwargs):
         loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
         return loss1 + loss2, x_dict
 
@@ -353,20 +355,20 @@ class SubLoss(LossOperator):
     2 - x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    -2
+    tensor(-2.)
     >>> loss_cls = loss_cls_2 - loss_cls_1  # equals to SubLoss(loss_cls_2, loss_cls_1)
     >>> print(loss_cls)
     x - 2
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    2
+    tensor(2.)
 
     """
     @property
     def _symbol(self):
         return self.loss1._symbol - self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict=None, **kwargs):
         loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
         return loss1 - loss2, x_dict
 
@@ -384,14 +386,14 @@ class MulLoss(LossOperator):
     2 x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    8
+    tensor(8.)
 
     """
     @property
     def _symbol(self):
         return self.loss1._symbol * self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict=None, **kwargs):
         loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
         return loss1 * loss2, x_dict
 
@@ -409,13 +411,13 @@ class DivLoss(LossOperator):
     \\frac{2}{x}
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    0.5
+    tensor(0.5000)
     >>> loss_cls = loss_cls_2 / loss_cls_1  # equals to DivLoss(loss_cls_2, loss_cls_1)
     >>> print(loss_cls)
     \\frac{x}{2}
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    2.0
+    tensor(2.)
 
 
     """
@@ -423,7 +425,7 @@ class DivLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol / self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict=None, **kwargs):
         loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
         return loss1 / loss2, x_dict
 
@@ -464,7 +466,7 @@ class NegLoss(LossSelfOperator):
     - x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    -4
+    tensor(-4.)
 
     """
     @property
@@ -622,6 +624,12 @@ class Expectation(Loss):
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP
     tensor([-12.8181, -12.6062])
+    >>> loss_cls = LogProb(p).expectation(q, sample_shape=(10,)) # equals to Expectation(q, LogProb(p))
+    >>> print(loss_cls)
+    \mathbb{E}_{p(z|x)} \left[\log p(x|z) \right]
+    >>> sample_x = torch.randn(2, 10) # Psuedo data
+    >>> loss = loss_cls.eval({"x": sample_x})
+    >>> print(loss) # doctest: +SKIP
 
     """
 

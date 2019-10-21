@@ -116,10 +116,10 @@ class FactorizedBernoulli(Bernoulli):
         start, end = x_dict.features_dims(self.var[0])
         # new_ndim = x_target.ndim - len(self._dist.batch_shape) - len(self._dist.event_shape)
         # log_prob = log_prob.sum(dim=range(new_ndim, new_ndim + len(self.iid_info[0])))
-        # TODO: torch.sumはdim=()でall sumする不規則なオプションなのでバグをチェックする
         end = min(end, log_prob.ndim)
-        if start != end:
-            log_prob = log_prob.sum(dim=range(start, end))
+        dim = list(range(start, end))
+        if dim:
+            log_prob = log_prob.sum(dim=dim)
         return log_prob
 
 

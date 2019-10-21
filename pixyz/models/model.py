@@ -125,7 +125,7 @@ class Model(object):
         else:
             self.test_loss_cls = loss
 
-    def train(self, train_x_dict={}, **kwargs):
+    def train(self, train_x_dict=None, **kwargs):
         """Train the model.
 
         Parameters
@@ -158,7 +158,7 @@ class Model(object):
 
         return loss
 
-    def test(self, test_x_dict={}, **kwargs):
+    def test(self, test_x_dict=None, **kwargs):
         """Test the model.
 
         Parameters

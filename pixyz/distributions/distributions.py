@@ -3,11 +3,10 @@ import torch
 import re
 from torch import nn
 from copy import deepcopy
-from itertools import chain
 
-from ..utils import tolist, convert_latex_name
-from .sample_dict import SampleDict
-from ..losses import LogProb, Prob
+from pixyz.utils import tolist, convert_latex_name
+from pixyz.distributions.sample_dict import SampleDict
+from pixyz.losses.pdf import LogProb, Prob
 
 
 class Distribution(nn.Module):
@@ -29,8 +28,8 @@ class Distribution(nn.Module):
       Normal(
         name=p_{1}, distribution_name=Normal,
         var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([64])
-        (loc): torch.Size([1, 64])
-        (scale): torch.Size([1, 64])
+        (loc): torch.Size([])
+        (scale): torch.Size([])
       )
 
     >>> # Conditional distribution
@@ -43,7 +42,7 @@ class Distribution(nn.Module):
       Normal(
         name=p_{2}, distribution_name=Normal,
         var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([64])
-        (scale): torch.Size([1, 64])
+        (scale): torch.Size([])
       )
 
     >>> # Conditional distribution (by neural networks)
@@ -61,7 +60,7 @@ class Distribution(nn.Module):
     Network architecture:
       P(
         name=p_{3}, distribution_name=Normal,
-        var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([])
+        var=['x'], cond_var=['y'], input_var=['y'], features_shape=N/A
         (model_loc): Linear(in_features=128, out_features=64, bias=True)
         (model_scale): Linear(in_features=128, out_features=64, bias=True)
       )
@@ -246,14 +245,14 @@ class Distribution(nn.Module):
           Normal(
             name=p, distribution_name=Normal,
             var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([10, 2])
-            (loc): torch.Size([1, 10, 2])
-            (scale): torch.Size([1, 10, 2])
+            (loc): torch.Size([])
+            (scale): torch.Size([])
           )
-        >>> p.sample()["x"].shape  # (batch_n=1, features_shape)
-        torch.Size([1, 10, 2])
-        >>> p.sample(batch_n=20)["x"].shape  # (batch_n, features_shape)
+        >>> p.sample()["x"].shape  # (features_shape)
+        torch.Size([10, 2])
+        >>> p.sample(sample_shape=(20,))["x"].shape  # (batch_n, features_shape)
         torch.Size([20, 10, 2])
-        >>> p.sample(batch_n=20, sample_shape=[40, 30])["x"].shape  # (sample_shape, batch_n, features_shape)
+        >>> p.sample(sample_shape=[40, 30, 20])["x"].shape  # (sample_shape, batch_n, features_shape)
         torch.Size([40, 30, 20, 10, 2])
 
         >>> # Conditional distribution
@@ -266,7 +265,7 @@ class Distribution(nn.Module):
           Normal(
             name=p, distribution_name=Normal,
             var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([10])
-            (scale): torch.Size([1, 10])
+            (scale): torch.Size([])
           )
         >>> sample_y = torch.randn(1, 10) # Psuedo data
         >>> sample_a = torch.randn(1, 10) # Psuedo data
@@ -289,6 +288,7 @@ class Distribution(nn.Module):
         raise NotImplementedError()
 
     def sample_mean(self, x_dict=None):
+        # TODO: -こちらにfeatures_shapeを含めるのは自然だが，iid指定となりエラー，バグを誘発するAPIとなっている -> パラメータがスカラーのときのみiid指定とする
         """Return the mean of the distribution.
 
         Parameters
@@ -305,7 +305,7 @@ class Distribution(nn.Module):
         ...             features_shape=[10], name="p1")
         >>> mean = p1.sample_mean()
         >>> print(mean)
-        tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+        tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
 
         >>> # Conditional distribution
         >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
@@ -336,7 +336,7 @@ class Distribution(nn.Module):
         ...             features_shape=[10], name="p1")
         >>> var = p1.sample_variance()
         >>> print(var)
-        tensor([[1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]])
+        tensor([1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
 
         >>> # Conditional distribution
         >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
@@ -374,7 +374,7 @@ class Distribution(nn.Module):
         >>> p1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
         ...             features_shape=[10], name="p1")
         >>> sample_x = torch.randn(1, 10) # Psuedo data
-        >>> log_prob = p1.log_prob({"x": sample_x})
+        >>> log_prob = p1.get_log_prob({"x": sample_x})
         >>> print(log_prob) # doctest: +SKIP
         tensor([-16.1153])
 
@@ -382,7 +382,7 @@ class Distribution(nn.Module):
         >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
         ...             features_shape=[10], name="p2")
         >>> sample_y = torch.randn(1, 10) # Psuedo data
-        >>> log_prob = p2.log_prob({"x": sample_x, "y": sample_y})
+        >>> log_prob = p2.get_log_prob({"x": sample_x, "y": sample_y})
         >>> print(log_prob) # doctest: +SKIP
         tensor([-21.5251])
 
@@ -415,7 +415,7 @@ class Distribution(nn.Module):
         ...             features_shape=[10], name="p1")
         >>> entropy = p1.get_entropy()
         >>> print(entropy)
-        tensor([14.1894])
+        tensor(14.1894)
 
         >>> # Conditional distribution
         >>> p2 = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
@@ -423,7 +423,7 @@ class Distribution(nn.Module):
         >>> sample_y = torch.randn(1, 10) # Psuedo data
         >>> entropy = p2.get_entropy({"y": sample_y})
         >>> print(entropy)
-        tensor([14.1894])
+        tensor(14.1894)
 
         """
         raise NotImplementedError()
@@ -561,7 +561,7 @@ class Distribution(nn.Module):
     def extra_repr(self):
         # parameters
         parameters_text = f'name={self.name}, distribution_name={self.distribution_name},\n' \
-                          f'var={self.var}, cond_var={self.cond_var}, input_var={self.input_var}'
+                          f'var={self.var}, cond_var={self.cond_var}, input_var={self.input_var},'
 
         if len(self._buffers) != 0:
             # add buffers to repr
@@ -586,14 +586,24 @@ class DistributionBase(Distribution):
         # elif len(iid_dims) != len(iid_shape):
         #     raise ValueError("the length of iid_dims and iid_shape must be the same.")
         # self.iid_info = (iid_dims, iid_shape)
-        self._features_shape = None if features_shape is None else torch.Size(features_shape)
-        self.is_iid = (features_shape is not None)
+        if features_shape is not None:
+            self._features_shape = torch.Size(features_shape)
+        else:
+            self._features_shape = None
+            self.is_iid = False
+        # self.is_iid = (features_shape is not None)
         # it means distribution is not like MultivariateNormal
         self.is_conditional_independent = True
 
+        # detect features_shape
+        try:
+            self.set_dist()
+        except (TypeError, NotImplementedError):
+            self._dist = None
+
     @property
     def features_shape(self):
-        if not self._features_shape:
+        if self._features_shape is None:
             raise Exception("features_shape is invalid until the distribution is sampled or its log_prob is evaluated.")
         return self._features_shape
 
@@ -612,15 +622,20 @@ class DistributionBase(Distribution):
 
         self.replace_params_dict = {}
 
+        self.is_iid = True
         for key, value in params_dict.items():
             if isinstance(value, str):
                 if value not in self._cond_var:
                     raise ValueError(f"a given parameter {value} is not in cond_var of the distribution.")
                 self.replace_params_dict[value] = key
-            elif torch.is_tensor(value):
-                self.register_buffer(key, value)
+                self.is_iid = False
             else:
-                raise ValueError(f"only Tensor or str parameters are supported. ({key}:{type(value)} is given.)")
+                # raise ValueError(f"only Tensor or str parameters are supported. ({key}:{type(value)} is given.)")
+                if not torch.is_tensor(value):
+                    value = torch.tensor(value, dtype=torch.float)
+                if value.ndim != 0:
+                    self.is_iid = False
+                self.register_buffer(key, value)
 
     @property
     def params_keys(self):
@@ -665,23 +680,22 @@ class DistributionBase(Distribution):
         # self._dist_shape = SampleDict.max_shape_(params)
         self._dist = self.distribution_torch_class(**params)
         # iid_dims, iid_shape = self.iid_info
-        # TODO: iidの問題が未解決（paramsのexpandでdistribution expandでのshapeの問題を解決したが，MultidimentionalNormalDistributionでのiid指定ができない＋今までの面倒なshapeソートの名残が残っている）
+        # TODO: -iidの問題が未解決（paramsのexpandでdistribution expandでのshapeの問題を解決したが，MultidimentionalNormalDistributionでのiid指定ができない＋今までの面倒なshapeソートの名残が残っている）
         if self.is_iid:
-            if len(self.features_shape) == 0 and self._dist.batch_shape != input_sample_shape \
-                    or self._dist.batch_shape[:-len(self.features_shape)] != input_sample_shape:
+            if not SampleDict.is_broadcastable_to(self._dist.batch_shape[:-len(self.features_shape)], input_sample_shape):
                 raise ValueError("torch distribution got wrong parameter which has too many features_shape.")
             self._dist = self.distribution_torch_class(**params)
-            self._dist.expand(input_sample_shape + self.features_shape)
+            self._dist = self._dist.expand(input_sample_shape + self.features_shape)
         else:
             # -squeeze可能な次元に吸収されてしまう問題があった（今はshape全体を指定しているので無い）
             # expand _dist for iid distribution and ancestral sampling
-            self._dist.expand(input_sample_shape + self._dist.batch_shape[len(input_sample_shape):])
+            self._dist = self._dist.expand(input_sample_shape + self._dist.batch_shape[len(input_sample_shape):])
 
             # SampleDist.features_dims(params, self.var[0]) can not be used because params don't have self.var[0]
             features_dims = (SampleDict.sample_dims_(params)[-1], None)
-            # TODO: shapeの型をtorch.Size()に揃えるべきか？
+            # TODO: -shapeの型をtorch.Size()に揃えるべきか？
             self._features_shape = self._dist.batch_shape[slice(*features_dims)] + self._dist.event_shape
-            # TODO: features_shapeをevent_shapeにリネームしたくなってきた(pytorchと統一)
+            # TODO: -features_shapeをevent_shapeにリネームしたくなってきた(pytorchと統一)
 
             # -本当にbatch_nオプションを削除してよかったのか確認する
 
@@ -712,23 +726,14 @@ class DistributionBase(Distribution):
 
         return samples
 
-    # def sum_over_iid_dims(self, torch_loss, given_dict):
-    #     x_target = given_dict[self.var[0]]
-    #     new_ndim = x_target.ndim - len(self._dist.batch_shape) - len(self._dist.event_shape)
-    #     # sum over iid dims
-    #     torch_loss = torch_loss.sum(dim=range(new_ndim, new_ndim + len(self.iid_info[0])))
-    #     return torch_loss
-
-    # TODO: 本当はここにSampleDictやproduct_infoに関する知識を含めないことで拡張しやすくしたいが，難しい
+    # TODO: -本当はここにSampleDictやproduct_infoに関する知識を含めないことで拡張しやすくしたいが，難しい
     def get_log_prob(self, x_dict):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self._cond_var)
         _x_dict = x_dict.from_variables(self._cond_var)
         self.set_dist(_x_dict)
 
         x_target = x_dict[self.var[0]]
-        # TODO: -iid_shapeについてソートしていない
         log_prob = self.dist.log_prob(x_target)
-        # log_prob = self.sum_over_iid_dims(log_prob, x_dict)
         if self.is_iid:
             dim = list(range(*x_dict.features_dims(self.var[0])))
             if dim:
@@ -761,11 +766,11 @@ class DistributionBase(Distribution):
           Normal(
             name=p, distribution_name=Normal,
             var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([1])
-            (loc): torch.Size([1, 1])
-            (scale): torch.Size([1, 1])
+            (loc): torch.Size([])
+            (scale): torch.Size([])
           )
         >>> dist_1.get_params()
-        {'loc': tensor([[0.]]) --(shape=[('batch', [1]), ('feature', [1])]), 'scale': tensor([[1.]]) --(shape=[('batch', [1]), ('feature', [1])])}
+        {'loc': tensor([0.]), 'scale': tensor([1.])} --(sample_shape=[])
 
         >>> dist_2 = Normal(loc=torch.tensor(0.), scale="z", cond_var=["z"], var=["x"])
         >>> print(dist_2)
@@ -774,11 +779,11 @@ class DistributionBase(Distribution):
         Network architecture:
           Normal(
             name=p, distribution_name=Normal,
-            var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
-            (loc): torch.Size([1])
+            var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
+            (loc): torch.Size([])
           )
         >>> dist_2.get_params({"z": torch.tensor(1.)})
-        {'scale': tensor(1.) --(shape=[]), 'loc': tensor([0.]) --(shape=[('feature', [1])])}
+        {'scale': tensor(1.), 'loc': tensor(0.)} --(sample_shape=[])
 
         """
         params_dict, vars_dict = SampleDict.split_(params_dict, self.replace_params_dict.keys())
@@ -795,8 +800,7 @@ class DistributionBase(Distribution):
         if self.is_iid:
             for key in params_dict.keys():
                 params_dict[key] = params_dict[key][
-                    (slice(None),)*params_dict[key].ndim + (None,)*len(self.features_shape)]
-
+                    (slice(None),) * params_dict[key].ndim + (None,) * len(self.features_shape)]
         return params_dict
 
     def get_entropy(self, x_dict=None):
@@ -806,10 +810,11 @@ class DistributionBase(Distribution):
         self.set_dist(_x_dict, relaxing=False)
 
         entropy = self.dist.entropy()
-        # sum over iid dims
-        if self.is_iid:
-            features_dim_offset = len(_x_dict.sample_shape)
-            entropy = entropy.sum(dim=range(features_dim_offset, features_dim_offset + len(self.features_shape)))
+        # sum over features dims
+        features_dim_offset = len(_x_dict.sample_shape)
+        dim = list(range(features_dim_offset, entropy.ndim))
+        if dim:
+            entropy = entropy.sum(dim=dim)
         # TODO: sum_featuresオプションをなくして（旧来実装の互換が）大丈夫だったか？
 
         return entropy
@@ -854,20 +859,38 @@ class DistributionBase(Distribution):
 
     def sample_mean(self, x_dict=None):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
-        input_sample_dims = x_dict.sample_dims
+        # input_sample_dims = x_dict.sample_dims
         self.set_dist(x_dict)
         # return self.sort_iid_dims(self.dist.mean, sample_ndim=input_sample_dims[1])
+        # if self.is_iid:
+        #     return self.dist.mean.expand(*(x_dict.sample_shape + self.features_shape))
         return self.dist.mean
 
     def sample_variance(self, x_dict=None):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
-        input_sample_dims = x_dict.sample_dims
+        # input_sample_dims = x_dict.sample_dims
         self.set_dist(x_dict)
         # return self.sort_iid_dims(self.dist.variance, sample_ndim=input_sample_dims[1])
+        # if self.is_iid:
+        #     return self.dist.variance.expand(*(x_dict.sample_shape + self.features_shape))
         return self.dist.variance
 
     def forward(self, **params):
         return params
+
+    def extra_repr(self):
+        features_shape = "N/A" if self._features_shape is None else self.features_shape
+        # parameters
+        parameters_text = f'name={self.name}, distribution_name={self.distribution_name},\n' \
+                          f'var={self.var}, cond_var={self.cond_var}, input_var={self.input_var},' \
+                          f' features_shape={features_shape}'
+
+        if len(self._buffers) != 0:
+            # add buffers to repr
+            buffers = ["({}): {}".format(key, value.shape) for key, value in self._buffers.items()]
+            return parameters_text + "\n" + "\n".join(buffers)
+
+        return parameters_text
 
 
 class MultiplyDistribution(Distribution):
@@ -895,11 +918,11 @@ class MultiplyDistribution(Distribution):
     Network architecture:
       DistributionBase(
         name=p, distribution_name=,
-        var=['z'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([])
+        var=['z'], cond_var=['y'], input_var=['y'], features_shape=N/A
       )
       DistributionBase(
         name=p, distribution_name=,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
     >>> b = DistributionBase(var=["y"], cond_var=["z"])
     >>> p_multi = MultiplyDistribution(a, b)
@@ -909,11 +932,11 @@ class MultiplyDistribution(Distribution):
     Network architecture:
       DistributionBase(
         name=p, distribution_name=,
-        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
       DistributionBase(
         name=p, distribution_name=,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
     >>> b = DistributionBase(var=["y"], cond_var=["a"])
     >>> p_multi = MultiplyDistribution(a, b)
@@ -923,11 +946,11 @@ class MultiplyDistribution(Distribution):
     Network architecture:
       DistributionBase(
         name=p, distribution_name=,
-        var=['y'], cond_var=['a'], input_var=['a'], features_shape=torch.Size([])
+        var=['y'], cond_var=['a'], input_var=['a'], features_shape=N/A
       )
       DistributionBase(
         name=p, distribution_name=,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
 
     """
@@ -1058,7 +1081,7 @@ class ReplaceVarDistribution(Distribution):
     Network architecture:
       DistributionBase(
         name=p, distribution_name=,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
     >>> replace_dict = {'x': 'y'}
     >>> p_repl = ReplaceVarDistribution(p, replace_dict)
@@ -1068,10 +1091,10 @@ class ReplaceVarDistribution(Distribution):
     Network architecture:
       ReplaceVarDistribution(
         name=p, distribution_name=,
-        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['y'], cond_var=['z'], input_var=['z'],
         (p): DistributionBase(
           name=p, distribution_name=,
-          var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+          var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
         )
       )
 
@@ -1192,11 +1215,11 @@ class MarginalizeVarDistribution(Distribution):
     Network architecture:
       DistributionBase(
         name=p, distribution_name=,
-        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
       DistributionBase(
         name=p, distribution_name=,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
     >>> p_marg = MarginalizeVarDistribution(p_multi, ["y"])
     >>> print(p_marg)
@@ -1205,11 +1228,11 @@ class MarginalizeVarDistribution(Distribution):
     Network architecture:
       DistributionBase(
         name=p, distribution_name=,
-        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
       DistributionBase(
         name=p, distribution_name=,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
       )
 
     """

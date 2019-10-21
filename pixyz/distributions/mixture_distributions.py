@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from ..distributions.distributions import Distribution
-from ..utils import convert_latex_name
+from pixyz.distributions.distributions import Distribution
+from pixyz.utils import convert_latex_name
 
 
 class MixtureModel(Distribution):
@@ -32,31 +32,31 @@ class MixtureModel(Distribution):
     Network architecture:
       MixtureModel(
         name=p, distribution_name=Mixture Model,
-        var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=[],
         (distributions): ModuleList(
           (0): Normal(
             name=p_{0}, distribution_name=Normal,
             var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
-            (loc): torch.Size([1, 2])
-            (scale): torch.Size([1, 2])
+            (loc): torch.Size([2])
+            (scale): torch.Size([2])
           )
           (1): Normal(
             name=p_{1}, distribution_name=Normal,
             var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
-            (loc): torch.Size([1, 2])
-            (scale): torch.Size([1, 2])
+            (loc): torch.Size([2])
+            (scale): torch.Size([2])
           )
           (2): Normal(
             name=p_{2}, distribution_name=Normal,
             var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
-            (loc): torch.Size([1, 2])
-            (scale): torch.Size([1, 2])
+            (loc): torch.Size([2])
+            (scale): torch.Size([2])
           )
         )
         (prior): Categorical(
           name=prior, distribution_name=Categorical,
           var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([3])
-          (probs): torch.Size([1, 3])
+          (probs): torch.Size([3])
         )
       )
     """

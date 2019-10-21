@@ -252,6 +252,7 @@ class Preprocess(Flow):
             # log-det Jacobian of transformation (2)
             logdet_jacobian = F.softplus(z) + F.softplus(-z) \
                 - F.softplus(self.data_constraint.log() - (1. - self.data_constraint).log())
+            # TODO: remove sum_samples because it breaks sample_shape
             logdet_jacobian = sum_samples(logdet_jacobian)
 
             # log-det Jacobian of transformation (1)

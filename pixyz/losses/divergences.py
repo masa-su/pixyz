@@ -39,7 +39,6 @@ class KullbackLeibler(Loss):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "
                              "got %s and %s." % (self.p.distribution_name, self.q.distribution_name))
 
-        # TODO: -基本的なVAEの使用で例外になってしまう＋set_distなどの継承が複雑になるので，多次元のfoward+iid_dimsのサポートをやめる
         if (not self.p.is_conditional_independent or not self.q.is_conditional_independent) \
                 and self.p.is_iid != self.q.is_iid:
             raise NotImplementedError("Divergence between different iid shape distributions is not supported.")

@@ -1,7 +1,6 @@
-import warnings
 from numbers import Number
 from collections.abc import Iterable
-from typing import Mapping, TypeVar, Dict, List
+from typing import Dict, List
 from itertools import chain
 import torch
 
@@ -19,34 +18,32 @@ class SampleDict(dict):
     ...             features_shape=[5], name="p")
     >>> sample_dict = p.sample(sample_shape=[3, 4])
     >>> sample_dict['x'].shape
-    torch.Size([3, 4, 1, 5])
-    >>> sample_dict.get_shape('x')
-    ShapeDict([('sample', [3, 4]), ('batch', [1]), ('feature', [5])])
-    >>> sample_dict = p.sample(batch_n=2)
-    >>> sample_dict.get_shape('x')
-    ShapeDict([('batch', [2]), ('feature', [5])])
-    >>> sample = sample_dict.get_sample('x')
-    >>> type(sample)
-    <class 'pixyz.distributions.sample_dict.Sample'>
-    >>> sample #doctest: +SKIP
-    tensor([[-0.8378,  0.8379,  0.4045,  0.8837, -0.2362],
-            [-1.9989,  0.8083, -1.1591, -1.5242,  0.4656]]) --(shape=[('batch', [2]), ('feature', [5])])
-    >>> sample_dict.add('y', torch.zeros(4, 2, 3), shape_dict=(('sample', [4]), ('batch', [2]), ('feature', [3])))
-    >>> sample_dict.get_shape('y')
-    ShapeDict([('sample', [4]), ('batch', [2]), ('feature', [3])])
-    >>> sample_dict.add('z', Sample(torch.zeros(4, 2, 3), (('sample', [4]), ('batch', [2]), ('feature', [3]))))
-    >>> sample_dict.get_shape('z')
-    ShapeDict([('sample', [4]), ('batch', [2]), ('feature', [3])])
-    >>> sample_dict.n_batch('z')
-    2
-    >>> sample_dict.feature_shape('z')
-    [3]
+    torch.Size([3, 4, 5])
+    >>> sample_dict.features_shape('x')
+    torch.Size([5])
+    >>> sample_dict.sample_shape
+    torch.Size([3, 4])
+    >>> sample_dict.n_batch('x')
+    4
+    >>> sample_dict['y'] = torch.zeros(3, 4, 3, 2)
+    >>> sample_dict.features_shape('y')
+    torch.Size([3, 2])
+    >>> sample_dict['z'] = torch.zeros(1, 4, 2, 3)
+    >>> sample_dict.features_shape('z')
+    torch.Size([2, 3])
+    >>> sample_dict.add('w', torch.zeros(4, 2, 3), sample_shape=(4,))
+    >>> sample_dict.features_shape('w')
+    torch.Size([2, 3])
+    >>> sample_dict['w'].shape
+    torch.Size([1, 4, 2, 3])
     >>> q = Normal(loc='x', scale=torch.tensor(1.), var=["y"], cond_var=["x"], name="q")
-    >>> sample_dict = q.sample(p.sample(sample_shape=[2]), sample_shape=[3, 4], batch_n=6)
-    >>> sample_dict.get_shape('y')
-    ShapeDict([('sample', [3, 4, 2]), ('batch', [6]), ('feature', [5])])
+    >>> sample_dict = q.sample(p.sample(sample_shape=[2]), sample_shape=[3, 4, 6])
+    >>> sample_dict['y'].shape
+    torch.Size([3, 4, 6, 2, 5])
+    >>> sample_dict.sample_shape
+    torch.Size([3, 4, 6, 2])
     """
-    def __init__(self, variables=None, sample_shape=torch.Size(), **kwargs):
+    def __init__(self, variables=None, sample_shape=(), **kwargs):
         """
         Initialize SampleDict from mapping of variable's name and the value of variable.
 
@@ -59,23 +56,20 @@ class SampleDict(dict):
         >>> import torch
         >>> from pixyz.distributions import SampleDict
         >>> sample_dict = SampleDict({'x': torch.zeros(2, 3, 4)})
-        >>> sample_dict.get_shape('x')
-        ShapeDict([('batch', [2]), ('feature', [3, 4])])
-        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
-        ...                                       shape_dict=(('feature', [2, 3, 4]),))})
-        >>> sample_dict.get_shape('x')
-        ShapeDict([('feature', [2, 3, 4])])
-        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
-        ...                                       shape_dict=(('time', [2]), ('batch', [3]), ('feature', [4])))})
-        >>> sample_dict.get_shape('x')
-        ShapeDict([('time', [2]), ('batch', [3]), ('feature', [4])])
+        >>> sample_dict.sample_shape
+        torch.Size([])
+        >>> sample_dict.features_shape('x')
+        torch.Size([2, 3, 4])
+        >>> sample_dict = SampleDict({'x': torch.zeros(2, 3, 4)}, sample_shape=(2, 3))
+        >>> sample_dict.features_shape('x')
+        torch.Size([4])
         """
         super().__init__()
 
         if isinstance(variables, SampleDict):
             self._sample_shape = variables._sample_shape
         else:
-            self._sample_shape = sample_shape
+            self._sample_shape = torch.Size(sample_shape)
         # 変数ごとに登録する->しない
         if variables is None:
             variables = ()
@@ -99,13 +93,14 @@ class SampleDict(dict):
         # unsqueezeしなくてもpytorch演算では問題が生じないが，処理が簡便になる
         # if len(self.sample_shape):
         #     warnings.warn("SampleDict.__setitem__ should not be used when SampleDict has some sample_shape.")
-        if not torch.is_tensor(value):
-            raise ValueError("the item of SampleDict must be torch.tensor.")
-        # TODO: shapeの合致ではなく，broadcastableを見るべき
+        value = value if torch.is_tensor(value) else torch.tensor(value, dtype=torch.float)
         if not self.is_broadcastable_to(value.shape[:len(self.sample_shape)], self.sample_shape):
             raise ValueError(f"the sample shape of value does not match. var_name: {var_name},"
                              f" expected: {self.sample_shape}, actual: {value.shape[:len(self.sample_shape)]}")
         super().__setitem__(var_name, value)
+
+    def add(self, var_name, value, sample_shape):
+        self.update(SampleDict({var_name: value}, sample_shape))
 
     @staticmethod
     def _check_dict_type(target):
@@ -164,48 +159,6 @@ class SampleDict(dict):
         SampleDict._check_dict_type(dict_)
         return dict_.n_batch_(var_name)
 
-    # @property
-    # def max_shape(self):
-    #     """
-    #     Get max shape which all other values can be broadcasted to.
-    # 
-    #     Returns
-    #     -------
-    #     ShapeDict
-    # 
-    #     Examples
-    #     --------
-    #     >>> import torch
-    #     >>> from pixyz.distributions import SampleDict
-    #     >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
-    #     ...                                       shape_dict=(('time', [2]), ('batch', [3]), ('feature', [4]))),
-    #     ...                           'mu': Sample(torch.zeros(4),
-    #     ...                                       shape_dict=(('feature', [4]),)),
-    #     ...                           'sigma': Sample(torch.zeros(1, 3, 4),
-    #     ...                                       shape_dict=(('time', [1]), ('batch', [3]), ('feature', [4]))),
-    #     ...                           })
-    #     >>> sample_dict.max_shape
-    #     ShapeDict([('time', [2]), ('batch', [3]), ('feature', [4])])
-    #     """
-    #     result = []
-    #     for var_name, sample in self.items():
-    #         for i, (shape_name, shape) in enumerate(reversed(sample.shape_dict.items())):
-    #             if len(result) <= i:
-    #                 result.append((shape_name, shape))
-    #                 continue
-    #             if shape_name != result[i][0]:
-    #                 raise ValueError
-    #             if len(result[i][1]) == 0:
-    #                 result[i] = (result[i][0], shape)
-    #             elif len(result[i][1]) != len(shape):
-    #                 raise ValueError
-    #     # return ShapeDict(reversed(result))
-    # 
-    # @staticmethod
-    # def max_shape_(dict_: 'SampleDict'):
-    #     SampleDict._check_dict_type(dict_)
-    #     return dict_.max_shape
-
     def squeeze(self, dim=(0,)):
         # TODO: 登録された変数がすべてsqueeze可能ならsqueezeする->使いみちを特に感じないので延期
         pass
@@ -215,15 +168,10 @@ class SampleDict(dict):
     #     pass
 
     def __str__(self):
-        # TODO: sample_dims情報も表示する
         return super().__str__()
 
     def __repr__(self):
-
-        def __repr__(self):
-            return f"{repr(self.value)} --(shape={repr(list(self.shape_dict.items()))})"
-
-        return super().__repr__()
+        return super().__repr__() + f" --(sample_shape={repr(list(self._sample_shape))})"
 
     def __eq__(self, other):
         self._check_dict_type(other)
@@ -252,7 +200,7 @@ class SampleDict(dict):
         if isinstance(variables, dict):
             variables = variables.items()
         for key, value in chain(variables, kwargs.items()):
-            tensor = value if torch.is_tensor(value) else torch.tensor(value)
+            tensor = value if torch.is_tensor(value) else torch.tensor(value, dtype=torch.float)
             # shapeの合致やunsqueezeなどを行い計算可能な状態に統一する
             assert self.is_broadcastable_to(tensor.shape[:ndim_target_s], self.sample_shape[-ndim_target_s:]), \
                 f"the sample shape of a new item does not match. item: {value}," \
@@ -317,7 +265,8 @@ class SampleDict(dict):
         else:
             raise ValueError(f"The type of input is not valid, got {type(arg)}.")
         # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-        result = SampleDict({key: value if torch.is_tensor(value) else torch.tensor(value) for key, value in items})
+        result = SampleDict({key: value if torch.is_tensor(value) else torch.tensor(value, dtype=torch.float)
+                             for key, value in items})
 
         return result
 
@@ -334,18 +283,14 @@ class SampleDict(dict):
         ----------
         var : Iterable[str]
 
-        return_dict : bool
-
         Returns
         -------
-        SampleDict[str, Tensor] or list
+        SampleDict[str, Tensor]
 
         Examples
         --------
-        >>> SampleDict({"a":1,"b":2,"c":3}).extract(["b"])
-        [2]
-        >>> SampleDict({"a":1,"b":2,"c":3}).extract(["b", "d"], return_dict=True)
-        {'b': 2 --(shape=[])}
+        >>> SampleDict({"a":1,"b":2,"c":3}).from_variables(["b"])
+        {'b': tensor(2.)} --(sample_shape=[])
         """
         # 階数を落とす -> 落とさない
         return SampleDict(((var_name, sample) for var_name, sample in self.items() if var_name in var),
@@ -395,10 +340,10 @@ class SampleDict(dict):
         --------
         >>> replace_list_dict = {'a': 'loc'}
         >>> x_dict = SampleDict({'a': 0, 'b': 1})
-        >>> replacing, remain = x_dict.split(x_dict, replace_list_dict.keys())
-        >>> replaced = replacing.replace_keys(replacing, replace_list_dict)
+        >>> replacing, remain = SampleDict.split_(x_dict, replace_list_dict.keys())
+        >>> replaced = SampleDict.replaced_dict_(replacing, replace_list_dict)
         >>> print((replaced, remain))
-        ({'loc': 0 --(shape=[])}, {'b': 1 --(shape=[])})
+        ({'loc': tensor(0.)} --(sample_shape=[]), {'b': tensor(1.)} --(sample_shape=[]))
 
         """
         """ Replace values in `dicts` according to `replace_list_dict`.
@@ -438,82 +383,3 @@ class SampleDict(dict):
         """
         return SampleDict(((var_name, sample.detach()) for var_name, sample in self.items()), self.sample_shape)
 
-    def slice(self, index, shape_name='time'):
-        """
-        Return new SampleDict whose values are sliced by shape_name and index
-        Parameters
-        ----------
-        index : int or list of int or list of slice
-        shape_name : str
-
-        Returns
-        -------
-        SampleDict
-
-        Examples
-        --------
-        >>> import torch
-        >>> from pixyz.distributions import SampleDict
-        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
-        ...                                       shape_dict=(('time', [2]), ('batch', [3]), ('feature', [4])))})
-        >>> sample_dict.get_shape('x')
-        ShapeDict([('time', [2]), ('batch', [3]), ('feature', [4])])
-        >>> sliced = sample_dict.slice(0)
-        >>> sliced.get_shape('x')
-        ShapeDict([('batch', [3]), ('feature', [4])])
-        >>> sample_dict = SampleDict({'x': Sample(torch.zeros(2, 3, 4),
-        ...                                       shape_dict=(('time', [2, 3]), ('feature', [4])))})
-        >>> sliced = sample_dict.slice([1, slice(None)])
-        >>> sliced.get_shape('x')
-        ShapeDict([('time', [3]), ('feature', [4])])
-        >>> sliced = sample_dict.slice([1, 2])
-        >>> sliced.get_shape('x')
-        ShapeDict([('feature', [4])])
-
-        """
-        raise NotImplementedError()
-        return SampleDict((var_name, sample.slice(index, shape_name)) for var_name, sample in self.items())
-    """
-    Sampled result class. It has info of meaning of shapes.
-
-    """
-    def slice(self, index, shape_name='time'):
-        raise NotImplementedError()
-        if isinstance(index, int):
-            index = [index]
-        if shape_name not in self.shape_dict:
-            return self
-        shape_dict = self.shape_dict.copy()
-        shape_dims = self.shape_dims(shape_name)
-        value = self._slice_value(self.value, index, shape_dims)
-        if all(not isinstance(item, slice) for item in index):
-            del shape_dict[shape_name]
-        else:
-            sliced_shape = []
-            for i, shape_dim in enumerate(shape_dims):
-                if isinstance(index[i], int):
-                    continue
-                sliced_shape.append(len(range(*index[i].indices(self.value.shape[shape_dim]))))
-            shape_dict[shape_name] = sliced_shape
-        return Sample_Obsolete(value, shape_dict)
-
-    def sum(self, shape_name):
-        """
-        Sum up over shape_name dims (inplace)
-
-        Parameters
-        ----------
-        shape_name : str
-
-        Returns
-        -------
-        torch.Tensor
-        inplaced sum tensor
-
-        """
-        raise NotImplementedError()
-        self.value = torch.sum(self.value, dim=self.shape_dims(shape_name))
-        shape_dict = self.shape_dict.copy()
-        del shape_dict[shape_name]
-        self.shape_dict = shape_dict
-        return self.value

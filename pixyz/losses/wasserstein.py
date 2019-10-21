@@ -62,11 +62,12 @@ class WassersteinDistance(Loss):
         return x_dict.n_batch(self.input_dist.input_var[0])
 
     def _get_eval(self, x_dict, **kwargs):
-        batch_n = self._get_batch_n(x_dict)
+        # batch_n = self._get_batch_n(x_dict)
+        # TODO: check sample_shape is preserved
 
         # sample from distributions
-        p_x = self.p.sample(x_dict, batch_n=batch_n).extract(self.p.var)[0]
-        q_x = self.q.sample(x_dict, batch_n=batch_n).extract(self.q.var)[0]
+        p_x = self.p.sample(x_dict)[self.p.var[0]]
+        q_x = self.q.sample(x_dict)[self.q.var[0]]
 
         if p_x.shape != q_x.shape:
             raise ValueError("The two distribution variables must have the same shape.")

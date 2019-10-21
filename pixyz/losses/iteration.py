@@ -1,9 +1,8 @@
 from copy import deepcopy
 import sympy
-import torch
 
-from .losses import Loss
-from ..distributions import SampleDict
+from pixyz.losses.losses import Loss
+from pixyz.distributions import SampleDict
 
 
 class IterativeLoss(Loss):
@@ -118,13 +117,15 @@ class IterativeLoss(Loss):
         return _symbol
 
     def slice_step_fn(self, t, x):
-        return x.slice(t, self.series_var)
+        sliced = SampleDict({key: value[(slice(None),) * len(x.sample_shape) + (t,)] for key, value in x.items()},
+                            sample_shape=x.sample_shape)
+        return sliced
 
     def _get_eval(self, x_dict: SampleDict, **kwargs):
         # TODO: -多分update_valueのvalueのテンソルを増やせばOK
         # TODO: -再帰パラメータの初期化は外部にあるので，それをユーザに増やしてもらって平均してもらうべき
         # TODO: -つまりIterativeLoss.expectation(init_dist, sample_shape)がよい
-        series_x_dict = x_dict.extract(self.series_var, return_dict=True)
+        series_x_dict = x_dict.from_variables(self.series_var)
         step_loss_sum = 0
 
         # set max_iter

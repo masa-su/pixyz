@@ -67,7 +67,7 @@ class ProductOfNormal(Normal):
 
     """
 
-    def __init__(self, p=[], name="p", features_shape=torch.Size()):
+    def __init__(self, p=[], name="p", features_shape=None):
         """
         Parameters
         ----------
@@ -207,36 +207,28 @@ class ProductOfNormal(Normal):
 
         return output_loc, torch.sqrt(output_variance)
 
-    def _check_input(self, x, var=None):
-        if var is None:
-            var = self.input_var
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        x_dict = SampleDict.from_arg(x_dict)
+        sample_shape = torch.Size(sample_shape)
 
-        if type(x) is torch.Tensor:
-            checked_x = SampleDict({var[0]: x})
+        # conditioned
+        input_dict = x_dict.from_variables(self.input_var)
+        input_sample_shape = input_dict.sample_shape
 
-        elif type(x) is list:
-            # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-            checked_x = SampleDict(zip(var, x))
+        self.set_dist(input_dict)
+        sample = self._get_sample(reparam=reparam, sample_shape=sample_shape)
 
-        elif type(x) is dict:
-            # point of modification
-            checked_x = SampleDict(x)
+        x_dict.update(SampleDict({self.var[0]: sample}, sample_shape=sample_shape + input_sample_shape))
 
-        elif type(x) is SampleDict:
-            checked_x = x.copy()
+        return x_dict if return_all else x_dict.from_variables(self.var)
 
-        else:
-            raise ValueError("The type of input is not valid, got %s." % type(x))
-
-        return checked_x
-
-    def log_prob(self, sum_features=True, feature_dims=None):
+    def log_prob(self):
         raise NotImplementedError()
 
-    def prob(self, sum_features=True, feature_dims=None):
+    def prob(self):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict):
         raise NotImplementedError()
 
 
@@ -292,7 +284,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
     """
 
-    def __init__(self, p, name="p", features_shape=torch.Size()):
+    def __init__(self, p, name="p", features_shape=None):
         r"""
         Parameters
         ----------
@@ -312,26 +304,8 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
         super().__init__(p=p, name=name, features_shape=features_shape)
 
-    def _check_input(self, x, var=None):
-        if var is None:
-            var = self.input_var
-
-        if type(x) is torch.Tensor:
-            checked_x = SampleDict({var[0]: x})
-
-        elif type(x) is list:
-            # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-            checked_x = SampleDict(zip(var, x))
-
-        elif isinstance(x, dict) or isinstance(x, SampleDict):
-            if not (set(list(x.keys())) >= set(var)):
-                raise ValueError("Input keys are not valid.")
-            checked_x = x if isinstance(x, SampleDict) else SampleDict(x)
-
-        else:
-            raise ValueError("The type of input is not valid, got %s." % type(x))
-
-        return checked_x
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        return super(ProductOfNormal, self).sample(x_dict, sample_shape, return_all, reparam)
 
     @staticmethod
     def _get_mask(inputs, index):
@@ -411,7 +385,7 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         torch.Tensor
 
         """
-        inputs = params_dict.extract(self.cond_var)[0]  # (n_batch, n_expert=input_dim)
+        inputs = params_dict[self.cond_var[0]]  # (n_batch, n_expert=input_dim)
 
         n_expert = inputs.size()[1]
 

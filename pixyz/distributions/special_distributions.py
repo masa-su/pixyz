@@ -24,7 +24,7 @@ class Deterministic(Distribution):
     Network architecture:
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'],
         (model): Linear(in_features=64, out_features=512, bias=True)
       )
     >>> sample = p.sample({"z": torch.randn(1, 64)})
@@ -43,8 +43,8 @@ class Deterministic(Distribution):
 
     def sample(self, x_dict=None, return_all=True, **kwargs):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
-        _x_dict = x_dict.extract(self.input_var, return_dict=True)
-        output_dict = SampleDict(self.forward(**_x_dict))
+        _x_dict = x_dict.from_variables(self.input_var)
+        output_dict = SampleDict(self.forward(**_x_dict), sample_shape=_x_dict.sample_shape)
 
         if set(output_dict.keys()) != set(self._var):
             raise ValueError("Output variables are not same as `var`.")
@@ -75,7 +75,7 @@ class DataDistribution(Distribution):
     Network architecture:
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=['x'],
       )
     >>> sample = p.sample({"x": torch.randn(1, 64)})
     """

@@ -35,7 +35,7 @@ class ML(Model):
         distributions = [p] + tolist(other_distributions)
 
         # set losses
-        self.nll = -p.log_prob(sum_features=True)
+        self.nll = -p.log_prob()
         loss = self.nll.mean()
 
         super().__init__(loss, test_loss=loss,

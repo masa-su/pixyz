@@ -27,10 +27,10 @@ class AdversarialLoss(Loss):
         params = discriminator.parameters()
         self.d_optimizer = optimizer(params, **optimizer_params)
 
-    def _get_batch_n(self, x_dict: SampleDict):
-        return x_dict.n_batch(self.input_dist.input_var[0])
+    def _get_batch_shape(self, x_dict: SampleDict):
+        return x_dict.sample_shape
 
-    def d_loss(self, y_p, y_q, batch_n):
+    def d_loss(self, y_p, y_q):
         """Evaluate a discriminator loss given outputs of the discriminator.
 
         Parameters
@@ -49,7 +49,7 @@ class AdversarialLoss(Loss):
         """
         raise NotImplementedError()
 
-    def g_loss(self, y_p, y_q, batch_n):
+    def g_loss(self, y_p, y_q):
         """Evaluate a generator loss given outputs of the discriminator.
 
         Parameters
@@ -155,12 +155,12 @@ class AdversarialJensenShannon(AdversarialLoss):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
-        (loc): torch.Size([1, 32])
-        (scale): torch.Size([1, 32])
+        (loc): torch.Size([])
+        (scale): torch.Size([])
       )
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'],
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -171,7 +171,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     Network architecture:
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=['x'],
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -187,7 +187,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     Network architecture:
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
+        var=['t'], cond_var=['x'], input_var=['x'],
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -227,41 +227,41 @@ class AdversarialJensenShannon(AdversarialLoss):
                                                                                    self.q.prob_text))
 
     def _get_eval(self, x_dict: SampleDict, discriminator=False, **kwargs):
-        batch_n = self._get_batch_n(x_dict)
+        # batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = self.p.sample(x_dict, batch_n=batch_n).extract(self.d.input_var, return_dict=True)
+        x_p_dict = self.p.sample(x_dict).from_variables(self.d.input_var)
         # sample x_q from q
-        x_q_dict = self.q.sample(x_dict, batch_n=batch_n).extract(self.d.input_var, return_dict=True)
+        x_q_dict = self.q.sample(x_dict).from_variables(self.d.input_var)
         if discriminator:
             # sample y_p from d
-            y_p = self.d.sample(x_p_dict.detach()).extract(self.d.var)[0]
+            y_p = self.d.sample(x_p_dict.detach())[self.d.var[0]]
             # sample y_q from d
-            y_q = self.d.sample(x_q_dict.detach()).extract(self.d.var)[0]
+            y_q = self.d.sample(x_q_dict.detach())[self.d.var[0]]
 
-            return self.d_loss(y_p, y_q, batch_n), x_dict
+            return self.d_loss(y_p, y_q), x_dict
 
         # sample y_p from d
         y_p_dict = self.d.sample(x_p_dict)
         # sample y_q from d
         y_q_dict = self.d.sample(x_q_dict)
 
-        y_p = y_p_dict.extract(self.d.var)[0]
-        y_q = y_q_dict.extract(self.d.var)[0]
+        y_p = y_p_dict[self.d.var[0]]
+        y_q = y_q_dict[self.d.var[0]]
 
-        return self.g_loss(y_p, y_q, batch_n), x_dict
+        return self.g_loss(y_p, y_q), x_dict
 
-    def d_loss(self, y_p, y_q, batch_n):
+    def d_loss(self, y_p, y_q):
         # set labels
-        t_p = torch.ones(batch_n, 1).to(y_p.device)
-        t_q = torch.zeros(batch_n, 1).to(y_p.device)
+        t_p = torch.ones_like(y_p).to(y_p.device)
+        t_q = torch.zeros_like(y_p).to(y_p.device)
 
         return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
 
-    def g_loss(self, y_p, y_q, batch_n):
+    def g_loss(self, y_p, y_q):
         # set labels
-        t1 = torch.ones(batch_n, 1).to(y_p.device)
-        t2 = torch.zeros(batch_n, 1).to(y_p.device)
+        t1 = torch.ones_like(y_p).to(y_p.device)
+        t2 = torch.zeros_like(y_p).to(y_p.device)
 
         if self._inverse_g_loss:
             y_p_loss = self.bce_loss(y_p, t2)
@@ -320,12 +320,12 @@ class AdversarialKullbackLeibler(AdversarialLoss):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
-        (loc): torch.Size([1, 32])
-        (scale): torch.Size([1, 32])
+        (loc): torch.Size([])
+        (scale): torch.Size([])
       )
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'],
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -336,7 +336,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Network architecture:
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=['x'],
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -352,7 +352,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Network architecture:
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
+        var=['t'], cond_var=['x'], input_var=['x'],
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -388,28 +388,28 @@ class AdversarialKullbackLeibler(AdversarialLoss):
                                                                                    self.q.prob_text))
 
     def _get_eval(self, x_dict: SampleDict, discriminator=False, **kwargs):
-        batch_n = self._get_batch_n(x_dict)
+        # batch_shape = self._get_batch_shape(x_dict)
 
         # sample x_p from p
-        x_p_dict = self.p.sample(x_dict, batch_n=batch_n).extract(self.d.input_var, return_dict=True)
+        x_p_dict = self.p.sample(x_dict).from_variables(self.d.input_var)
 
         if discriminator:
             # sample x_q from q
-            x_q_dict = self.q.sample(x_dict, batch_n=batch_n).extract(self.d.input_var, return_dict=True)
+            x_q_dict = self.q.sample(x_dict).from_variables(self.d.input_var)
 
             # sample y_p from d
-            y_p = self.d.sample(x_p_dict.detach()).extract(self.d.var)[0]
+            y_p = self.d.sample(x_p_dict.detach())[self.d.var[0]]
             # sample y_q from d
-            y_q = self.d.sample(x_q_dict.detach()).extract(self.d.var)[0]
+            y_q = self.d.sample(x_q_dict.detach())[self.d.var[0]]
 
-            return self.d_loss(y_p, y_q, batch_n), x_dict
+            return self.d_loss(y_p, y_q), x_dict
 
         # sample y from d
-        y_p = self.d.sample(x_p_dict).extract(self.d.var)[0]
+        y_p = self.d.sample(x_p_dict)[self.d.var[0]]
 
-        return self.g_loss(y_p, batch_n), x_dict
+        return self.g_loss(y_p), x_dict
 
-    def g_loss(self, y_p, batch_n):
+    def g_loss(self, y_p):
         """Evaluate a generator loss given an output of the discriminator.
 
         Parameters
@@ -424,18 +424,20 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         torch.Tensor
 
         """
+        # label_shape = list(batch_shape) + [1]
         # set labels
-        t_p = torch.ones(batch_n, 1).to(y_p.device)
-        t_q = torch.zeros(batch_n, 1).to(y_p.device)
+        t_p = torch.ones_like(y_p).to(y_p.device)
+        t_q = torch.zeros_like(y_p).to(y_p.device)
 
         y_p_loss = -self.bce_loss(y_p, t_p) + self.bce_loss(y_p, t_q)  # log (y_p) - log (1 - y_p)
 
         return y_p_loss
 
-    def d_loss(self, y_p, y_q, batch_n):
+    def d_loss(self, y_p, y_q):
+        # label_shape = list(batch_shape) + [1]
         # set labels
-        t_p = torch.ones(batch_n, 1).to(y_p.device)
-        t_q = torch.zeros(batch_n, 1).to(y_p.device)
+        t_p = torch.ones_like(y_p).to(y_p.device)
+        t_q = torch.zeros_like(y_p).to(y_p.device)
 
         return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
 
@@ -476,12 +478,12 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
-        (loc): torch.Size([1, 32])
-        (scale): torch.Size([1, 32])
+        (loc): torch.Size([])
+        (scale): torch.Size([])
       )
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'],
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -492,7 +494,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Network architecture:
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=['x'],
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -508,7 +510,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Network architecture:
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
+        var=['t'], cond_var=['x'], input_var=['x'],
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>

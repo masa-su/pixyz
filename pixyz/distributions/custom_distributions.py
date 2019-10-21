@@ -1,4 +1,3 @@
-from ..utils import sum_samples
 from .sample_dict import SampleDict
 from .distributions import Distribution
 
@@ -56,12 +55,9 @@ class CustomProb(Distribution):
     def distribution_name(self):
         return self._distribution_name
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
-        x_dict = x_dict.extract(self._var, return_dict=True)
+    def get_log_prob(self, x_dict):
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self.cond_var)
+        x_dict = x_dict.from_variables(self._var)
         log_prob = self.log_prob_function(**x_dict)
-        if sum_features:
-            log_prob = sum_samples(log_prob)
 
         return log_prob

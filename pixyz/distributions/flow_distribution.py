@@ -24,9 +24,11 @@ class TransformedDistribution(Distribution):
         else:
             features_shape = torch.Size()
 
-        super().__init__(var=var, cond_var=prior.cond_var, name=name, features_shape=features_shape)
+        super().__init__(var=var, cond_var=prior.cond_var, name=name)
         self.prior = prior
         self.flow = flow  # FlowList
+        # TODO: features_shapeをDistributionから削除して良かったのか？
+        self.features_shape = features_shape
 
         self._flow_input_var = prior.var
 
@@ -57,16 +59,14 @@ class TransformedDistribution(Distribution):
         """
         return self.flow.logdet_jacobian
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
-               compute_jacobian=True):
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, compute_jacobian=True):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all)
+        sample_dict = self.prior.sample(x_dict, sample_shape=sample_shape, return_all=return_all)
 
         # flow transformation
-        _x = sample_dict.extract(self.flow_input_var)[0]
+        _x = sample_dict[self.flow_input_var[0]]
         z = self.forward(_x, compute_jacobian=compute_jacobian)
+        # TODO: 断絶が起きているはず
         output_dict = SampleDict({self.var[0]: z})
 
         if return_all:
@@ -75,11 +75,9 @@ class TransformedDistribution(Distribution):
 
         return output_dict
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, compute_jacobian=False):
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
+    def get_log_prob(self, x_dict, compute_jacobian=False):
         # prior
-        log_prob_prior = self.prior.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
+        log_prob_prior = self.prior.get_log_prob(x_dict)
 
         # flow
         if compute_jacobian:
@@ -156,9 +154,10 @@ class InverseTransformedDistribution(Distribution):
         else:
             features_shape = torch.Size()
 
-        super().__init__(var, cond_var=cond_var, name=name, features_shape=features_shape)
+        super().__init__(var, cond_var=cond_var, name=name)
         self.prior = prior
         self.flow = flow  # FlowList
+        self.features_shape = features_shape
 
         self._flow_output_var = prior.var
 
@@ -189,21 +188,20 @@ class InverseTransformedDistribution(Distribution):
         """
         return self.flow.logdet_jacobian
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all)
+        sample_dict = self.prior.sample(x_dict, sample_shape=sample_shape, return_all=return_all)
 
         # inverse flow transformation
-        _z = sample_dict.extract(self.flow_output_var)
-        _y = sample_dict.extract(self.cond_var)
+        _z = sample_dict[self.flow_output_var[0]]
 
-        if len(_y) == 0:
-            x = self.inverse(_z[0])
+        if self.cond_var[0] in sample_dict:
+            _y = sample_dict[self.cond_var[0]]
+            x = self.inverse(_z, y=_y)
         else:
-            x = self.inverse(_z[0], y=_y[0])
+            x = self.inverse(_z)
 
+        # TODO: 断絶の疑い
         output_dict = SampleDict({self.var[0]: x})
 
         if return_all:
@@ -213,17 +211,17 @@ class InverseTransformedDistribution(Distribution):
         return output_dict
 
     def inference(self, x_dict, return_all=True, compute_jacobian=False):
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self.cond_var)
         # flow transformation
-        _x = x_dict.extract(self.var)
-        _y = x_dict.extract(self.cond_var)
+        _x = x_dict[self.var[0]]
 
-        if len(_y) == 0:
-            z = self.forward(_x[0], compute_jacobian=compute_jacobian)
+        if self.cond_var[0] in x_dict:
+            _y = x_dict[self.cond_var[0]]
+            z = self.forward(_x, y=_y[0], compute_jacobian=compute_jacobian)
         else:
-            z = self.forward(_x[0], y=_y[0], compute_jacobian=compute_jacobian)
+            z = self.forward(_x, compute_jacobian=compute_jacobian)
 
+        # TODO: 断絶の疑い
         output_dict = SampleDict({self.flow_output_var[0]: z})
 
         if return_all:
@@ -231,14 +229,12 @@ class InverseTransformedDistribution(Distribution):
 
         return output_dict
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
-        if not isinstance(x_dict, SampleDict):
-            x_dict = SampleDict(x_dict)
+    def get_log_prob(self, x_dict):
         # flow
         output_dict = self.inference(x_dict, return_all=True, compute_jacobian=True)
 
         # prior
-        log_prob_prior = self.prior.get_log_prob(output_dict, sum_features=sum_features, feature_dims=feature_dims)
+        log_prob_prior = self.prior.get_log_prob(output_dict)
 
         return log_prob_prior + self.logdet_jacobian
 
