@@ -58,13 +58,7 @@ class WassersteinDistance(Loss):
     def _symbol(self):
         return sympy.Symbol("W^{{upper}} \\left({}, {} \\right)".format(self.p.prob_text, self.q.prob_text))
 
-    def _get_batch_n(self, x_dict):
-        return x_dict.n_batch(self.input_dist.input_var[0])
-
     def _get_eval(self, x_dict, **kwargs):
-        # batch_n = self._get_batch_n(x_dict)
-        # TODO: check sample_shape is preserved
-
         # sample from distributions
         p_x = self.p.sample(x_dict)[self.p.var[0]]
         q_x = self.q.sample(x_dict)[self.q.var[0]]
@@ -72,6 +66,13 @@ class WassersteinDistance(Loss):
         if p_x.shape != q_x.shape:
             raise ValueError("The two distribution variables must have the same shape.")
 
-        distance = self.metric(p_x, q_x)
+        # metric function assumes tensor's shape=(N,D)
+        sample_shape = x_dict.sample_shape
+        features_shape = x_dict.features_shape(p_x)
+        distance = self.metric(p_x.reshape(-1, *features_shape), q_x.reshape(-1, *features_shape))
+        if sample_shape:
+            distance = distance.reshape(*sample_shape)
+        else:
+            distance = distance.squeeze(0)
 
         return distance, x_dict

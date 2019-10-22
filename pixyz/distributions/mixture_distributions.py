@@ -2,6 +2,7 @@ import torch
 from torch import nn
 
 from pixyz.distributions.distributions import Distribution
+from pixyz.distributions.sample_dict import SampleDict
 from pixyz.utils import convert_latex_name
 
 
@@ -32,7 +33,7 @@ class MixtureModel(Distribution):
     Network architecture:
       MixtureModel(
         name=p, distribution_name=Mixture Model,
-        var=['x'], cond_var=[], input_var=[],
+        var=['x'], cond_var=[], input_var=[], features_shape=N/A
         (distributions): ModuleList(
           (0): Normal(
             name=p_{0}, distribution_name=Normal,
@@ -139,25 +140,26 @@ class MixtureModel(Distribution):
     def posterior(self, name=None):
         return PosteriorMixtureModel(self, name=name)
 
-    def sample(self, batch_n=None, sample_shape=torch.Size(), return_hidden=False, **kwargs):
-        if sample_shape != torch.Size():
+    def sample(self, sample_shape=torch.Size(), return_hidden=False, **kwargs):
+        if len(sample_shape) > 1:
             raise NotImplementedError
         # sample from prior
-        hidden_output = self.prior.sample(batch_n=batch_n, sample_shape=sample_shape)[self._hidden_var[0]]
+        hidden_output = self.prior.sample(sample_shape=sample_shape)[self._hidden_var[0]]
 
         var_output = []
+        # sample from selected distribution for each item of batch
         for _hidden_output in hidden_output:
             var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample()[self._var[0]])
 
         var_output = torch.cat(var_output, dim=0)
-        output_dict = {self._var[0]: var_output}
+        output_dict = SampleDict({self._var[0]: var_output}, sample_shape=sample_shape)
 
         if return_hidden:
             output_dict.update({self._hidden_var[0]: hidden_output})
 
         return output_dict
 
-    def get_log_prob(self, x_dict, return_hidden=False, **kwargs):
+    def get_log_prob(self, x_dict, return_hidden=False):
         """Evaluate log-pdf, log p(x) (if return_hidden=False) or log p(x, z) (if return_hidden=True).
 
         Parameters
@@ -173,12 +175,10 @@ class MixtureModel(Distribution):
             The log-pdf value of x.
 
             return_hidden = 0 :
-                dim=0 : the size of batch
+                size = (sample_shape,)
 
             return_hidden = 1 :
-                dim=0 : the number of mixture
-
-                dim=1 : the size of batch
+                size = (sample_shape, the number of mixture)
 
         """
 
@@ -195,10 +195,10 @@ class MixtureModel(Distribution):
             # p(x, z=i)
             log_prob_all.append(log_prob + prior_log_prob)
 
-        log_prob_all = torch.stack(log_prob_all, dim=0)  # (num_mix, batch_size)
+        log_prob_all = torch.stack(log_prob_all, dim=0)  # (num_mix, sample_shape)
 
         if return_hidden:
-            return log_prob_all
+            return log_prob_all.permute(*list(range(1, log_prob_all.dim())) + [0])
 
         return torch.logsumexp(log_prob_all, 0)
 
@@ -240,7 +240,7 @@ class PosteriorMixtureModel(Distribution):
     def sample(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, **kwargs):
+    def get_log_prob(self, x_dict):
         # log p(z|x) = log p(x, z) - log p(x)
-        log_prob = self.p.get_log_prob(x_dict, return_hidden=True) - self.p.get_log_prob(x_dict)
-        return log_prob  # (num_mix, batch_size)
+        log_prob = self.p.get_log_prob(x_dict, return_hidden=True) - self.p.get_log_prob(x_dict).unsqueeze(-1)
+        return log_prob  # (sample_shape, num_mix)

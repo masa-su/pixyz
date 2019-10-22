@@ -61,12 +61,7 @@ class MMD(Loss):
     def _symbol(self):
         return sympy.Symbol("D_{{MMD^2}} \\left[{}||{} \\right]".format(self.p.prob_text, self.q.prob_text))
 
-    def _get_batch_n(self, x_dict: SampleDict):
-        return x_dict.n_batch(self.input_dist.input_var[0])
-
-    def _get_eval(self, x_dict, **kwargs):
-        # batch_n = self._get_batch_n(x_dict)
-
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         # sample from distributions
         p_x = self.p.sample(x_dict)[self.p.var[0]]
         q_x = self.q.sample(x_dict)[self.q.var[0]]
@@ -76,14 +71,18 @@ class MMD(Loss):
 
         if len(p_x.shape) != 2:
             raise ValueError("The number of axes of a given sample must be 2, got %d" % len(p_x.shape))
+        # if len(x_dict.features_shape(p_x)) != 1:
+        #     raise ValueError(f"The features_shape of a given sample must be 1 dim shape,"
+        #                      f" got {x_dict.features_shape(p_x)}")
 
-        p_x_dim = p_x.shape[1]
-        q_x_dim = q_x.shape[1]
+        p_x_dim = p_x.shape[-1]
+        q_x_dim = q_x.shape[-1]
 
+        # kernel function assumes tensor's shape=(N,D)
         # estimate the squared MMD (unbiased estimator)
-        p_kernel = self.kernel(p_x, p_x, **self.kernel_params).sum() / (p_x_dim * (p_x_dim - 1))
-        q_kernel = self.kernel(q_x, q_x, **self.kernel_params).sum() / (q_x_dim * (q_x_dim - 1))
-        pq_kernel = self.kernel(p_x, q_x, **self.kernel_params).sum() / (p_x_dim * q_x_dim)
+        p_kernel = self.kernel(p_x, p_x, **self.kernel_params).sum(dim=(-1, -2)) / (p_x_dim * (p_x_dim - 1))
+        q_kernel = self.kernel(q_x, q_x, **self.kernel_params).sum(dim=(-1, -2)) / (q_x_dim * (q_x_dim - 1))
+        pq_kernel = self.kernel(p_x, q_x, **self.kernel_params).sum(dim=(-1, -2)) / (p_x_dim * q_x_dim)
         mmd_loss = p_kernel + q_kernel - 2 * pq_kernel
 
         return mmd_loss, x_dict

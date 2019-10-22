@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from .norm_util import WNConv2d
 
 
+# TODO: pytorchクラスがsample_shape拡張に対応しているかチェック
 class ResidualBlock(nn.Module):
     """ResNet basic block with weight norm."""
     def __init__(self, in_channels, out_channels):

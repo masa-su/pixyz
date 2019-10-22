@@ -66,7 +66,7 @@ class Distribution(nn.Module):
       )
     """
 
-    def __init__(self, var, cond_var=(), name="p"):
+    def __init__(self, var, cond_var=(), name="p", features_shape=None):
         """
         Parameters
         ----------
@@ -78,7 +78,7 @@ class Distribution(nn.Module):
         name : :obj:`str`, defaults to "p"
             Name of this distribution.
             This name is displayed in :attr:`prob_text` and :attr:`prob_factorized_text`.
-        features_shape_TODO : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size())
+        features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size())
             Shape of dimensions (features) of this distribution.
 
         """
@@ -97,6 +97,7 @@ class Distribution(nn.Module):
 
         self._prob_text = None
         self._prob_factorized_text = None
+        self._features_shape = torch.Size(features_shape) if features_shape is not None else None
 
     @property
     def distribution_name(self):
@@ -162,53 +163,11 @@ class Distribution(nn.Module):
             prob_text = "{} = {}".format(self.prob_text, self.prob_factorized_text)
         return prob_text
 
-    # TODO: -多分廃止する
-    def _check_input(self, input_, var=None):
-        """Check the type of given input.
-        If the input type is :obj:`dict`, this method checks whether the input keys contains the :attr:`var` list.
-        In case that its type is :obj:`list` or :obj:`tensor`, it returns the output formatted in :obj:`dict`.
-
-        Parameters
-        ----------
-        input_ : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`, or :obj:`SampleDict`
-            Input variables.
-        var : :obj:`list` or :obj:`NoneType`, defaults to None
-            Variables to check if given input contains them.
-            This is set to None by default.
-
-        Returns
-        -------
-        input_dict : :obj:`SampleDict`
-            Variables checked in this method.
-
-        Raises
-        ------
-        ValueError
-            Raises `ValueError` if the type of input is neither :obj:`torch.Tensor`, :obj:`list`, nor :obj:`dict.
-
-        """
-        if not input_:
-            return {}
-
-        if var is None:
-            var = self.input_var
-
-        if torch.is_tensor(input_):
-            input_dict = {var[0]: input_}
-
-        elif isinstance(input_, list):
-            # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-            input_dict = dict(zip(var, input_))
-
-        elif isinstance(input_, dict):
-            if not (set(list(input_.keys())) >= set(var)):
-                raise ValueError("Input keys are not valid.")
-            input_dict = input_.copy()
-
-        else:
-            raise ValueError(f"The type of input is not valid, got {type(input_)}.")
-
-        return input_dict
+    @property
+    def features_shape(self):
+        if self._features_shape is None:
+            raise Exception("features_shape is invalid.")
+        return self._features_shape
 
     def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         """Sample variables of this distribution.
@@ -220,8 +179,6 @@ class Distribution(nn.Module):
             Input variables.
         sample_shape : :obj:`list` or :obj:`NoneType`, defaults to torch.Size()
             Shape of generating samples.
-        batch_n : :obj:`int`, defaults to None.
-            Set batch size of parameters.
         return_all : :obj:`bool`, defaults to True
             Choose whether the output contains input variables.
         reparam : :obj:`bool`, defaults to False.
@@ -356,10 +313,6 @@ class Distribution(nn.Module):
         ----------
         x_dict : :obj:`dict`, or :obj:`SampleDict`
             Input variables.
-        sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some dimensions which are specified by `feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set dimensions to sum across the output.
 
         Returns
         -------
@@ -396,10 +349,6 @@ class Distribution(nn.Module):
         ----------
         x_dict : :obj:`dict`, or :obj:`SampleDict`, defaults to {}
             Input variables.
-        sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some dimensions which are specified by :attr:`feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set dimensions to sum across the output.
 
         Returns
         -------
@@ -423,7 +372,7 @@ class Distribution(nn.Module):
         >>> sample_y = torch.randn(1, 10) # Psuedo data
         >>> entropy = p2.get_entropy({"y": sample_y})
         >>> print(entropy)
-        tensor(14.1894)
+        tensor([14.1894])
 
         """
         raise NotImplementedError()
@@ -433,10 +382,6 @@ class Distribution(nn.Module):
 
         Parameters
         ----------
-        sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some axes (dimensions) which are specified by :attr:`feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set axes to sum across the output.
 
         Returns
         -------
@@ -471,11 +416,6 @@ class Distribution(nn.Module):
 
         Parameters
         ----------
-        sum_features : :obj:`bool`, defaults to True
-            Choose whether the output is summed across some axes (dimensions)
-            which are specified by :attr:`feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set dimensions to sum across the output. (Note: this parameter is not used for now.)
 
         Returns
         -------
@@ -559,9 +499,11 @@ class Distribution(nn.Module):
         return text
 
     def extra_repr(self):
+        features_shape = "N/A" if self._features_shape is None else self.features_shape
         # parameters
         parameters_text = f'name={self.name}, distribution_name={self.distribution_name},\n' \
-                          f'var={self.var}, cond_var={self.cond_var}, input_var={self.input_var},'
+                          f'var={self.var}, cond_var={self.cond_var}, input_var={self.input_var},' \
+                          f' features_shape={features_shape}'
 
         if len(self._buffers) != 0:
             # add buffers to repr
@@ -581,17 +523,11 @@ class DistributionBase(Distribution):
 
         self._set_buffers(**params_dict)
         self._dist = None
-        # if len(iid_dims) == 0:
-        #     iid_dims = range(len(iid_shape))
-        # elif len(iid_dims) != len(iid_shape):
-        #     raise ValueError("the length of iid_dims and iid_shape must be the same.")
-        # self.iid_info = (iid_dims, iid_shape)
         if features_shape is not None:
             self._features_shape = torch.Size(features_shape)
         else:
             self._features_shape = None
             self.is_iid = False
-        # self.is_iid = (features_shape is not None)
         # it means distribution is not like MultivariateNormal
         self.is_conditional_independent = True
 
@@ -600,12 +536,6 @@ class DistributionBase(Distribution):
             self.set_dist()
         except (TypeError, NotImplementedError):
             self._dist = None
-
-    @property
-    def features_shape(self):
-        if self._features_shape is None:
-            raise Exception("features_shape is invalid until the distribution is sampled or its log_prob is evaluated.")
-        return self._features_shape
 
     def _set_buffers(self, **params_dict):
         """Format constant parameters of this distribution as buffers.
@@ -652,7 +582,7 @@ class DistributionBase(Distribution):
         """Return the instance of PyTorch distribution."""
         return self._dist
 
-    def set_dist(self, x_dict=None, relaxing=False):
+    def set_dist(self, x_dict=None, **dist_options):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
         This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
@@ -663,41 +593,31 @@ class DistributionBase(Distribution):
             Parameters of this distribution.
         relaxing : :obj:`bool`, defaults to False.
             Choose whether to use relaxed_* in PyTorch distribution.
-        batch_n : :obj:`int`, defaults to None.
-            Set batch size of parameters.
-        **kwargs
-            Arbitrary keyword arguments.
 
         Returns
         -------
 
         """
         params = self.get_params(x_dict)
+        # it is comment-outed for categorical distribution (it uses prob or log_prob params)
         # if set(self.params_keys) != set(params.keys()):
         #     raise ValueError(f"params keys don't match. expected: {self.params_keys}, actual: {params.keys()}")
-        input_sample_shape = params.sample_shape
 
-        # self._dist_shape = SampleDict.max_shape_(params)
-        self._dist = self.distribution_torch_class(**params)
-        # iid_dims, iid_shape = self.iid_info
-        # TODO: -iidの問題が未解決（paramsのexpandでdistribution expandでのshapeの問題を解決したが，MultidimentionalNormalDistributionでのiid指定ができない＋今までの面倒なshapeソートの名残が残っている）
+        self._dist = self.distribution_torch_class(**params, **dist_options)
+
+        input_sample_shape = params.sample_shape
         if self.is_iid:
             if not SampleDict.is_broadcastable_to(self._dist.batch_shape[:-len(self.features_shape)], input_sample_shape):
                 raise ValueError("torch distribution got wrong parameter which has too many features_shape.")
-            self._dist = self.distribution_torch_class(**params)
+            self._dist = self.distribution_torch_class(**params, **dist_options)
             self._dist = self._dist.expand(input_sample_shape + self.features_shape)
         else:
-            # -squeeze可能な次元に吸収されてしまう問題があった（今はshape全体を指定しているので無い）
             # expand _dist for iid distribution and ancestral sampling
             self._dist = self._dist.expand(input_sample_shape + self._dist.batch_shape[len(input_sample_shape):])
 
             # SampleDist.features_dims(params, self.var[0]) can not be used because params don't have self.var[0]
             features_dims = (SampleDict.sample_dims_(params)[-1], None)
-            # TODO: -shapeの型をtorch.Size()に揃えるべきか？
             self._features_shape = self._dist.batch_shape[slice(*features_dims)] + self._dist.event_shape
-            # TODO: -features_shapeをevent_shapeにリネームしたくなってきた(pytorchと統一)
-
-            # -本当にbatch_nオプションを削除してよかったのか確認する
 
     def _get_sample(self, reparam=False, sample_shape=torch.Size()):
         """Get a sample_shape shaped sample from :attr:`dist`.
@@ -728,6 +648,17 @@ class DistributionBase(Distribution):
 
     # TODO: -本当はここにSampleDictやproduct_infoに関する知識を含めないことで拡張しやすくしたいが，難しい
     def get_log_prob(self, x_dict):
+        """
+        Parameters
+        ----------
+        x_dict : :obj:`dict`, or :obj:`SampleDict`
+
+        Returns
+        -------
+        log_prob : torch.Tensor
+            size = (sample_shape,)
+
+        """
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self._cond_var)
         _x_dict = x_dict.from_variables(self._cond_var)
         self.set_dist(_x_dict)
@@ -807,7 +738,7 @@ class DistributionBase(Distribution):
         # TODO: いくつかの派生先ではkwargsが使われていたのでチェックする
         x_dict = SampleDict.from_arg(x_dict, required_keys=self._cond_var)
         _x_dict = x_dict.from_variables(self._cond_var)
-        self.set_dist(_x_dict, relaxing=False)
+        self.set_dist(_x_dict)
 
         entropy = self.dist.entropy()
         # sum over features dims
@@ -819,14 +750,7 @@ class DistributionBase(Distribution):
 
         return entropy
 
-    # def sort_iid_dims(self, torch_sample, sample_ndim=0):
-    #     offset = sample_ndim
-    #     for dim, iid_dim in enumerate(self.iid_info[0]):
-    #         torch_sample = torch_sample.transpose(offset + dim, offset + iid_dim)
-    #     return torch_sample
-
     def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
-        # global_sample: x_dictに含まれるinput_sample_shapeについて，ブロードキャストではなくサンプルするかどうか
         # check whether the input is valid or convert it to valid dictionary.
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         sample_shape = torch.Size(sample_shape)
@@ -834,24 +758,9 @@ class DistributionBase(Distribution):
         # conditioned
         input_dict = x_dict.from_variables(self.input_var)
         input_sample_shape = input_dict.sample_shape
-        # 辞書内でブロードキャストしきらない場合があり得るので，shapeをここで統一する必要があるかも
-        # input_sample_shapeについて，sampleする，unsqueezeだけでなくexpandする
 
-        # batch_n（名前はn_batchのほうが良さそう）をsample_shapeに統一しているが，sample_shapeと微妙に異なる点がある
-        # それはinput_dictの段階でunsqueeze(+expand)されているのが基本だということだ，set_distから分かる
-        # 重大な問題として新規shapeがunsqueezeなのかexpandなのか区別する必要がある．
-        # ちなみにdist.expandは足りない分を自動でunsqueezeする
-        # batch_shapeは廃止できない，2つ目の事前分布がdictからパラメータを受け取るとbatch_dimがある
-        # SampleDictの仕様を変更し，unsqueezeせずにgivenするようにすると，sample_shapeのみで良くなるが
-        # 自分で(4,1,1,1)のようにユーザーが型を合わせる必要が出てくる
         self.set_dist(input_dict)
         sample = self._get_sample(reparam=reparam, sample_shape=sample_shape)
-        # (obsolete) output shape is (sample_shape, iid_shape, input_sample_shape, other_features_shape).
-        # output shape is (sample_shape, input_sample_shape, features_shape).
-
-        # # iid_shape is restricted to be located at head of shape in pytorch distribution.
-        # sample = self.sort_iid_dims(sample, sample_ndim=len(sample_shape))
-        # # output shape is (sample_shape, input_sample_shape, features_shape(iid_shape & other_features_shape)).
 
         x_dict.update(SampleDict({self.var[0]: sample}, sample_shape=sample_shape + input_sample_shape))
 
@@ -859,38 +768,16 @@ class DistributionBase(Distribution):
 
     def sample_mean(self, x_dict=None):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
-        # input_sample_dims = x_dict.sample_dims
         self.set_dist(x_dict)
-        # return self.sort_iid_dims(self.dist.mean, sample_ndim=input_sample_dims[1])
-        # if self.is_iid:
-        #     return self.dist.mean.expand(*(x_dict.sample_shape + self.features_shape))
         return self.dist.mean
 
     def sample_variance(self, x_dict=None):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
-        # input_sample_dims = x_dict.sample_dims
         self.set_dist(x_dict)
-        # return self.sort_iid_dims(self.dist.variance, sample_ndim=input_sample_dims[1])
-        # if self.is_iid:
-        #     return self.dist.variance.expand(*(x_dict.sample_shape + self.features_shape))
         return self.dist.variance
 
     def forward(self, **params):
         return params
-
-    def extra_repr(self):
-        features_shape = "N/A" if self._features_shape is None else self.features_shape
-        # parameters
-        parameters_text = f'name={self.name}, distribution_name={self.distribution_name},\n' \
-                          f'var={self.var}, cond_var={self.cond_var}, input_var={self.input_var},' \
-                          f' features_shape={features_shape}'
-
-        if len(self._buffers) != 0:
-            # add buffers to repr
-            buffers = ["({}): {}".format(key, value.shape) for key, value in self._buffers.items()]
-            return parameters_text + "\n" + "\n".join(buffers)
-
-        return parameters_text
 
 
 class MultiplyDistribution(Distribution):
@@ -955,7 +842,7 @@ class MultiplyDistribution(Distribution):
 
     """
 
-    def __init__(self, a, b):
+    def __init__(self, a: Distribution, b: Distribution):
         """
         Parameters
         ----------
@@ -1039,18 +926,10 @@ class MultiplyDistribution(Distribution):
         if not isinstance(child_x_dict, SampleDict):
             raise ValueError("result of sample must be a instance of SampleDict.")
 
-        # # もしかしてsplit必要ない？squeezeしてないし・・・
-        # child_x_dict, output_dict = output_dict.split(self._inh_var)
-        # # if parent and child are independent, sample_shape should be set separately.
-        # child_sample_shape = sample_shape if self._inh_var else torch.Size()
-        # sample from the child distribution
-        # output_dict2 = self._child.sample(x_dict=child_x_dict, sample_shape=child_sample_shape,
-        #                                   return_all=True, reparam=reparam)
         output_dict = self._child.sample(x_dict=child_x_dict, return_all=True, reparam=reparam)
         if not isinstance(output_dict, SampleDict):
             raise ValueError("result of sample must be a instance of SampleDict.")
         # TODO: 連鎖部分では必ず型チェックする，数が多くなるようなら検討する-> 入力制限の法が良いかも
-        # output_dict.update(output_dict2)
 
         return output_dict if return_all else output_dict.from_variables(self._var)
 
@@ -1091,7 +970,7 @@ class ReplaceVarDistribution(Distribution):
     Network architecture:
       ReplaceVarDistribution(
         name=p, distribution_name=,
-        var=['y'], cond_var=['z'], input_var=['z'],
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=N/A
         (p): DistributionBase(
           name=p, distribution_name=,
           var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
@@ -1149,7 +1028,7 @@ class ReplaceVarDistribution(Distribution):
         params_dict = SampleDict.replaced_dict_(params_dict, self._replace_inv_cond_var_dict)
         return self.p.get_params(params_dict)
 
-    def set_dist_and_shape(self, x_dict=None, relaxing=False):
+    def set_dist(self, x_dict=None, relaxing=False):
         x_dict = SampleDict.replaced_dict_(x_dict, self._replace_inv_cond_var_dict)
         return self.p.set_dist(x_dict=x_dict, relaxing=relaxing)
 
@@ -1166,19 +1045,19 @@ class ReplaceVarDistribution(Distribution):
         return x_dict
 
     def get_log_prob(self, x_dict):
-        x_dict = SampleDict.from_arg(x_dict, require_keys=self.var + self.cond_var)
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self.cond_var)
         input_dict = x_dict.from_variables(self.cond_var + self.var)
         input_dict = input_dict.dict_with_replaced_keys(self._replace_inv_dict)
         return self.p.get_log_prob(input_dict)
 
     def sample_mean(self, x_dict=None):
-        x_dict = SampleDict.from_arg(x_dict, require_keys=self.input_var)
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         input_dict = x_dict.from_variables(self.cond_var)
         input_dict = input_dict.replaced_dict(self._replace_inv_cond_var_dict)
         return self.p.sample_mean(input_dict)
 
     def sample_variance(self, x_dict=None):
-        x_dict = SampleDict.from_arg(x_dict, require_keys=self.input_var)
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         input_dict = x_dict.from_variables(self.cond_var)
         input_dict = input_dict.replaced_dict(self._replace_inv_cond_var_dict)
         return self.p.sample_variance(input_dict)

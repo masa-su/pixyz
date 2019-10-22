@@ -68,7 +68,7 @@ class IterativeLoss(Loss):
     \sum_{t=1}^{t_{max}} mean \left(\mathbb{E}_{p(h,z|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
     >>>
     >>> # Evaluate
-    >>> x_sample = torch.randn(30, 2, 128) # (timestep_size, batch_size, feature_size)
+    >>> x_sample = torch.randn(2, 30, 128) # (batch_size, timestep_size, feature_size)
     >>> h_init = torch.zeros(2, 32) # (batch_size, h_dim)
     >>> loss = loss_cls.eval({"x": x_sample, "h_prev": h_init})
     >>> print(loss) # doctest: +SKIP
@@ -76,11 +76,11 @@ class IterativeLoss(Loss):
     """
 
     def __init__(self, step_loss, max_iter=None,
-                 input_var=None, series_var=None, update_value={}, slice_step=None, timestep_var=["t"]):
+                 input_var=None, series_var=None, update_value={}, slice_step=None, timestep_var=("t",)):
         self.step_loss = step_loss
         self.max_iter = max_iter
         self.update_value = update_value
-        self.timestep_var = timestep_var
+        self.timestep_var = list(timestep_var)
         self.timpstep_symbol = sympy.Symbol(self.timestep_var[0])
 
         if (series_var is None) and (max_iter is None):
@@ -122,9 +122,6 @@ class IterativeLoss(Loss):
         return sliced
 
     def _get_eval(self, x_dict: SampleDict, **kwargs):
-        # TODO: -多分update_valueのvalueのテンソルを増やせばOK
-        # TODO: -再帰パラメータの初期化は外部にあるので，それをユーザに増やしてもらって平均してもらうべき
-        # TODO: -つまりIterativeLoss.expectation(init_dist, sample_shape)がよい
         series_x_dict = x_dict.from_variables(self.series_var)
         step_loss_sum = 0
 

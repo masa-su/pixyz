@@ -1,6 +1,7 @@
 import sympy
 import torch
 from .losses import Loss
+from ..distributions import SampleDict
 
 
 class LogProb(Loss):
@@ -35,7 +36,7 @@ class LogProb(Loss):
     def _symbol(self):
         return sympy.Symbol("\\log {}".format(self.p.prob_text))
 
-    def _get_eval(self, x=None, **kwargs):
+    def _get_eval(self, x: SampleDict, **kwargs):
         log_prob = self.p.get_log_prob(x)
         return log_prob, x
 
@@ -67,6 +68,6 @@ class Prob(LogProb):
     def _symbol(self):
         return sympy.Symbol(self.p.prob_text)
 
-    def _get_eval(self, x=None, **kwargs):
+    def _get_eval(self, x: SampleDict, **kwargs):
         log_prob, x = super()._get_eval(x, **kwargs)
         return torch.exp(log_prob), x

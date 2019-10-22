@@ -49,9 +49,10 @@ class Bernoulli(DistributionBase):
 class RelaxedBernoulli(Bernoulli):
     """Relaxed (re-parameterizable) Bernoulli distribution parameterized by :attr:`probs`."""
 
-    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", features_shape=torch.Size(),
+    def __init__(self, temperature=torch.tensor(0.1), cond_var=(), var=("x",), name="p", features_shape=torch.Size(),
                  **kwargs):
         self._temperature = temperature
+        self.relaxing = False
 
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape, **kwargs)
 
@@ -61,33 +62,39 @@ class RelaxedBernoulli(Bernoulli):
 
     @property
     def distribution_torch_class(self):
-        return BernoulliTorch
-
-    @property
-    def relaxed_distribution_torch_class(self):
         """Use relaxed version only when sampling"""
-        return RelaxedBernoulliTorch
+        return BernoulliTorch if not self.relaxing else RelaxedBernoulliTorch
 
     @property
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def set_dist(self, x_dict={}, relaxing=True, batch_n=None, **kwargs):
-        params = self.get_params(x_dict)
-        if relaxing is True:
-            self._dist = self.relaxed_distribution_torch_class(temperature=self.temperature, **params)
+    def set_dist(self, x_dict=None, **dist_options):
+        if self.relaxing:
+            super().set_dist(x_dict, temperature=self.temperature, **dist_options)
         else:
-            self._dist = self.distribution_torch_class(**params)
+            super().set_dist(x_dict, **dist_options)
 
-        # expand batch_n
-        if batch_n:
-            batch_shape = self._dist.batch_shape
-            if batch_shape[0] == 1:
-                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
-            elif batch_shape[0] == batch_n:
-                return
-            else:
-                raise ValueError()
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        tmp = self.relaxing
+        self.relaxing = True
+        result = super().sample(x_dict, sample_shape, return_all, reparam)
+        self.relaxing = tmp
+        return result
+
+    def sample_mean(self, x_dict=None):
+        tmp = self.relaxing
+        self.relaxing = False
+        result = super().sample_mean(x_dict)
+        self.relaxing = tmp
+        return result
+
+    def sample_variance(self, x_dict=None):
+        tmp = self.relaxing
+        self.relaxing = False
+        result = super().sample_variance(x_dict)
+        self.relaxing = tmp
+        return result
 
 
 class FactorizedBernoulli(Bernoulli):
@@ -112,10 +119,9 @@ class FactorizedBernoulli(Bernoulli):
         x_target = x_dict[self.var[0]]
         log_prob = self.dist.log_prob(x_target)
         log_prob[x_target == 0] = 0
-        # sum over a factorized dim and iid dims
+        # TODO: (facotrized dim = iid dim)か確かめる
+        # sum over a factorized dim
         start, end = x_dict.features_dims(self.var[0])
-        # new_ndim = x_target.ndim - len(self._dist.batch_shape) - len(self._dist.event_shape)
-        # log_prob = log_prob.sum(dim=range(new_ndim, new_ndim + len(self.iid_info[0])))
         end = min(end, log_prob.ndim)
         dim = list(range(start, end))
         if dim:
@@ -142,9 +148,11 @@ class Categorical(DistributionBase):
 class RelaxedCategorical(Categorical):
     """Relaxed (re-parameterizable) categorical distribution parameterized by :attr:`probs`."""
 
-    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", features_shape=torch.Size(),
+    def __init__(self, temperature=torch.tensor(0.1), cond_var=(), var=("x",), name="p", features_shape=torch.Size(),
                  **kwargs):
         self._temperature = temperature
+        # default is False for KL divergence
+        self.relaxing = False
 
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape, **kwargs)
 
@@ -154,41 +162,39 @@ class RelaxedCategorical(Categorical):
 
     @property
     def distribution_torch_class(self):
-        return CategoricalTorch
-
-    @property
-    def relaxed_distribution_torch_class(self):
         """Use relaxed version only when sampling"""
-        return RelaxedOneHotCategoricalTorch
+        return CategoricalTorch if not self.relaxing else RelaxedOneHotCategoricalTorch
 
     @property
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def set_dist(self, x_dict={}, relaxing=True, batch_n=None, **kwargs):
-        params = self.get_params(x_dict)
-        if relaxing is True:
-            self._dist = self.relaxed_distribution_torch_class(temperature=self.temperature, **params)
+    def set_dist(self, x_dict=None, **dist_options):
+        if self.relaxing:
+            super().set_dist(x_dict, temperature=self.temperature, **dist_options)
         else:
-            self._dist = self.distribution_torch_class(**params)
+            super().set_dist(x_dict, **dist_options)
 
-        # expand batch_n
-        if batch_n:
-            batch_shape = self._dist.batch_shape
-            if batch_shape[0] == 1:
-                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
-            elif batch_shape[0] == batch_n:
-                return
-            else:
-                raise ValueError()
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        tmp = self.relaxing
+        self.relaxing = True
+        result = super().sample(x_dict, sample_shape, return_all, reparam)
+        self.relaxing = tmp
+        return result
 
-    def sample_mean(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.mean
+    def sample_mean(self, x_dict=None):
+        tmp = self.relaxing
+        self.relaxing = False
+        result = super().sample_mean(x_dict)
+        self.relaxing = tmp
+        return result
 
-    def sample_variance(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.variance
+    def sample_variance(self, x_dict=None):
+        tmp = self.relaxing
+        self.relaxing = False
+        result = super().sample_variance(x_dict)
+        self.relaxing = tmp
+        return result
 
 
 class Multinomial(DistributionBase):

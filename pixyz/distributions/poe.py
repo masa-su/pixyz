@@ -122,7 +122,7 @@ class ProductOfNormal(Normal):
             prob_text = "{} \\propto {}".format(self.prob_text, self.prob_factorized_text)
         return prob_text
 
-    def _get_expert_params(self, params_dict={}, **kwargs):
+    def _get_expert_params(self, params_dict: SampleDict, **kwargs):
         """Get the output parameters of all experts.
 
         Parameters
@@ -141,7 +141,7 @@ class ProductOfNormal(Normal):
         scale = []
 
         for _p in self.p:
-            inputs_dict = params_dict.extract(_p.cond_var, return_dict=True)
+            inputs_dict = params_dict.from_variables(_p.cond_var)
             if len(inputs_dict) != 0:
                 outputs = _p.get_params(inputs_dict, **kwargs)
                 loc.append(outputs["loc"])
@@ -152,18 +152,18 @@ class ProductOfNormal(Normal):
 
         return loc, scale
 
-    def get_params(self, params_dict={}, **kwargs):
-        if not isinstance(params_dict, SampleDict):
-            params_dict = SampleDict(params_dict)
+    def get_params(self, params_dict=None, **kwargs):
+        params_dict = SampleDict.from_arg(params_dict)
         # experts
         if len(params_dict) > 0:
-            loc, scale = self._get_expert_params(params_dict, **kwargs)  # (n_expert, n_batch, output_dim)
+            loc, scale = self._get_expert_params(params_dict, **kwargs)  # (n_expert, sapmle_shape, output_dim)
         else:
+            # TODO: gpuに載せなくて大丈夫か？
             loc = torch.zeros(1)
             scale = torch.zeros(1)
 
         output_loc, output_scale = self._compute_expert_params(loc, scale)
-        output_dict = SampleDict({"loc": output_loc, "scale": output_scale})
+        output_dict = SampleDict({"loc": output_loc, "scale": output_scale}, sample_shape=params_dict.sample_shape)
 
         return output_dict
 
@@ -175,19 +175,19 @@ class ProductOfNormal(Normal):
         Parameters
         ----------
         loc : torch.Tensor
-            Concatenation of mean vectors for specified experts. (n_expert, n_batch, output_dim)
+            Concatenation of mean vectors for specified experts. (n_expert, sample_shape, output_dim)
 
         scale : torch.Tensor
             Concatenation of the square root of a diagonal covariance matrix for specified experts.
-            (n_expert, n_batch, output_dim)
+            (n_expert, sample_shape, output_dim)
 
         Returns
         -------
         output_loc : torch.Tensor
-            Mean vectors for this distribution. (n_batch, output_dim)
+            Mean vectors for this distribution. (sample_shape, output_dim)
 
         output_scale : torch.Tensor
-            The square root of diagonal covariance matrices for this distribution. (n_batch, output_dim)
+            The square root of diagonal covariance matrices for this distribution. (sample_shape, output_dim)
 
         """
         # parameter for prior
@@ -199,10 +199,10 @@ class ProductOfNormal(Normal):
 
         # compute the square root of a diagonal covariance matrix for the product of distributions.
         output_prec = torch.sum(prec, dim=0) + prior_prec
-        output_variance = 1. / output_prec   # (n_batch, output_dim)
+        output_variance = 1. / output_prec   # (sample_shape, output_dim)
 
         # compute the mean vectors for the product of normal distributions.
-        output_loc = torch.sum(prec * loc, dim=0)   # (n_batch, output_dim)
+        output_loc = torch.sum(prec * loc, dim=0)   # (sample_shape, output_dim)
         output_loc = output_loc * output_variance
 
         return output_loc, torch.sqrt(output_variance)
@@ -321,22 +321,21 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         torch.Tensor
 
         """
+        # TODO: device指定しなくて大丈夫か？
         mask = torch.zeros_like(inputs).type(inputs.dtype)
-        mask[:, index] = 1
+        mask[(slice(None),) * (mask.dim() - 1) + (index,)] = 1
         return mask
 
-    def _get_params_with_masking(self, inputs, index, **kwargs):
+    def _get_params_with_masking(self, inputs, index, sample_shape):
         """Get the output parameters of the index-specified expert.
 
         Parameters
         ----------
         inputs : torch.Tensor
         index : int
-        **kwargs
-            Arbitrary keyword arguments.
         Returns
         -------
-        outputs : torch.Tensor
+        outputs : torch.Tensor size=(2, sample_shape, output_dim)
 
         Examples
         --------
@@ -362,15 +361,18 @@ class ElementWiseProductOfNormal(ProductOfNormal):
                ])
 
         """
-        mask = self._get_mask(inputs, index)  # (n_batch, n_expert)
-        outputs_dict = self.p.get_params({self.cond_var[0]: inputs * mask}, **kwargs)
-        outputs = torch.stack([outputs_dict["loc"], outputs_dict["scale"]])  # (2, n_batch, output_dim)
+        mask = self._get_mask(inputs, index)  # (sample_shape, n_expert)
+        # TODO: sample_shapeは結局必要ないかもしれない
+        outputs_dict = self.p.get_params(SampleDict({self.cond_var[0]: inputs * mask}, sample_shape))
+        outputs = torch.stack([outputs_dict["loc"], outputs_dict["scale"]])  # (2, sample_shape, output_dim)
 
         # When the index-th expert in the output examples is not specified, set zero to them.
-        outputs[:, inputs[:, index] == 0, :] = 0
+        output_ndim = outputs.dim() - len(sample_shape) - 1
+        filter_ = inputs[(None,) + (slice(None),) * len(sample_shape) + (index,) + (None,) * output_ndim]
+        outputs = torch.where(filter_, outputs, torch.zeros_like(outputs))
         return outputs
 
-    def _get_expert_params(self, params_dict={}, **kwargs):
+    def _get_expert_params(self, params_dict: SampleDict, **kwargs):
         """Get the output parameters of all experts.
 
         Parameters
@@ -385,11 +387,11 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         torch.Tensor
 
         """
-        inputs = params_dict[self.cond_var[0]]  # (n_batch, n_expert=input_dim)
+        inputs = params_dict[self.cond_var[0]]  # (sample_shape, n_expert=input_dim)
 
-        n_expert = inputs.size()[1]
+        n_expert = inputs.size()[-1]
 
-        outputs = [self._get_params_with_masking(inputs, i) for i in range(n_expert)]
-        outputs = torch.stack(outputs)  # (n_expert, 2, n_batch, output_dim)
+        outputs = [self._get_params_with_masking(inputs, i, params_dict.sample_shape) for i in range(n_expert)]
+        outputs = torch.stack(outputs)  # (n_expert, 2, sample_shape, output_dim)
 
-        return outputs[:, 0, :, :], outputs[:, 1, :, :]  # (n_expert, n_batch, output_dim)
+        return outputs[:, 0], outputs[:, 1]  # (n_expert, sample_shape, output_dim)

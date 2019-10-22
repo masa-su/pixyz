@@ -232,9 +232,7 @@ class ValueLoss(Loss):
         self.loss1 = loss1  # if torch.is_tensor(loss1) else torch.tensor(loss1, dtype=torch.float)
         self._input_var = []
 
-    def _get_eval(self, x_dict=None, **kwargs):
-        if x_dict is None:
-            x_dict = {}
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         return torch.tensor(self.loss1, dtype=torch.float), x_dict
 
     @property
@@ -263,7 +261,7 @@ class Parameter(Loss):
             raise ValueError()
         self._input_var = tolist(input_var)
 
-    def _get_eval(self, x_dict, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         return x_dict[self._input_var[0]], x_dict
 
     @property
@@ -299,7 +297,7 @@ class LossOperator(Loss):
         self.loss1 = loss1
         self.loss2 = loss2
 
-    def _get_eval(self, x_dict=None, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         if self.loss1 is not None:
             loss1, x1 = self.loss1._get_eval(x_dict, **kwargs)
         else:
@@ -337,7 +335,7 @@ class AddLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol + self.loss2._symbol
 
-    def _get_eval(self, x_dict=None, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
         return loss1 + loss2, x_dict
 
@@ -368,7 +366,7 @@ class SubLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol - self.loss2._symbol
 
-    def _get_eval(self, x_dict=None, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
         return loss1 - loss2, x_dict
 
@@ -393,7 +391,7 @@ class MulLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol * self.loss2._symbol
 
-    def _get_eval(self, x_dict=None, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
         return loss1 * loss2, x_dict
 
@@ -425,7 +423,7 @@ class DivLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol / self.loss2._symbol
 
-    def _get_eval(self, x_dict=None, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
         return loss1 / loss2, x_dict
 
@@ -473,7 +471,7 @@ class NegLoss(LossSelfOperator):
     def _symbol(self):
         return -self.loss1._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
         return -loss, x_dict
 
@@ -502,7 +500,7 @@ class AbsLoss(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("|{}|".format(self.loss1.loss_text))
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
         return loss.abs(), x_dict
 
@@ -537,7 +535,7 @@ class BatchMean(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("mean \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
         return loss.mean(), x_dict
 
@@ -572,7 +570,7 @@ class BatchSum(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("sum \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
         return loss.sum(), x_dict
 
@@ -585,7 +583,7 @@ class SetLoss(Loss):
     def __getattr__(self, name):
         getattr(self.loss, name)
 
-    def _get_eval(self, x_dict, **kwargs):
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         return self.loss._get_eval(x_dict, **kwargs)
 
     @property
@@ -647,11 +645,10 @@ class Expectation(Loss):
         p_text = "{" + self.p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
-    def _get_eval(self, x_dict=None, **kwargs):
-        x_dict = SampleDict.from_arg(x_dict)
+    def _get_eval(self, x_dict: SampleDict, **kwargs):
         samples_dict = self.p.sample(x_dict, sample_shape=self.sample_shape, reparam=True, return_all=True)
 
-        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)  # TODO: eval or _get_eval
+        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)
         samples_dict.update(loss_sample_dict)
 
         # sum over sample_shape
@@ -659,6 +656,4 @@ class Expectation(Loss):
         if dim:
             loss = loss.mean(dim=dim)
 
-        # 増えたsampleが外側に解放されても大丈夫か？
-        # 多分，iterativeLossのときに問題になるぞ -- ならない
         return loss, samples_dict

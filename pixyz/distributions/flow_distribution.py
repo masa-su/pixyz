@@ -24,11 +24,9 @@ class TransformedDistribution(Distribution):
         else:
             features_shape = torch.Size()
 
-        super().__init__(var=var, cond_var=prior.cond_var, name=name)
+        super().__init__(var=var, cond_var=prior.cond_var, name=name, features_shape=features_shape)
         self.prior = prior
         self.flow = flow  # FlowList
-        # TODO: features_shapeをDistributionから削除して良かったのか？
-        self.features_shape = features_shape
 
         self._flow_input_var = prior.var
 
@@ -62,12 +60,14 @@ class TransformedDistribution(Distribution):
     def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, compute_jacobian=True):
         # sample from the prior
         sample_dict = self.prior.sample(x_dict, sample_shape=sample_shape, return_all=return_all)
+        if len(sample_dict.sample_shape) > 1:
+            # TODO: sample shape of flow is not supported
+            raise NotImplementedError()
 
         # flow transformation
         _x = sample_dict[self.flow_input_var[0]]
         z = self.forward(_x, compute_jacobian=compute_jacobian)
-        # TODO: 断絶が起きているはず
-        output_dict = SampleDict({self.var[0]: z})
+        output_dict = SampleDict({self.var[0]: z}, sample_shape=sample_dict.sample_shape)
 
         if return_all:
             sample_dict.update(output_dict)
@@ -80,8 +80,7 @@ class TransformedDistribution(Distribution):
         log_prob_prior = self.prior.get_log_prob(x_dict)
 
         # flow
-        if compute_jacobian:
-            self.sample(x_dict, return_all=False, compute_jacobian=True)
+        self.sample(x_dict, return_all=False, compute_jacobian=compute_jacobian)
 
         return log_prob_prior - self.logdet_jacobian
 
@@ -148,16 +147,15 @@ class InverseTransformedDistribution(Distribution):
 
     """
 
-    def __init__(self, prior, flow, var, cond_var=[], name="p"):
+    def __init__(self, prior, flow, var, cond_var=(), name="p"):
         if flow.in_features:
             features_shape = [flow.in_features]
         else:
             features_shape = torch.Size()
 
-        super().__init__(var, cond_var=cond_var, name=name)
+        super().__init__(var, cond_var=cond_var, name=name, features_shape=features_shape)
         self.prior = prior
         self.flow = flow  # FlowList
-        self.features_shape = features_shape
 
         self._flow_output_var = prior.var
 
@@ -201,8 +199,7 @@ class InverseTransformedDistribution(Distribution):
         else:
             x = self.inverse(_z)
 
-        # TODO: 断絶の疑い
-        output_dict = SampleDict({self.var[0]: x})
+        output_dict = SampleDict({self.var[0]: x}, sample_shape=sample_dict.sample_shape)
 
         if return_all:
             sample_dict.update(output_dict)
@@ -221,8 +218,7 @@ class InverseTransformedDistribution(Distribution):
         else:
             z = self.forward(_x, compute_jacobian=compute_jacobian)
 
-        # TODO: 断絶の疑い
-        output_dict = SampleDict({self.flow_output_var[0]: z})
+        output_dict = SampleDict({self.flow_output_var[0]: z}, sample_shape=x_dict.sample_shape)
 
         if return_all:
             output_dict.update(x_dict)

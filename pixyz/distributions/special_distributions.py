@@ -24,7 +24,7 @@ class Deterministic(Distribution):
     Network architecture:
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'],
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
         (model): Linear(in_features=64, out_features=512, bias=True)
       )
     >>> sample = p.sample({"z": torch.randn(1, 64)})
@@ -75,20 +75,29 @@ class DataDistribution(Distribution):
     Network architecture:
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'],
+        var=['x'], cond_var=[], input_var=['x'], features_shape=N/A
       )
     >>> sample = p.sample({"x": torch.randn(1, 64)})
     """
 
-    def __init__(self, var, name="p_{data}"):
+    def __init__(self, var, name="p_{data}", sample_dims=(0, 1)):
         super().__init__(var=var, cond_var=[], name=name)
+        self.sample_dims = sample_dims
 
     @property
     def distribution_name(self):
         return "Data distribution"
 
     def sample(self, x_dict=None, **kwargs):
-        output_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
+        x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
+        sample_shape = [1] * self.sample_dims[1]
+        for value in x_dict.values():
+            for i, dim in enumerate(value.shape[:self.sample_dims[1]]):
+                if dim != 1 and dim != sample_shape[i]:
+                    if sample_shape[i] != 1:
+                        raise ValueError("given data has multiple sample shape.")
+                    sample_shape[i] = dim
+        output_dict = SampleDict(dict(x_dict), sample_shape=sample_shape)
         return output_dict
 
     def sample_mean(self, x_dict):

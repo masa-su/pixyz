@@ -19,7 +19,7 @@ class ML(Model):
         """
         Parameters
         ----------
-        p : torch.distributions.Distribution
+        p : pixyz.distributions.Distribution
             Classifier (distribution).
         optimizer : torch.optim
             Optimization algorithm.

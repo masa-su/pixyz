@@ -1,8 +1,8 @@
 import sympy
 from torch import optim, nn
 import torch
-from .losses import Loss
-from ..distributions import SampleDict
+from pixyz.losses.losses import Loss
+from pixyz.distributions import SampleDict
 
 
 class AdversarialLoss(Loss):
@@ -27,20 +27,15 @@ class AdversarialLoss(Loss):
         params = discriminator.parameters()
         self.d_optimizer = optimizer(params, **optimizer_params)
 
-    def _get_batch_shape(self, x_dict: SampleDict):
-        return x_dict.sample_shape
-
-    def d_loss(self, y_p, y_q):
+    def d_loss(self, y_p_dict, y_q_dict):
         """Evaluate a discriminator loss given outputs of the discriminator.
 
         Parameters
         ----------
-        y_p : torch.Tensor
+        y_p_dict : SampleDict
             Output of discriminator given sample from p.
-        y_q : torch.Tensor
+        y_q_dict : SampleDict
             Output of discriminator given sample from q.
-        batch_n : int
-            Batch size of inputs.
 
         Returns
         -------
@@ -49,17 +44,15 @@ class AdversarialLoss(Loss):
         """
         raise NotImplementedError()
 
-    def g_loss(self, y_p, y_q):
+    def g_loss(self, y_p_dict, y_q_dict):
         """Evaluate a generator loss given outputs of the discriminator.
 
         Parameters
         ----------
-        y_p : torch.Tensor
+        y_p_dict : SampleDict
             Output of discriminator given sample from p.
-        y_q : torch.Tensor
+        y_q_dict : SampleDict
             Output of discriminator given sample from q.
-        batch_n : int
-            Batch size of inputs.
 
         Returns
         -------
@@ -86,7 +79,7 @@ class AdversarialLoss(Loss):
         self.d.train()
 
         self.d_optimizer.zero_grad()
-        loss = self.eval(train_x_dict, discriminator=True)
+        loss = self.eval(train_x_dict, discriminator=True).mean()
 
         # backprop
         loss.backward()
@@ -114,7 +107,7 @@ class AdversarialLoss(Loss):
         self.d.eval()
 
         with torch.no_grad():
-            loss = self.eval(test_x_dict, discriminator=True)
+            loss = self.eval(test_x_dict, discriminator=True).mean()
 
         return loss
 
@@ -160,7 +153,7 @@ class AdversarialJensenShannon(AdversarialLoss):
       )
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'],
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -171,7 +164,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     Network architecture:
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'],
+        var=['x'], cond_var=[], input_var=['x'], features_shape=N/A
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -187,7 +180,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     Network architecture:
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'],
+        var=['t'], cond_var=['x'], input_var=['x'], features_shape=N/A
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -218,8 +211,17 @@ class AdversarialJensenShannon(AdversarialLoss):
                          input_var=input_var,
                          optimizer=optimizer, optimizer_params=optimizer_params)
 
-        self.bce_loss = nn.BCELoss()
+        self._bce_loss = nn.BCELoss(reduction='none')
         self._inverse_g_loss = inverse_g_loss
+
+    def bce_loss(self, x, y, sample_shape):
+        features_shape = x.shape[len(sample_shape):]
+        loss = self._bce_loss(x.reshape(-1, *features_shape), y.reshape(-1, *features_shape))
+        if sample_shape:
+            loss = loss.reshape(*sample_shape)
+        else:
+            loss = loss.squeeze(0).squeeze(-1)
+        return loss
 
     @property
     def _symbol(self):
@@ -227,48 +229,47 @@ class AdversarialJensenShannon(AdversarialLoss):
                                                                                    self.q.prob_text))
 
     def _get_eval(self, x_dict: SampleDict, discriminator=False, **kwargs):
-        # batch_n = self._get_batch_n(x_dict)
-
         # sample x_p from p
         x_p_dict = self.p.sample(x_dict).from_variables(self.d.input_var)
         # sample x_q from q
         x_q_dict = self.q.sample(x_dict).from_variables(self.d.input_var)
         if discriminator:
             # sample y_p from d
-            y_p = self.d.sample(x_p_dict.detach())[self.d.var[0]]
+            y_p_dict = self.d.sample(x_p_dict.detach(), return_all=False)
             # sample y_q from d
-            y_q = self.d.sample(x_q_dict.detach())[self.d.var[0]]
+            y_q_dict = self.d.sample(x_q_dict.detach(), return_all=False)
 
-            return self.d_loss(y_p, y_q), x_dict
+            return self.d_loss(y_p_dict, y_q_dict), x_dict
 
         # sample y_p from d
-        y_p_dict = self.d.sample(x_p_dict)
+        y_p_dict = self.d.sample(x_p_dict, return_all=False)
         # sample y_q from d
-        y_q_dict = self.d.sample(x_q_dict)
+        y_q_dict = self.d.sample(x_q_dict, return_all=False)
 
+        return self.g_loss(y_p_dict, y_q_dict), x_dict
+
+    def d_loss(self, y_p_dict, y_q_dict):
         y_p = y_p_dict[self.d.var[0]]
         y_q = y_q_dict[self.d.var[0]]
-
-        return self.g_loss(y_p, y_q), x_dict
-
-    def d_loss(self, y_p, y_q):
         # set labels
         t_p = torch.ones_like(y_p).to(y_p.device)
-        t_q = torch.zeros_like(y_p).to(y_p.device)
+        t_q = torch.zeros_like(y_q).to(y_q.device)
 
-        return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
+        return self.bce_loss(y_p, t_p, y_p_dict.sample_shape) + self.bce_loss(y_q, t_q, y_q_dict.sample_shape)
 
-    def g_loss(self, y_p, y_q):
+    def g_loss(self, y_p_dict, y_q_dict):
+        y_p = y_p_dict[self.d.var[0]]
+        y_q = y_q_dict[self.d.var[0]]
         # set labels
         t1 = torch.ones_like(y_p).to(y_p.device)
-        t2 = torch.zeros_like(y_p).to(y_p.device)
+        t2 = torch.zeros_like(y_q).to(y_q.device)
 
         if self._inverse_g_loss:
-            y_p_loss = self.bce_loss(y_p, t2)
-            y_q_loss = self.bce_loss(y_q, t1)
+            y_p_loss = self.bce_loss(y_p, t2, y_p_dict.sample_shape)
+            y_q_loss = self.bce_loss(y_q, t1, y_q_dict.sample_shape)
         else:
-            y_p_loss = -self.bce_loss(y_p, t1)
-            y_q_loss = -self.bce_loss(y_q, t2)
+            y_p_loss = -self.bce_loss(y_p, t1, y_p_dict.sample_shape)
+            y_q_loss = -self.bce_loss(y_q, t2, y_q_dict.sample_shape)
 
         if self.p.distribution_name == "Data distribution":
             y_p_loss = y_p_loss.detach()
@@ -325,7 +326,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
       )
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'],
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -336,7 +337,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Network architecture:
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'],
+        var=['x'], cond_var=[], input_var=['x'], features_shape=N/A
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -352,7 +353,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Network architecture:
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'],
+        var=['t'], cond_var=['x'], input_var=['x'], features_shape=N/A
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -380,7 +381,16 @@ class AdversarialKullbackLeibler(AdversarialLoss):
 
     def __init__(self, p, q, discriminator, **kwargs):
         super().__init__(p, q, discriminator, **kwargs)
-        self.bce_loss = nn.BCELoss()
+        self._bce_loss = nn.BCELoss(reduction="none")
+
+    def bce_loss(self, x, y, sample_shape):
+        features_shape = x.shape[len(sample_shape):]
+        loss = self._bce_loss(x.reshape(-1, *features_shape), y.reshape(-1, *features_shape))
+        if sample_shape:
+            loss = loss.reshape(*sample_shape)
+        else:
+            loss = loss.squeeze(0).squeeze(-1)
+        return loss
 
     @property
     def _symbol(self):
@@ -388,8 +398,6 @@ class AdversarialKullbackLeibler(AdversarialLoss):
                                                                                    self.q.prob_text))
 
     def _get_eval(self, x_dict: SampleDict, discriminator=False, **kwargs):
-        # batch_shape = self._get_batch_shape(x_dict)
-
         # sample x_p from p
         x_p_dict = self.p.sample(x_dict).from_variables(self.d.input_var)
 
@@ -398,48 +406,50 @@ class AdversarialKullbackLeibler(AdversarialLoss):
             x_q_dict = self.q.sample(x_dict).from_variables(self.d.input_var)
 
             # sample y_p from d
-            y_p = self.d.sample(x_p_dict.detach())[self.d.var[0]]
+            y_p = self.d.sample(x_p_dict.detach(), return_all=False)
             # sample y_q from d
-            y_q = self.d.sample(x_q_dict.detach())[self.d.var[0]]
+            y_q = self.d.sample(x_q_dict.detach(), return_all=False)
 
             return self.d_loss(y_p, y_q), x_dict
 
         # sample y from d
-        y_p = self.d.sample(x_p_dict)[self.d.var[0]]
+        y_p = self.d.sample(x_p_dict, return_all=False)
 
         return self.g_loss(y_p), x_dict
 
-    def g_loss(self, y_p):
+    def g_loss(self, y_p_dict):
         """Evaluate a generator loss given an output of the discriminator.
 
         Parameters
         ----------
-        y_p : torch.Tensor
+        y_p_dict : SampleDict
             Output of discriminator given sample from p.
-        batch_n : int
-            Batch size of inputs.
 
         Returns
         -------
         torch.Tensor
 
         """
+        y_p = y_p_dict[self.d.var[0]]
         # label_shape = list(batch_shape) + [1]
         # set labels
         t_p = torch.ones_like(y_p).to(y_p.device)
         t_q = torch.zeros_like(y_p).to(y_p.device)
 
-        y_p_loss = -self.bce_loss(y_p, t_p) + self.bce_loss(y_p, t_q)  # log (y_p) - log (1 - y_p)
+        y_p_loss = -self.bce_loss(y_p, t_p, y_p_dict.sample_shape) + self.bce_loss(
+            y_p, t_q, y_p_dict.sample_shape)  # log (y_p) - log (1 - y_p)
 
         return y_p_loss
 
-    def d_loss(self, y_p, y_q):
+    def d_loss(self, y_p_dict, y_q_dict):
+        y_p = y_p_dict[self.d.var[0]]
+        y_q = y_q_dict[self.d.var[0]]
         # label_shape = list(batch_shape) + [1]
         # set labels
         t_p = torch.ones_like(y_p).to(y_p.device)
         t_q = torch.zeros_like(y_p).to(y_p.device)
 
-        return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
+        return self.bce_loss(y_p, t_p, y_p_dict.sample_shape) + self.bce_loss(y_q, t_q, y_q_dict.sample_shape)
 
     def train(self, train_x_dict, **kwargs):
         return super().train(train_x_dict, **kwargs)
@@ -483,7 +493,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
       )
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'],
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=N/A
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -494,7 +504,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Network architecture:
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'],
+        var=['x'], cond_var=[], input_var=['x'], features_shape=N/A
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -510,7 +520,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Network architecture:
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'],
+        var=['t'], cond_var=['x'], input_var=['x'], features_shape=N/A
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -544,16 +554,27 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     def _symbol(self):
         return sympy.Symbol("mean(W^{{Adv}} \\left({}, {} \\right))".format(self.p.prob_text, self.q.prob_text))
 
-    def d_loss(self, y_p, y_q, *args, **kwargs):
-        return - (torch.mean(y_p) - torch.mean(y_q))
+    def _mean_over_features(self, dict_: SampleDict):
+        target = dict_[self.d.var[0]]
+        dim = list(range(*dict_.features_dims(self.d.var[0])))
+        if dim:
+            mean = torch.mean(target, dim=dim)
+        else:
+            mean = target
+        return mean
 
-    def g_loss(self, y_p, y_q, *args, **kwargs):
+    def d_loss(self, y_p_dict, y_q_dict):
+        return - (self._mean_over_features(y_p_dict) - self._mean_over_features(y_q_dict))
+
+    def g_loss(self, y_p_dict, y_q_dict):
+        mean_p = self._mean_over_features(y_p_dict)
+        mean_q = self._mean_over_features(y_q_dict)
         if self.p.distribution_name == "Data distribution":
-            y_p = y_p.detach()
+            mean_p = mean_p.detach()
 
         if self.q.distribution_name == "Data distribution":
-            y_q = y_q.detach()
-        return torch.mean(y_p) - torch.mean(y_q)
+            mean_q = mean_q.detach()
+        return mean_p - mean_q
 
     def train(self, train_x_dict, **kwargs):
         loss = super().train(train_x_dict, **kwargs)
