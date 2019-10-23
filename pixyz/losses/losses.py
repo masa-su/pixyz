@@ -628,10 +628,13 @@ class Expectation(Loss):
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP
     tensor([-12.8181, -12.6062])
+    >>> loss_cls = LogProb(p).expectation(q, sample_shape=(5,)) # equals to Expectation(q, LogProb(p))
+    >>> loss = loss_cls.eval({"x": sample_x})
+    >>> print(loss) # doctest: +SKIP
 
     """
 
-    def __init__(self, p, f, input_var=None, sample_shape=torch.Size()):
+    def __init__(self, p, f, input_var=None, sample_shape=torch.Size([1])):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
@@ -646,12 +649,13 @@ class Expectation(Loss):
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
     def _get_eval(self, x_dict={}, **kwargs):
-        samples_dict = self.p.sample(x_dict, sample_shape=self.sample_shape, reparam=True, return_all=True)
+        samples_dicts = [self.p.sample(x_dict, reparam=True, return_all=True) for i in range(self.sample_shape.numel())]
 
-        loss, loss_sample_dict = self._f.eval(samples_dict, return_dict=True, **kwargs)  # TODO: eval or _get_eval
-        samples_dict.update(loss_sample_dict)
-
+        loss_and_dicts = [self._f.eval(samples_dict, return_dict=True, **kwargs) for
+                          samples_dict in samples_dicts]  # TODO: eval or _get_eval
+        losses = [loss for loss, loss_sample_dict in loss_and_dicts]
         # sum over sample_shape
-        loss = loss.view(self.sample_shape.numel(), -1).mean(dim=0)
+        loss = torch.stack(losses).mean(dim=0)
+        samples_dicts[0].update(loss_and_dicts[0][1])
 
-        return loss, samples_dict
+        return loss, samples_dicts[0]
