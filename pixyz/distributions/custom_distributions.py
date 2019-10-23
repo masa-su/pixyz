@@ -55,7 +55,7 @@ class CustomProb(Distribution):
     def distribution_name(self):
         return self._distribution_name
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self.cond_var)
         x_dict = x_dict.from_variables(self._var)
         log_prob = self.log_prob_function(**x_dict)

@@ -144,12 +144,12 @@ class MixtureModel(Distribution):
         if len(sample_shape) > 1:
             raise NotImplementedError
         # sample from prior
-        hidden_output = self.prior.sample(sample_shape=sample_shape)[self._hidden_var[0]]
+        hidden_output = self.prior.sample(sample_shape=sample_shape, **kwargs)[self._hidden_var[0]]
 
         var_output = []
         # sample from selected distribution for each item of batch
         for _hidden_output in hidden_output:
-            var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample()[self._var[0]])
+            var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample(**kwargs)[self._var[0]])
 
         var_output = torch.cat(var_output, dim=0)
         output_dict = SampleDict({self._var[0]: var_output}, sample_shape=sample_shape)
@@ -159,7 +159,7 @@ class MixtureModel(Distribution):
 
         return output_dict
 
-    def get_log_prob(self, x_dict, return_hidden=False):
+    def get_log_prob(self, x_dict, return_hidden=False, **kwargs):
         """Evaluate log-pdf, log p(x) (if return_hidden=False) or log p(x, z) (if return_hidden=True).
 
         Parameters
@@ -189,9 +189,9 @@ class MixtureModel(Distribution):
 
         for i, d in enumerate(self.distributions):
             # p(z=i)
-            prior_log_prob = self.prior.log_prob().eval({self._hidden_var[0]: eye_tensor[i]})
+            prior_log_prob = self.prior.log_prob(**kwargs).eval({self._hidden_var[0]: eye_tensor[i]})
             # p(x|z=i)
-            log_prob = d.log_prob().eval(x_dict)
+            log_prob = d.log_prob(**kwargs).eval(x_dict)
             # p(x, z=i)
             log_prob_all.append(log_prob + prior_log_prob)
 
@@ -240,7 +240,8 @@ class PosteriorMixtureModel(Distribution):
     def sample(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         # log p(z|x) = log p(x, z) - log p(x)
-        log_prob = self.p.get_log_prob(x_dict, return_hidden=True) - self.p.get_log_prob(x_dict).unsqueeze(-1)
+        log_prob = self.p.get_log_prob(x_dict, return_hidden=True, **kwargs
+                                       ) - self.p.get_log_prob(x_dict, **kwargs).unsqueeze(-1)
         return log_prob  # (sample_shape, num_mix)

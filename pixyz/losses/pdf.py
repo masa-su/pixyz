@@ -28,16 +28,19 @@ class LogProb(Loss):
 
     """
 
-    def __init__(self, p):
+    def __init__(self, p, **kwargs):
         input_var = p.var + p.cond_var
         super().__init__(p, input_var=input_var)
+        self.default_kwargs = kwargs
 
     @property
     def _symbol(self):
         return sympy.Symbol("\\log {}".format(self.p.prob_text))
 
     def _get_eval(self, x: SampleDict, **kwargs):
-        log_prob = self.p.get_log_prob(x)
+        _kwargs = self.default_kwargs.copy()
+        _kwargs.update(kwargs)
+        log_prob = self.p.get_log_prob(x, **_kwargs)
         return log_prob, x
 
 
@@ -69,5 +72,7 @@ class Prob(LogProb):
         return sympy.Symbol(self.p.prob_text)
 
     def _get_eval(self, x: SampleDict, **kwargs):
-        log_prob, x = super()._get_eval(x, **kwargs)
+        _kwargs = self.default_kwargs.copy()
+        _kwargs.update(kwargs)
+        log_prob, x = super()._get_eval(x, **_kwargs)
         return torch.exp(log_prob), x

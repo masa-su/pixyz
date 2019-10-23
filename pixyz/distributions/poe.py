@@ -158,7 +158,6 @@ class ProductOfNormal(Normal):
         if len(params_dict) > 0:
             loc, scale = self._get_expert_params(params_dict, **kwargs)  # (n_expert, sapmle_shape, output_dim)
         else:
-            # TODO: gpuに載せなくて大丈夫か？
             loc = torch.zeros(1)
             scale = torch.zeros(1)
 
@@ -207,7 +206,7 @@ class ProductOfNormal(Normal):
 
         return output_loc, torch.sqrt(output_variance)
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         x_dict = SampleDict.from_arg(x_dict)
         sample_shape = torch.Size(sample_shape)
 
@@ -228,7 +227,7 @@ class ProductOfNormal(Normal):
     def prob(self):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         raise NotImplementedError()
 
 
@@ -304,8 +303,8 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
         super().__init__(p=p, name=name, features_shape=features_shape)
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
-        return super(ProductOfNormal, self).sample(x_dict, sample_shape, return_all, reparam)
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
+        return super(ProductOfNormal, self).sample(x_dict, sample_shape, return_all, reparam, **kwargs)
 
     @staticmethod
     def _get_mask(inputs, index):
@@ -321,7 +320,6 @@ class ElementWiseProductOfNormal(ProductOfNormal):
         torch.Tensor
 
         """
-        # TODO: device指定しなくて大丈夫か？
         mask = torch.zeros_like(inputs).type(inputs.dtype)
         mask[(slice(None),) * (mask.dim() - 1) + (index,)] = 1
         return mask
@@ -362,7 +360,6 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
         """
         mask = self._get_mask(inputs, index)  # (sample_shape, n_expert)
-        # TODO: sample_shapeは結局必要ないかもしれない
         outputs_dict = self.p.get_params(SampleDict({self.cond_var[0]: inputs * mask}, sample_shape))
         outputs = torch.stack([outputs_dict["loc"], outputs_dict["scale"]])  # (2, sample_shape, output_dim)
 

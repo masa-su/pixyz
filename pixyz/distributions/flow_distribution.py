@@ -57,11 +57,11 @@ class TransformedDistribution(Distribution):
         """
         return self.flow.logdet_jacobian
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, compute_jacobian=True):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               compute_jacobian=True, **kwargs):
         # sample from the prior
         sample_dict = self.prior.sample(x_dict, sample_shape=sample_shape, return_all=return_all)
         if len(sample_dict.sample_shape) > 1:
-            # TODO: sample shape of flow is not supported
             raise NotImplementedError()
 
         # flow transformation
@@ -75,9 +75,9 @@ class TransformedDistribution(Distribution):
 
         return output_dict
 
-    def get_log_prob(self, x_dict, compute_jacobian=False):
+    def get_log_prob(self, x_dict, compute_jacobian=False, **kwargs):
         # prior
-        log_prob_prior = self.prior.get_log_prob(x_dict)
+        log_prob_prior = self.prior.get_log_prob(x_dict, **kwargs)
 
         # flow
         self.sample(x_dict, return_all=False, compute_jacobian=compute_jacobian)
@@ -186,9 +186,9 @@ class InverseTransformedDistribution(Distribution):
         """
         return self.flow.logdet_jacobian
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, sample_shape=sample_shape, return_all=return_all)
+        sample_dict = self.prior.sample(x_dict, sample_shape=sample_shape, return_all=return_all, **kwargs)
 
         # inverse flow transformation
         _z = sample_dict[self.flow_output_var[0]]
@@ -225,12 +225,12 @@ class InverseTransformedDistribution(Distribution):
 
         return output_dict
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         # flow
         output_dict = self.inference(x_dict, return_all=True, compute_jacobian=True)
 
         # prior
-        log_prob_prior = self.prior.get_log_prob(output_dict)
+        log_prob_prior = self.prior.get_log_prob(output_dict, **kwargs)
 
         return log_prob_prior + self.logdet_jacobian
 

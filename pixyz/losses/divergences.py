@@ -51,7 +51,7 @@ class KullbackLeibler(Loss):
 
         divergence = kl_divergence(self.p.dist, self.q.dist)
 
-        dim = list(torch.arange(divergence.ndim))[len(x_dict.sample_shape):]
+        dim = list(range(*x_dict.features_dims(divergence)))
         if dim:
             divergence = torch.sum(divergence, dim=dim)
         return divergence, x_dict

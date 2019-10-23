@@ -75,10 +75,10 @@ class RelaxedBernoulli(Bernoulli):
         else:
             super().set_dist(x_dict, **dist_options)
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         tmp = self.relaxing
         self.relaxing = True
-        result = super().sample(x_dict, sample_shape, return_all, reparam)
+        result = super().sample(x_dict, sample_shape, return_all, reparam, **kwargs)
         self.relaxing = tmp
         return result
 
@@ -111,7 +111,7 @@ class FactorizedBernoulli(Bernoulli):
     def distribution_name(self):
         return "FactorizedBernoulli"
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self._cond_var)
         _x_dict = x_dict.from_variables(self._cond_var)
         self.set_dist(_x_dict)
@@ -119,7 +119,6 @@ class FactorizedBernoulli(Bernoulli):
         x_target = x_dict[self.var[0]]
         log_prob = self.dist.log_prob(x_target)
         log_prob[x_target == 0] = 0
-        # TODO: (facotrized dim = iid dim)か確かめる
         # sum over a factorized dim
         start, end = x_dict.features_dims(self.var[0])
         end = min(end, log_prob.ndim)
@@ -175,10 +174,10 @@ class RelaxedCategorical(Categorical):
         else:
             super().set_dist(x_dict, **dist_options)
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         tmp = self.relaxing
         self.relaxing = True
-        result = super().sample(x_dict, sample_shape, return_all, reparam)
+        result = super().sample(x_dict, sample_shape, return_all, reparam, **kwargs)
         self.relaxing = tmp
         return result
 

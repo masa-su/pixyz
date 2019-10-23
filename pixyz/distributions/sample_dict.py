@@ -5,10 +5,9 @@ from itertools import chain
 import torch
 
 
-# TODO: 過去のpixyzコードからkwargsを調べ，実際に使用していた拡張引数をチェックする
 class SampleDict(dict):
     """
-    Container class of sampled values. Each value has info of meaning of shapes.
+    Container class of sampled values. Container has info of sample shape (& features shape).
 
     Examples
     --------
@@ -51,6 +50,7 @@ class SampleDict(dict):
         Parameters
         ----------
         variables : Mapping of str and torch.Tensor or Mapping of str and Sample or SampleDict
+        sample_shape : Iterable or torch.Size
 
         Examples
         --------
@@ -120,7 +120,6 @@ class SampleDict(dict):
         SampleDict._check_dict_type(dict_)
         return dict_.sample_shape
 
-    # TODO: 登録されていない新変数についてのfeatures_dimsを必要としていた部分を置き換える
     def features_dims(self, var):
         if isinstance(var, str):
             var = self[var]
@@ -322,18 +321,16 @@ class SampleDict(dict):
 
     @staticmethod
     def split_(dict_, keys):
-        """ Replace values in `dicts` according to :attr:`replace_list_dict`.
-
-        Replaced dict is splitted by :attr:`replaced_dict` and :attr:`remain_dict`.
+        """ Splitted dictionaries by :attr:`keys`.
 
         Parameters
         ----------
-        dict_ : dict
+        dict_ : dict or SampleDict or None
             Dictionary.
 
         Returns
         -------
-        replaced_dict : SampleDict
+        dict_with_keys : SampleDict
             Dictionary.
         remain_dict : SampleDict
             Dictionary.
@@ -347,8 +344,6 @@ class SampleDict(dict):
         >>> print((replaced, remain))
         ({'loc': tensor(0.)} --(sample_shape=[]), {'b': tensor(1.)} --(sample_shape=[]))
         """
-        # TODO: コメントがまだコピペ
-        # return {key if key not in diff_dict else diff_dict[key]: value for key, value in dict.items()}
         dict_ = SampleDict.from_arg(dict_)
         return dict_.split(keys)
 

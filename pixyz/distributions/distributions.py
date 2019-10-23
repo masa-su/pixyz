@@ -169,7 +169,7 @@ class Distribution(nn.Module):
             raise Exception("features_shape is invalid.")
         return self._features_shape
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         """Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
 
@@ -245,7 +245,6 @@ class Distribution(nn.Module):
         raise NotImplementedError()
 
     def sample_mean(self, x_dict=None):
-        # TODO: -こちらにfeatures_shapeを含めるのは自然だが，iid指定となりエラー，バグを誘発するAPIとなっている -> パラメータがスカラーのときのみiid指定とする
         """Return the mean of the distribution.
 
         Parameters
@@ -306,7 +305,7 @@ class Distribution(nn.Module):
         """
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         """Giving variables, this method returns values of log-pdf.
 
         Parameters
@@ -517,6 +516,18 @@ class DistributionBase(Distribution):
     """Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class."""
 
     def __init__(self, cond_var=(), var=("x",), name="p", features_shape=None, **params_dict):
+        """
+        Parameters
+        ----------
+        cond_var
+        var
+        name
+        features_shape: torch.Size or list or None
+            if PytorchDistribution params is specified by only scalars,
+            features_shape defines the shape of iid distribution.
+            otherwise, features_shape is stored just as information.
+        params_dict
+        """
         super().__init__(cond_var=cond_var, var=var, name=name)
         if len(var) != 1:
             raise ValueError("multiple var distribution is not supported.")
@@ -616,7 +627,7 @@ class DistributionBase(Distribution):
             self._dist = self._dist.expand(input_sample_shape + self._dist.batch_shape[len(input_sample_shape):])
 
             # SampleDist.features_dims(params, self.var[0]) can not be used because params don't have self.var[0]
-            features_dims = (SampleDict.sample_dims_(params)[-1], None)
+            features_dims = (params.sample_dims[-1], None)
             self._features_shape = self._dist.batch_shape[slice(*features_dims)] + self._dist.event_shape
 
     def _get_sample(self, reparam=False, sample_shape=torch.Size()):
@@ -646,8 +657,7 @@ class DistributionBase(Distribution):
 
         return samples
 
-    # TODO: -本当はここにSampleDictやproduct_infoに関する知識を含めないことで拡張しやすくしたいが，難しい
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         """
         Parameters
         ----------
@@ -735,7 +745,6 @@ class DistributionBase(Distribution):
         return params_dict
 
     def get_entropy(self, x_dict=None):
-        # TODO: いくつかの派生先ではkwargsが使われていたのでチェックする
         x_dict = SampleDict.from_arg(x_dict, required_keys=self._cond_var)
         _x_dict = x_dict.from_variables(self._cond_var)
         self.set_dist(_x_dict)
@@ -746,11 +755,10 @@ class DistributionBase(Distribution):
         dim = list(range(features_dim_offset, entropy.ndim))
         if dim:
             entropy = entropy.sum(dim=dim)
-        # TODO: sum_featuresオプションをなくして（旧来実装の互換が）大丈夫だったか？
 
         return entropy
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         # check whether the input is valid or convert it to valid dictionary.
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         sample_shape = torch.Size(sample_shape)
@@ -917,26 +925,25 @@ class MultiplyDistribution(Distribution):
     def prob_factorized_text(self):
         return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         # sample from the parent distribution
         parents_x_dict = x_dict
         child_x_dict = self._parent.sample(x_dict=parents_x_dict, sample_shape=sample_shape,
-                                           return_all=True, reparam=reparam)
+                                           return_all=True, reparam=reparam, **kwargs)
         if not isinstance(child_x_dict, SampleDict):
             raise ValueError("result of sample must be a instance of SampleDict.")
 
-        output_dict = self._child.sample(x_dict=child_x_dict, return_all=True, reparam=reparam)
+        output_dict = self._child.sample(x_dict=child_x_dict, return_all=True, reparam=reparam, **kwargs)
         if not isinstance(output_dict, SampleDict):
             raise ValueError("result of sample must be a instance of SampleDict.")
-        # TODO: 連鎖部分では必ず型チェックする，数が多くなるようなら検討する-> 入力制限の法が良いかも
 
         return output_dict if return_all else output_dict.from_variables(self._var)
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self.cond_var)
-        parent_log_prob = self._parent.get_log_prob(x_dict)
-        child_log_prob = self._child.get_log_prob(x_dict)
+        parent_log_prob = self._parent.get_log_prob(x_dict, **kwargs)
+        child_log_prob = self._child.get_log_prob(x_dict, **kwargs)
 
         if parent_log_prob.size() == child_log_prob.size():
             return parent_log_prob + child_log_prob
@@ -1032,23 +1039,23 @@ class ReplaceVarDistribution(Distribution):
         x_dict = SampleDict.replaced_dict_(x_dict, self._replace_inv_cond_var_dict)
         return self.p.set_dist(x_dict=x_dict, relaxing=relaxing)
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
         input_dict = x_dict.from_variables(self.cond_var)
         replaced_input_dict = input_dict.replaced_dict(self._replace_inv_cond_var_dict)
 
         output_dict = self.p.sample(replaced_input_dict, sample_shape=sample_shape,
-                                    return_all=False, reparam=reparam)
+                                    return_all=False, reparam=reparam, **kwargs)
         output_dict = output_dict.replaced_dict(self._replace_dict)
 
         x_dict.update(output_dict)
         return x_dict
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, **kwargs):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.var + self.cond_var)
         input_dict = x_dict.from_variables(self.cond_var + self.var)
         input_dict = input_dict.dict_with_replaced_keys(self._replace_inv_dict)
-        return self.p.get_log_prob(input_dict)
+        return self.p.get_log_prob(input_dict, **kwargs)
 
     def sample_mean(self, x_dict=None):
         x_dict = SampleDict.from_arg(x_dict, required_keys=self.input_var)
@@ -1159,9 +1166,9 @@ class MarginalizeVarDistribution(Distribution):
     def get_params(self, params_dict=None):
         return self.p.get_params(params_dict)
 
-    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         output_dict = self.p.sample(x_dict=x_dict, sample_shape=sample_shape, return_all=return_all,
-                                    reparam=reparam)
+                                    reparam=reparam, **kwargs)
         _, output_dict = output_dict.split(self._marginalize_list)
 
         return output_dict
