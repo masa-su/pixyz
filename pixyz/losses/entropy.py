@@ -3,7 +3,7 @@ import sympy
 from .losses import Loss, SetLoss
 
 
-class Entropy(SetLoss):
+class EmpiricalEntropy(SetLoss):
     r"""
     Entropy (Monte Carlo approximation).
 
@@ -21,7 +21,7 @@ class Entropy(SetLoss):
     >>> import torch
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> loss_cls = Entropy(p)
+    >>> loss_cls = EmpiricalEntropy(p)
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log p(x) \right]
     >>> loss = loss_cls.eval()
@@ -35,7 +35,7 @@ class Entropy(SetLoss):
         super().__init__(loss)
 
 
-class AnalyticalEntropy(Loss):
+class Entropy(Loss):
     r"""
     Entropy (analytical).
 
@@ -48,7 +48,7 @@ class AnalyticalEntropy(Loss):
     >>> import torch
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> loss_cls = AnalyticalEntropy(p)
+    >>> loss_cls = Entropy(p)
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log p(x) \right]
     >>> loss = loss_cls.eval()
@@ -69,7 +69,7 @@ class AnalyticalEntropy(Loss):
         return entropy, x_dict
 
 
-class CrossEntropy(SetLoss):
+class EmpiricalCrossEntropy(SetLoss):
     r"""
     Cross entropy, a.k.a., the negative expected value of log-likelihood (Monte Carlo approximation).
 
@@ -88,7 +88,7 @@ class CrossEntropy(SetLoss):
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="p")
     >>> q = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="q")
-    >>> loss_cls = CrossEntropy(p, q)
+    >>> loss_cls = EmpiricalCrossEntropy(p, q)
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log q(x) \right]
     >>> loss = loss_cls.eval()
