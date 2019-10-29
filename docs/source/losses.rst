@@ -43,10 +43,17 @@ Expectation
 Entropy
 --------
 
-CrossEntropy
+EmpiricalCrossEntropy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: CrossEntropy
+.. autoclass:: EmpiricalCrossEntropy
+    :members:
+    :undoc-members:
+
+EmpiricalEntropy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: EmpiricalEntropy
     :members:
     :undoc-members:
 
@@ -54,13 +61,6 @@ Entropy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: Entropy
-    :members:
-    :undoc-members:
-
-AnalyticalEntropy
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: AnalyticalEntropy
     :members:
     :undoc-members:
 
@@ -83,6 +83,13 @@ ELBO
 
 Statistical distance
 ----------------------------
+
+EmpiricalKullbackLeibler
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: EmpiricalKullbackLeibler
+    :members:
+    :undoc-members:
 
 KullbackLeibler
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
