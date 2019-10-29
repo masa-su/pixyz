@@ -124,7 +124,7 @@ class FactorizedBernoulli(Bernoulli):
 
 class Categorical(DistributionBase):
     """Categorical distribution parameterized by :attr:`probs`."""
-    def __init__(self, probs, cond_var=[], var=['x'], name='p', features_shape=torch.Size()):
+    def __init__(self, cond_var=[], var=['x'], name='p', features_shape=torch.Size(), probs=None):
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape,
                          **_valid_param_dict({'probs': probs}))
 
