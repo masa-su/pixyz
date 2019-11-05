@@ -1,11 +1,12 @@
 import sympy
 
-from .losses import Loss, SetLoss
+from pixyz.losses.losses import Loss
+from pixyz.losses.divergences import KullbackLeibler
 
 
-class EmpiricalEntropy(SetLoss):
+def Entropy(p, input_var=None, analytical=True):
     r"""
-    Entropy (Monte Carlo approximation).
+    Entropy (Analytical or Monte Carlo approximation).
 
     .. math::
 
@@ -14,34 +15,7 @@ class EmpiricalEntropy(SetLoss):
     where :math:`x_l \sim p(x)`.
 
     Note:
-        This class is a special case of the :attr:`Expectation` class.
-
-    Examples
-    --------
-    >>> import torch
-    >>> from pixyz.distributions import Normal
-    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> loss_cls = EmpiricalEntropy(p)
-    >>> print(loss_cls)
-    - \mathbb{E}_{p(x)} \left[\log p(x) \right]
-    >>> loss = loss_cls.eval()
-    """
-
-    def __init__(self, p, input_var=None):
-        if input_var is None:
-            input_var = p.input_var
-
-        loss = -p.log_prob().expectation(p, input_var)
-        super().__init__(loss)
-
-
-class Entropy(Loss):
-    r"""
-    Entropy (analytical).
-
-    .. math::
-
-        H[p] = -\mathbb{E}_{p(x)}[\log p(x)]
+        This class is a special case of the :attr:`Expectation` class if analytical=False.
 
     Examples
     --------
@@ -50,14 +24,27 @@ class Entropy(Loss):
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
     >>> loss_cls = Entropy(p)
     >>> print(loss_cls)
+    H \left[ {p(x)} \right]
+    >>> loss = loss_cls.eval()
+    >>> loss_cls = Entropy(p, analytical=False)
+    >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log p(x) \right]
     >>> loss = loss_cls.eval()
     """
+    if analytical:
+        loss = AnalyticalEntropy(p, input_var=input_var)
+    else:
+        if input_var is None:
+            input_var = p.input_var
+        loss = -p.log_prob().expectation(p, input_var)
+    return loss
 
+
+class AnalyticalEntropy(Loss):
     @property
     def _symbol(self):
         p_text = "{" + self.p.prob_text + "}"
-        return sympy.Symbol("- \\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.p.log_prob().loss_text))
+        return sympy.Symbol(f"H \\left[ {p_text} \\right]")
 
     def _get_eval(self, x_dict, **kwargs):
         if not hasattr(self.p, 'distribution_torch_class'):
@@ -69,9 +56,9 @@ class Entropy(Loss):
         return entropy, x_dict
 
 
-class EmpiricalCrossEntropy(SetLoss):
+def CrossEntropy(p, q, input_var=None, analytical=False):
     r"""
-    Cross entropy, a.k.a., the negative expected value of log-likelihood (Monte Carlo approximation).
+    Cross entropy, a.k.a., the negative expected value of log-likelihood (Monte Carlo approximation or Analytical).
 
     .. math::
 
@@ -80,7 +67,7 @@ class EmpiricalCrossEntropy(SetLoss):
     where :math:`x_l \sim p(x)`.
 
     Note:
-        This class is a special case of the :attr:`Expectation` class.
+        This class is a special case of the :attr:`Expectation` class if analytical=False.
 
     Examples
     --------
@@ -88,21 +75,26 @@ class EmpiricalCrossEntropy(SetLoss):
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="p")
     >>> q = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="q")
-    >>> loss_cls = EmpiricalCrossEntropy(p, q)
+    >>> loss_cls = CrossEntropy(p, q)
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log q(x) \right]
     >>> loss = loss_cls.eval()
+    >>> loss_cls = CrossEntropy(p, q, analytical=True)
+    >>> print(loss_cls)
+    D_{KL} \left[p(x)||q(x) \right] + H \left[ {p(x)} \right]
+    >>> loss = loss_cls.eval()
     """
-
-    def __init__(self, p, q, input_var=None):
+    if analytical:
+        loss = Entropy(p) + KullbackLeibler(p, q)
+    else:
         if input_var is None:
             input_var = list(set(p.input_var + q.input_var) - set(p.var))
 
         loss = -q.log_prob().expectation(p, input_var)
-        super().__init__(loss)
+    return loss
 
 
-class StochasticReconstructionLoss(SetLoss):
+def StochasticReconstructionLoss(encoder, decoder, input_var=None):
     r"""
     Reconstruction Loss (Monte Carlo approximation).
 
@@ -126,17 +118,14 @@ class StochasticReconstructionLoss(SetLoss):
     - \mathbb{E}_{q(z|x)} \left[\log p(x|z) \right]
     >>> loss = loss_cls.eval({"x": torch.randn(1,64)})
     """
+    if input_var is None:
+        input_var = encoder.input_var
 
-    def __init__(self, encoder, decoder, input_var=None):
+    if not (set(decoder.var) <= set(input_var)):
+        raise ValueError("Variable {} (in the `{}` class) is not included"
+                         " in `input_var` of the `{}` class.".format(decoder.var,
+                                                                     decoder.__class__.__name__,
+                                                                     encoder.__class__.__name__))
 
-        if input_var is None:
-            input_var = encoder.input_var
-
-        if not(set(decoder.var) <= set(input_var)):
-            raise ValueError("Variable {} (in the `{}` class) is not included"
-                             " in `input_var` of the `{}` class.".format(decoder.var,
-                                                                         decoder.__class__.__name__,
-                                                                         encoder.__class__.__name__))
-
-        loss = -decoder.log_prob().expectation(encoder, input_var)
-        super().__init__(loss)
+    loss = -decoder.log_prob().expectation(encoder, input_var)
+    return loss

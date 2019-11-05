@@ -3,16 +3,20 @@ import torch
 from torch.distributions import kl_divergence
 
 from ..utils import get_dict_values
-from .losses import Loss, SetLoss
+from .losses import Loss
 
 
-class KullbackLeibler(Loss):
+def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True):
     r"""
-    Kullback-Leibler divergence (analytical).
+    Kullback-Leibler divergence (analytical or Monte Carlo Apploximation).
 
     .. math::
 
-        D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
+        D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}] \approx \frac{1}{L}\sum_{l=1}^L \log\frac{p(x_l)}{q(x_l)}
+    where :math:`x_l \sim p(x)`.
+
+    Note:
+        This class is a special case of the :attr:`Expectation` class if analytical=False.
 
     Examples
     --------
@@ -25,8 +29,22 @@ class KullbackLeibler(Loss):
     >>> print(loss_cls)
     D_{KL} \left[p(z)||q(z) \right]
     >>> loss = loss_cls.eval()
+    >>> loss_cls = KullbackLeibler(p, q, analytical=False)
+    >>> print(loss_cls)
+    \mathbb{E}_{p(z)} \left[\log p(z) - \log q(z) \right]
+    >>> loss = loss_cls.eval()
     """
+    if input_var is None:
+        input_var = p.input_var
 
+    if analytical:
+        loss = AnalyticalKullbackLeibler(p, q, input_var, dim)
+    else:
+        loss = (p.log_prob() - q.log_prob()).expectation(p, input_var)
+    return loss
+
+
+class AnalyticalKullbackLeibler(Loss):
     def __init__(self, p, q, input_var=None, dim=None):
         self.dim = dim
         super().__init__(p, q, input_var)
@@ -79,40 +97,6 @@ class KullbackLeibler(Loss):
             _kl = torch.sum(divergence, dim=self.dim)
             return divergence, x
         """
-
-
-class EmpiricalKullbackLeibler(SetLoss):
-    r"""
-    Kullback-Leibler divergence (Monte Carlo approximation).
-
-    .. math::
-
-        D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}] \approx \frac{1}{L}\sum_{l=1}^L \log\frac{p(x_l)}{q(x_l)}
-
-    where :math:`x_l \sim p(x)`.
-
-    Note:
-        This class is a special case of the :attr:`Expectation` class.
-
-    Examples
-    --------
-    >>> import torch
-    >>> from pixyz.distributions import Normal, Beta
-    >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["z"], features_shape=[64], name="p")
-    >>> q = Beta(concentration0=torch.tensor(1.), concentration1=torch.tensor(1.),
-    ...          var=["z"], features_shape=[64], name="q")
-    >>> loss_cls = EmpiricalKullbackLeibler(p, q)
-    >>> print(loss_cls)
-    \mathbb{E}_{p(z)} \left[\log p(z) - \log q(z) \right]
-    >>> loss = loss_cls.eval()
-    """
-
-    def __init__(self, p, q, input_var=None):
-        if input_var is None:
-            input_var = p.input_var
-
-        loss = (p.log_prob() - q.log_prob()).expectation(p, input_var)
-        super().__init__(loss)
 
 
 """

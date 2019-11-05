@@ -581,22 +581,6 @@ class BatchSum(LossSelfOperator):
         return loss.sum(), x_dict
 
 
-class SetLoss(Loss):
-    def __init__(self, loss):
-        self.loss = loss
-        self._input_var = loss.input_var
-
-    def __getattr__(self, name):
-        getattr(self.loss, name)
-
-    def _get_eval(self, x_dict, **kwargs):
-        return self.loss._get_eval(x_dict, **kwargs)
-
-    @property
-    def _symbol(self):
-        return self.loss._symbol
-
-
 class Expectation(Loss):
     r"""
     Expectation of a given function (Monte Carlo approximation).

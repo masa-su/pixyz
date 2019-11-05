@@ -1,7 +1,6 @@
-from .losses import SetLoss
 
 
-class ELBO(SetLoss):
+def ELBO(p, q, input_var=None):
     r"""
     The evidence lower bound (Monte Carlo approximation).
 
@@ -25,7 +24,5 @@ class ELBO(SetLoss):
     \mathbb{E}_{p(z|x)} \left[\log p(x|z) - \log p(z|x) \right]
     >>> loss = loss_cls.eval({"x": torch.randn(1, 64)})
     """
-    def __init__(self, p, q, input_var=None):
-
-        loss = (p.log_prob() - q.log_prob()).expectation(q, input_var)
-        super().__init__(loss)
+    loss = (p.log_prob() - q.log_prob()).expectation(q, input_var)
+    return loss
