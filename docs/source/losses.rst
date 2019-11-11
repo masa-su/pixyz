@@ -43,15 +43,15 @@ Expectation
 Entropy
 --------
 
-CrossEntropy
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autofunction:: CrossEntropy
-
 Entropy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autofunction:: Entropy
+
+CrossEntropy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: CrossEntropy
 
 StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

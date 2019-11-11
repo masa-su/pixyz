@@ -15,9 +15,6 @@ def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True):
         D_{KL}[p||q] &= \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}] \qquad \text{(analytical)}\\
         &\approx \frac{1}{L}\sum_{l=1}^L \log\frac{p(x_l)}{q(x_l)}, \quad \text{where} \quad  x_l \sim p(x) \quad \text{(MC approximation)}.
 
-    Note:
-        This class is a special case of the :attr:`Expectation` class if analytical=False.
-
     Examples
     --------
     >>> import torch

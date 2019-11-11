@@ -13,9 +13,6 @@ def Entropy(p, input_var=None, analytical=True):
         H[p] &= -\mathbb{E}_{p(x)}[\log p(x)] \qquad \text{(analytical)}\\
         &\approx -\frac{1}{L}\sum_{l=1}^L \log p(x_l), \quad \text{where} \quad x_l \sim p(x) \quad \text{(MC approximation)}.
 
-    Note:
-        This class is a special case of the :attr:`Expectation` class if analytical=False.
-
     Examples
     --------
     >>> import torch
@@ -64,9 +61,6 @@ def CrossEntropy(p, q, input_var=None, analytical=False):
 
         H[p||q] &= -\mathbb{E}_{p(x)}[\log q(x)] \qquad \text{(analytical)}\\
         &\approx -\frac{1}{L}\sum_{l=1}^L \log q(x_l), \quad \text{where} \quad x_l \sim p(x) \quad \text{(MC approximation)}.
-
-    Note:
-        This class is a special case of the :attr:`Expectation` class if analytical=False.
 
     Examples
     --------
