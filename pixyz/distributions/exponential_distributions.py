@@ -57,7 +57,7 @@ class Bernoulli(DistributionBase):
 class RelaxedBernoulli(Bernoulli):
     """Relaxed (re-parameterizable) Bernoulli distribution parameterized by :attr:`probs`."""
 
-    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", features_shape=torch.Size(),
+    def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), temperature=torch.tensor(0.1),
                  probs=None):
         self._temperature = temperature
 
@@ -144,7 +144,7 @@ class Categorical(DistributionBase):
 class RelaxedCategorical(Categorical):
     """Relaxed (re-parameterizable) categorical distribution parameterized by :attr:`probs`."""
 
-    def __init__(self, temperature=torch.tensor(0.1), cond_var=[], var=["x"], name="p", features_shape=torch.Size(),
+    def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), temperature=torch.tensor(0.1),
                  probs=None):
         self._temperature = temperature
 
