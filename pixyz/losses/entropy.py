@@ -10,7 +10,7 @@ def Entropy(p, input_var=None, analytical=True):
 
     .. math::
 
-        H[p] &= -\mathbb{E}_{p(x)}[\log p(x)] \qquad \text{(analytical)}\\
+        H(p) &= -\mathbb{E}_{p(x)}[\log p(x)] \qquad \text{(analytical)}\\
         &\approx -\frac{1}{L}\sum_{l=1}^L \log p(x_l), \quad \text{where} \quad x_l \sim p(x) \quad \text{(MC approximation)}.
 
     Examples
@@ -59,7 +59,7 @@ def CrossEntropy(p, q, input_var=None, analytical=False):
 
     .. math::
 
-        H[p||q] &= -\mathbb{E}_{p(x)}[\log q(x)] \qquad \text{(analytical)}\\
+        H(p,q) &= -\mathbb{E}_{p(x)}[\log q(x)] \qquad \text{(analytical)}\\
         &\approx -\frac{1}{L}\sum_{l=1}^L \log q(x_l), \quad \text{where} \quad x_l \sim p(x) \quad \text{(MC approximation)}.
 
     Examples
