@@ -26,7 +26,8 @@ def Entropy(p, input_var=None, analytical=True):
     >>> loss_cls = Entropy(p, analytical=False)
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log p(x) \right]
-    >>> loss = loss_cls.eval()
+    >>> loss_cls.eval() # doctest: +SKIP
+    tensor([99.1524])
     """
     if analytical:
         loss = AnalyticalEntropy(p, input_var=input_var)
@@ -76,7 +77,8 @@ def CrossEntropy(p, q, input_var=None, analytical=False):
     >>> loss_cls = CrossEntropy(p, q, analytical=False)
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log q(x) \right]
-    >>> loss = loss_cls.eval()
+    >>> loss_cls.eval() # doctest: +SKIP
+    tensor([127.1449])
     """
     if analytical:
         loss = Entropy(p) + KullbackLeibler(p, q)

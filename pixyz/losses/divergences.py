@@ -29,7 +29,8 @@ def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True):
     >>> loss_cls = KullbackLeibler(p, q, analytical=False)
     >>> print(loss_cls)
     \mathbb{E}_{p(z)} \left[\log p(z) - \log q(z) \right]
-    >>> loss = loss_cls.eval()
+    >>> loss_cls.eval() # doctest: +SKIP
+    tensor([29.1984])
     """
     if input_var is None:
         input_var = p.input_var
