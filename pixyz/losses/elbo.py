@@ -1,6 +1,7 @@
+import torch
 
 
-def ELBO(p, q, input_var=None):
+def ELBO(p, q, input_var=None, sample_shape=torch.Size([1])):
     r"""
     The evidence lower bound (Monte Carlo approximation).
 
@@ -23,5 +24,5 @@ def ELBO(p, q, input_var=None):
     \mathbb{E}_{p(z|x)} \left[\log p(x|z) - \log p(z|x) \right]
     >>> loss = loss_cls.eval({"x": torch.randn(1, 64)})
     """
-    loss = (p.log_prob() - q.log_prob()).expectation(q, input_var)
+    loss = (p.log_prob() - q.log_prob()).expectation(q, input_var, sample_shape=sample_shape)
     return loss

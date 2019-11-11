@@ -91,7 +91,7 @@ def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size
     return loss
 
 
-def StochasticReconstructionLoss(encoder, decoder, input_var=None):
+def StochasticReconstructionLoss(encoder, decoder, input_var=None, sample_shape=torch.Size([1])):
     r"""
     Reconstruction Loss (Monte Carlo approximation).
 
@@ -123,5 +123,5 @@ def StochasticReconstructionLoss(encoder, decoder, input_var=None):
                                                                      decoder.__class__.__name__,
                                                                      encoder.__class__.__name__))
 
-    loss = -decoder.log_prob().expectation(encoder, input_var)
+    loss = -decoder.log_prob().expectation(encoder, input_var, sample_shape=sample_shape)
     return loss
