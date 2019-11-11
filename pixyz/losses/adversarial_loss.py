@@ -291,8 +291,8 @@ class AdversarialKullbackLeibler(AdversarialLoss):
 
     .. math::
 
-        D_{KL}[p(x)||q(x)] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
-         \approx \mathbb{E}_{p(x)}[\log \frac{d^*(x)}{1-d^*(x)}],
+        D_{KL}[p(x)||q(x)] = \mathbb{E}_{p(x)}\left[\log \frac{p(x)}{q(x)}\right]
+         \approx \mathbb{E}_{p(x)}\left[\log \frac{d^*(x)}{1-d^*(x)}\right],
 
     where :math:`d^*(x) = \arg\max_{d} \mathbb{E}_{q(x)}[\log d(x)] + \mathbb{E}_{p(x)}[\log (1-d(x))]`.
 

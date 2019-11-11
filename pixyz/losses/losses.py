@@ -588,8 +588,7 @@ class Expectation(Loss):
     .. math::
 
         \mathbb{E}_{p(x)}[f(x)] \approx \frac{1}{L}\sum_{l=1}^L f(x_l),
-
-    where :math:`x_l \sim p(x)`.
+         \quad \text{where}\quad x_l \sim p(x).
 
     Note that :math:`f` doesn't need to be able to sample, which is known as the law of the unconscious statistician
     (LOTUS).

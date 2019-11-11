@@ -1,10 +1,11 @@
 import sympy
+import torch
 
 from pixyz.losses.losses import Loss
 from pixyz.losses.divergences import KullbackLeibler
 
 
-def Entropy(p, input_var=None, analytical=True):
+def Entropy(p, input_var=None, analytical=True, sample_shape=torch.Size([1])):
     r"""
     Entropy (Analytical or Monte Carlo approximation).
 
@@ -23,18 +24,18 @@ def Entropy(p, input_var=None, analytical=True):
     H \left[ {p(x)} \right]
     >>> loss_cls.eval()
     tensor([90.8121])
-    >>> loss_cls = Entropy(p, analytical=False)
+    >>> loss_cls = Entropy(p, analytical=False, sample_shape=[10])
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log p(x) \right]
     >>> loss_cls.eval() # doctest: +SKIP
-    tensor([99.1524])
+    tensor([90.5991])
     """
     if analytical:
         loss = AnalyticalEntropy(p, input_var=input_var)
     else:
         if input_var is None:
             input_var = p.input_var
-        loss = -p.log_prob().expectation(p, input_var)
+        loss = -p.log_prob().expectation(p, input_var, sample_shape=sample_shape)
     return loss
 
 
@@ -54,7 +55,7 @@ class AnalyticalEntropy(Loss):
         return entropy, x_dict
 
 
-def CrossEntropy(p, q, input_var=None, analytical=False):
+def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size([1])):
     r"""
     Cross entropy, a.k.a., the negative expected value of log-likelihood (Monte Carlo approximation or Analytical).
 
@@ -74,11 +75,11 @@ def CrossEntropy(p, q, input_var=None, analytical=False):
     D_{KL} \left[p(x)||q(x) \right] + H \left[ {p(x)} \right]
     >>> loss_cls.eval()
     tensor([122.8121])
-    >>> loss_cls = CrossEntropy(p, q, analytical=False)
+    >>> loss_cls = CrossEntropy(p, q, analytical=False, sample_shape=[10])
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log q(x) \right]
     >>> loss_cls.eval() # doctest: +SKIP
-    tensor([127.1449])
+    tensor([123.2192])
     """
     if analytical:
         loss = Entropy(p) + KullbackLeibler(p, q)
@@ -86,7 +87,7 @@ def CrossEntropy(p, q, input_var=None, analytical=False):
         if input_var is None:
             input_var = list(set(p.input_var + q.input_var) - set(p.var))
 
-        loss = -q.log_prob().expectation(p, input_var)
+        loss = -q.log_prob().expectation(p, input_var, sample_shape=sample_shape)
     return loss
 
 
@@ -97,8 +98,7 @@ def StochasticReconstructionLoss(encoder, decoder, input_var=None):
     .. math::
 
         -\mathbb{E}_{q(z|x)}[\log p(x|z)] \approx -\frac{1}{L}\sum_{l=1}^L \log p(x|z_l),
-
-    where :math:`z_l \sim q(z|x)`.
+         \quad \text{where} \quad z_l \sim q(z|x).
 
     Note:
         This class is a special case of the :attr:`Expectation` class.

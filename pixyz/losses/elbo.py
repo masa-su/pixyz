@@ -6,9 +6,8 @@ def ELBO(p, q, input_var=None):
 
     .. math::
 
-        \mathbb{E}_{q(z|x)}[\log \frac{p(x,z)}{q(z|x)}] \approx \frac{1}{L}\sum_{l=1}^L \log p(x, z_l),
-
-    where :math:`z_l \sim q(z|x)`.
+        \mathbb{E}_{q(z|x)}\left[\log \frac{p(x,z)}{q(z|x)}\right] \approx \frac{1}{L}\sum_{l=1}^L \log p(x, z_l),
+         \quad \text{where} \quad z_l \sim q(z|x).
 
     Note:
         This class is a special case of the :attr:`Expectation` class.
