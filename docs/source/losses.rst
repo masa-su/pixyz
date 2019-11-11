@@ -43,33 +43,20 @@ Expectation
 Entropy
 --------
 
-EmpiricalCrossEntropy
+CrossEntropy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: EmpiricalCrossEntropy
-    :members:
-    :undoc-members:
-
-EmpiricalEntropy
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: EmpiricalEntropy
-    :members:
-    :undoc-members:
+.. autofunction:: CrossEntropy
 
 Entropy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Entropy
-    :members:
-    :undoc-members:
+.. autofunction:: Entropy
 
 StochasticReconstructionLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: StochasticReconstructionLoss
-    :members:
-    :undoc-members:
+.. autofunction:: StochasticReconstructionLoss
 
 Lower bound
 ----------------------------
@@ -77,26 +64,15 @@ Lower bound
 ELBO
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: ELBO
-    :members:
-    :undoc-members:
+.. autofunction:: ELBO
 
 Statistical distance
 ----------------------------
 
-EmpiricalKullbackLeibler
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: EmpiricalKullbackLeibler
-    :members:
-    :undoc-members:
-
 KullbackLeibler
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: KullbackLeibler
-    :members:
-    :undoc-members:
+.. autofunction:: KullbackLeibler
 
 WassersteinDistance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -156,13 +132,6 @@ Parameter
 
 .. currentmodule:: pixyz.losses.losses
 .. autoclass:: Parameter
-    :members:
-    :undoc-members:
-
-SetLoss
-~~~~~~~~~~~
-
-.. autoclass:: SetLoss
     :members:
     :undoc-members:
 

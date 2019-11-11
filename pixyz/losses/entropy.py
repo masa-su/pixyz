@@ -10,9 +10,8 @@ def Entropy(p, input_var=None, analytical=True):
 
     .. math::
 
-        H[p] = -\mathbb{E}_{p(x)}[\log p(x)] \approx -\frac{1}{L}\sum_{l=1}^L \log p(x_l),
-
-    where :math:`x_l \sim p(x)`.
+        H[p] &= -\mathbb{E}_{p(x)}[\log p(x)] \qquad \text{(analytical)}\\
+        &\approx -\frac{1}{L}\sum_{l=1}^L \log p(x_l), \quad \text{where} \quad x_l \sim p(x) \quad \text{(MC approximation)}.
 
     Note:
         This class is a special case of the :attr:`Expectation` class if analytical=False.
@@ -22,10 +21,11 @@ def Entropy(p, input_var=None, analytical=True):
     >>> import torch
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> loss_cls = Entropy(p)
+    >>> loss_cls = Entropy(p, analytical=True)
     >>> print(loss_cls)
     H \left[ {p(x)} \right]
-    >>> loss = loss_cls.eval()
+    >>> loss_cls.eval()
+    tensor([90.8121])
     >>> loss_cls = Entropy(p, analytical=False)
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log p(x) \right]
@@ -62,9 +62,8 @@ def CrossEntropy(p, q, input_var=None, analytical=False):
 
     .. math::
 
-        H[p||q] = -\mathbb{E}_{p(x)}[\log q(x)] \approx -\frac{1}{L}\sum_{l=1}^L \log q(x_l),
-
-    where :math:`x_l \sim p(x)`.
+        H[p||q] &= -\mathbb{E}_{p(x)}[\log q(x)] \qquad \text{(analytical)}\\
+        &\approx -\frac{1}{L}\sum_{l=1}^L \log q(x_l), \quad \text{where} \quad x_l \sim p(x) \quad \text{(MC approximation)}.
 
     Note:
         This class is a special case of the :attr:`Expectation` class if analytical=False.
@@ -74,14 +73,15 @@ def CrossEntropy(p, q, input_var=None, analytical=False):
     >>> import torch
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="p")
-    >>> q = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="q")
-    >>> loss_cls = CrossEntropy(p, q)
-    >>> print(loss_cls)
-    - \mathbb{E}_{p(x)} \left[\log q(x) \right]
-    >>> loss = loss_cls.eval()
+    >>> q = Normal(loc=torch.tensor(1.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="q")
     >>> loss_cls = CrossEntropy(p, q, analytical=True)
     >>> print(loss_cls)
     D_{KL} \left[p(x)||q(x) \right] + H \left[ {p(x)} \right]
+    >>> loss_cls.eval()
+    tensor([122.8121])
+    >>> loss_cls = CrossEntropy(p, q, analytical=False)
+    >>> print(loss_cls)
+    - \mathbb{E}_{p(x)} \left[\log q(x) \right]
     >>> loss = loss_cls.eval()
     """
     if analytical:

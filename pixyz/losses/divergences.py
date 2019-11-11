@@ -12,8 +12,8 @@ def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True):
 
     .. math::
 
-        D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}] \approx \frac{1}{L}\sum_{l=1}^L \log\frac{p(x_l)}{q(x_l)}
-    where :math:`x_l \sim p(x)`.
+        D_{KL}[p||q] &= \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}] \qquad \text{(analytical)}\\
+        &\approx \frac{1}{L}\sum_{l=1}^L \log\frac{p(x_l)}{q(x_l)}, \quad \text{where} \quad  x_l \sim p(x) \quad \text{(MC approximation)}.
 
     Note:
         This class is a special case of the :attr:`Expectation` class if analytical=False.
@@ -23,12 +23,12 @@ def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True):
     >>> import torch
     >>> from pixyz.distributions import Normal, Beta
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["z"], features_shape=[64], name="p")
-    >>> q = Beta(concentration0=torch.tensor(1.), concentration1=torch.tensor(1.),
-    ...          var=["z"], features_shape=[64], name="q")
-    >>> loss_cls = KullbackLeibler(p, q)
+    >>> q = Normal(loc=torch.tensor(1.), scale=torch.tensor(1.), var=["z"], features_shape=[64], name="q")
+    >>> loss_cls = KullbackLeibler(p, q, analytical=True)
     >>> print(loss_cls)
     D_{KL} \left[p(z)||q(z) \right]
-    >>> loss = loss_cls.eval()
+    >>> loss_cls.eval()
+    tensor([32.])
     >>> loss_cls = KullbackLeibler(p, q, analytical=False)
     >>> print(loss_cls)
     \mathbb{E}_{p(z)} \left[\log p(z) - \log q(z) \right]
