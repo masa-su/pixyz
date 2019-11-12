@@ -3,9 +3,8 @@ from .divergences import (
 )
 
 from .entropy import (
-    CrossEntropy,
     Entropy,
-    AnalyticalEntropy,
+    CrossEntropy,
     StochasticReconstructionLoss,
 )
 
@@ -43,9 +42,8 @@ from .wasserstein import (
 
 __all__ = [
     'Parameter',
-    'CrossEntropy',
     'Entropy',
-    'AnalyticalEntropy',
+    'CrossEntropy',
     'StochasticReconstructionLoss',
     'Expectation',
     'KullbackLeibler',

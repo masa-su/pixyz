@@ -581,22 +581,6 @@ class BatchSum(LossSelfOperator):
         return loss.sum(), x_dict
 
 
-class SetLoss(Loss):
-    def __init__(self, loss):
-        self.loss = loss
-        self._input_var = loss.input_var
-
-    def __getattr__(self, name):
-        getattr(self.loss, name)
-
-    def _get_eval(self, x_dict, **kwargs):
-        return self.loss._get_eval(x_dict, **kwargs)
-
-    @property
-    def _symbol(self):
-        return self.loss._symbol
-
-
 class Expectation(Loss):
     r"""
     Expectation of a given function (Monte Carlo approximation).
@@ -604,8 +588,7 @@ class Expectation(Loss):
     .. math::
 
         \mathbb{E}_{p(x)}[f(x)] \approx \frac{1}{L}\sum_{l=1}^L f(x_l),
-
-    where :math:`x_l \sim p(x)`.
+         \quad \text{where}\quad x_l \sim p(x).
 
     Note that :math:`f` doesn't need to be able to sample, which is known as the law of the unconscious statistician
     (LOTUS).

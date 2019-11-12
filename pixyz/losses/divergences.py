@@ -6,27 +6,44 @@ from ..utils import get_dict_values
 from .losses import Loss
 
 
-class KullbackLeibler(Loss):
+def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True, sample_shape=torch.Size([1])):
     r"""
-    Kullback-Leibler divergence (analytical).
+    Kullback-Leibler divergence (analytical or Monte Carlo Apploximation).
 
     .. math::
 
-        D_{KL}[p||q] = \mathbb{E}_{p(x)}[\log \frac{p(x)}{q(x)}]
+        D_{KL}[p||q] &= \mathbb{E}_{p(x)}\left[\log \frac{p(x)}{q(x)}\right] \qquad \text{(analytical)}\\
+        &\approx \frac{1}{L}\sum_{l=1}^L \log\frac{p(x_l)}{q(x_l)},
+         \quad \text{where} \quad  x_l \sim p(x) \quad \text{(MC approximation)}.
 
     Examples
     --------
     >>> import torch
     >>> from pixyz.distributions import Normal, Beta
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["z"], features_shape=[64], name="p")
-    >>> q = Beta(concentration0=torch.tensor(1.), concentration1=torch.tensor(1.),
-    ...          var=["z"], features_shape=[64], name="q")
-    >>> loss_cls = KullbackLeibler(p, q)
+    >>> q = Normal(loc=torch.tensor(1.), scale=torch.tensor(1.), var=["z"], features_shape=[64], name="q")
+    >>> loss_cls = KullbackLeibler(p, q, analytical=True)
     >>> print(loss_cls)
     D_{KL} \left[p(z)||q(z) \right]
-    >>> loss = loss_cls.eval()
+    >>> loss_cls.eval()
+    tensor([32.])
+    >>> loss_cls = KullbackLeibler(p, q, analytical=False, sample_shape=[64])
+    >>> print(loss_cls)
+    \mathbb{E}_{p(z)} \left[\log p(z) - \log q(z) \right]
+    >>> loss_cls.eval() # doctest: +SKIP
+    tensor([31.4713])
     """
+    if input_var is None:
+        input_var = p.input_var
 
+    if analytical:
+        loss = AnalyticalKullbackLeibler(p, q, input_var, dim)
+    else:
+        loss = (p.log_prob() - q.log_prob()).expectation(p, input_var, sample_shape=sample_shape)
+    return loss
+
+
+class AnalyticalKullbackLeibler(Loss):
     def __init__(self, p, q, input_var=None, dim=None):
         self.dim = dim
         super().__init__(p, q, input_var)
