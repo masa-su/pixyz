@@ -631,11 +631,17 @@ class Expectation(Loss):
         p_text = "{" + self.p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        samples_dicts = [self.p.sample(x_dict, reparam=True, return_all=True) for i in range(self.sample_shape.numel())]
+    def _get_eval(self, x_dict={}, test_mode=False, **kwargs):
+        reparam = not test_mode and self.p.has_reparam
+        policy_grad = not test_mode and not self.p.has_reparam
+        samples_dicts = [self.p.sample(x_dict, reparam=reparam, return_all=True) for i in range(self.sample_shape.numel())]
 
         loss_and_dicts = [self._f.eval(samples_dict, return_dict=True, **kwargs) for
                           samples_dict in samples_dicts]  # TODO: eval or _get_eval
+        if policy_grad:
+            loss_and_dicts = [(loss.detach() * self.p.log_prob() + loss, loss_sample_dict)
+                              for loss, loss_sample_dict in loss_and_dicts]
+
         losses = [loss for loss, loss_sample_dict in loss_and_dicts]
         # sum over sample_shape
         loss = torch.stack(losses).mean(dim=0)

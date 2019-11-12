@@ -101,3 +101,7 @@ class DataDistribution(Distribution):
         """
 
         return self.var
+
+    @property
+    def has_reparam(self):
+        return True
