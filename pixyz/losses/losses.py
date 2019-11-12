@@ -598,7 +598,7 @@ class Expectation(Loss):
     Examples
     --------
     >>> import torch
-    >>> from pixyz.distributions import Normal
+    >>> from pixyz.distributions import Normal, Bernoulli
     >>> from pixyz.losses import LogProb
     >>> q = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"],
     ...            features_shape=[10]) # q(z|x)
@@ -611,9 +611,18 @@ class Expectation(Loss):
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP
     tensor([-12.8181, -12.6062])
-    >>> loss_cls = LogProb(p).expectation(q, sample_shape=(5,)) # equals to Expectation(q, LogProb(p))
+    >>> loss_cls = LogProb(p).expectation(q, sample_shape=(5,))
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP
+    >>> q = Bernoulli(probs=torch.tensor(0.5), var=["x"], cond_var=[], features_shape=[10]) # q(x)
+    >>> p = Bernoulli(probs=torch.tensor(0.3), var=["x"], cond_var=[], features_shape=[10]) # p(x)
+    >>> loss_cls = p.log_prob().expectation(q, sample_shape=[64])
+    >>> train_loss = loss_cls.eval()
+    >>> print(train_loss) # doctest: +SKIP
+    tensor([46.7559])
+    >>> eval_loss = loss_cls.eval(test_mode=True)
+    >>> print(eval_loss) # doctest: +SKIP
+    tensor([-7.6047])
 
     """
 
@@ -639,7 +648,7 @@ class Expectation(Loss):
         loss_and_dicts = [self._f.eval(samples_dict, return_dict=True, **kwargs) for
                           samples_dict in samples_dicts]  # TODO: eval or _get_eval
         if policy_grad:
-            loss_and_dicts = [(loss.detach() * self.p.log_prob() + loss, loss_sample_dict)
+            loss_and_dicts = [(loss.detach() * self.p.log_prob().eval(loss_sample_dict) + loss, loss_sample_dict)
                               for loss, loss_sample_dict in loss_and_dicts]
 
         losses = [loss for loss, loss_sample_dict in loss_and_dicts]
