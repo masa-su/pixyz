@@ -26,7 +26,7 @@ from .adversarial_loss import (
 from .losses import (
     Parameter,
     Expectation,
-    PolicyGradLoss,
+    REINFORCE,
 )
 
 from .iteration import (
@@ -47,7 +47,7 @@ __all__ = [
     'CrossEntropy',
     'StochasticReconstructionLoss',
     'Expectation',
-    'PolicyGradLoss',
+    'REINFORCE',
     'KullbackLeibler',
     'LogProb',
     'Prob',

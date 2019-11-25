@@ -40,10 +40,10 @@ Expectation
     :members:
     :undoc-members:
 
-PolicyGradLoss
+REINFORCE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: PolicyGradLoss
+.. autofunction:: REINFORCE
 
 Entropy
 --------

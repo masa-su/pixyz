@@ -681,7 +681,7 @@ class Expectation(Loss):
         return loss, samples_dicts[0]
 
 
-def PolicyGradLoss(p, f, input_var=None, sample_shape=torch.Size([1]), reparam=True):
+def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1]), reparam=True):
     r"""
     Surrogate Loss for Policy Gradient Method with a given reward function :math:`f`.
 
@@ -698,7 +698,7 @@ def PolicyGradLoss(p, f, input_var=None, sample_shape=torch.Size([1]), reparam=T
     >>> from pixyz.losses import LogProb
     >>> q = Bernoulli(probs=torch.tensor(0.5), var=["x"], cond_var=[], features_shape=[10]) # q(x)
     >>> p = Bernoulli(probs=torch.tensor(0.3), var=["x"], cond_var=[], features_shape=[10]) # p(x)
-    >>> loss_cls = PolicyGradLoss(q, p.log_prob(), sample_shape=[64])
+    >>> loss_cls = REINFORCE(q, p.log_prob(), sample_shape=[64])
     >>> train_loss = loss_cls.eval(test_mode=True)
     >>> print(train_loss) # doctest: +SKIP
     tensor([46.7559])
@@ -708,4 +708,4 @@ def PolicyGradLoss(p, f, input_var=None, sample_shape=torch.Size([1]), reparam=T
     tensor([-7.6047])
 
     """
-    return Expectation(p, f.detach() * p.log_prob() + f, input_var, sample_shape, reparam=reparam)
+    return Expectation(p, (f - b).detach() * p.log_prob() + (f - b), input_var, sample_shape, reparam=reparam)
