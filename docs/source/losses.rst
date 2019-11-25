@@ -40,6 +40,11 @@ Expectation
     :members:
     :undoc-members:
 
+PolicyGradLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: PolicyGradLoss
+
 Entropy
 --------
 
