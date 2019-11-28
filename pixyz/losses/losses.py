@@ -683,13 +683,27 @@ class Expectation(Loss):
 
 def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1]), reparam=True):
     r"""
-    Surrogate Loss for Policy Gradient Method with a given reward function :math:`f`.
+    Surrogate Loss for Policy Gradient Method (REINFORCE) with a given reward function :math:`f` and a given baseline :math:`b`.
 
     .. math::
 
-        \mathbb{E}_{p(x)}[detach(f(x))\nabla\log p(x)+f(x)].
+        \mathbb{E}_{p(x)}[detach(f(x)-b(x))\log p(x)+f(x)-b(x)].
 
-    in this function, :math:`f` is assumed to :attr:`pixyz.Loss`.
+    in this function, :math:`f` and :math:`b` is assumed to :attr:`pixyz.Loss`.
+
+    Parameters
+    ----------
+    p : :class:`pixyz.distributions.Distribution`
+            Distribution for expectation.
+    f : :class:`pixyz.losses.Loss`
+            reward function
+    b : :class:`pixyz.losses.Loss`
+            baseline function
+
+    Returns
+    -------
+    surrogate_loss : :class:`pixyz.losses.Loss`
+            policy gradient can be calcurated from a gradient of this surrogate loss.
 
     Examples
     --------
