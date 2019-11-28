@@ -1,11 +1,11 @@
 import sympy
 from torch import optim, nn
 import torch
-from .losses import Loss
+from .losses import Divergence
 from ..utils import get_dict_values, detach_dict
 
 
-class AdversarialLoss(Loss):
+class AdversarialLoss(Divergence):
     def __init__(self, p, q, discriminator, input_var=None,
                  optimizer=optim.Adam, optimizer_params={}):
         if p.var != q.var:

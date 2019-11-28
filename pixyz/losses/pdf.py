@@ -31,7 +31,8 @@ class LogProb(Loss):
         input_var = p.var + p.cond_var
         self.sum_features = sum_features
         self.feature_dims = feature_dims
-        super().__init__(p, input_var=input_var)
+        self.p = p
+        super().__init__(input_var=input_var)
 
     @property
     def _symbol(self):

@@ -1,10 +1,10 @@
 from torch.nn.modules.distance import PairwiseDistance
 import sympy
-from .losses import Loss
+from .losses import Divergence
 from ..utils import get_dict_values
 
 
-class WassersteinDistance(Loss):
+class WassersteinDistance(Divergence):
     r"""
     Wasserstein distance.
 

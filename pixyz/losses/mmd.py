@@ -1,10 +1,10 @@
 import torch
 import sympy
-from .losses import Loss
+from .losses import Divergence
 from ..utils import get_dict_values
 
 
-class MMD(Loss):
+class MMD(Divergence):
     r"""
     The Maximum Mean Discrepancy (MMD).
 

@@ -53,31 +53,17 @@ class Loss(object, metaclass=abc.ABCMeta):
 
     """
 
-    def __init__(self, p, q=None, input_var=None):
+    def __init__(self, input_var=None):
         """
         Parameters
         ----------
-        p : pixyz.distributions.Distribution
-            Distribution.
-        q : pixyz.distributions.Distribution, defaults to None
-            Distribution.
         input_var : :obj:`list` of :obj:`str`, defaults to None
             Input variables of this loss function.
             In general, users do not need to set them explicitly
             because these depend on the given distributions and each loss function.
 
         """
-        self.p = p
-        self.q = q
-
-        if input_var is not None:
-            self._input_var = input_var
-        else:
-            _input_var = deepcopy(p.input_var)
-            if q is not None:
-                _input_var += deepcopy(q.input_var)
-                _input_var = sorted(set(_input_var), key=_input_var.index)
-            self._input_var = _input_var
+        self._input_var = input_var
 
     @property
     def input_var(self):
@@ -214,7 +200,45 @@ class Loss(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def _get_eval(self, x_dict, **kwargs):
+        """
+        Parameters
+        ----------
+        x_dict : dict
+            Input variables.
+
+        Returns
+        -------
+        a tuple of :class:`pixyz.losses.Loss` and dict
+        deterministically calcurated loss and updated all samples.
+        """
         raise NotImplementedError()
+
+
+class Divergence(Loss):
+    def __init__(self, p, q=None, input_var=None):
+        """
+        Parameters
+        ----------
+        p : pixyz.distributions.Distribution
+            Distribution.
+        q : pixyz.distributions.Distribution, defaults to None
+            Distribution.
+        input_var : :obj:`list` of :obj:`str`, defaults to None
+            Input variables of this loss function.
+            In general, users do not need to set them explicitly
+            because these depend on the given distributions and each loss function.
+
+        """
+        if input_var is not None:
+            _input_var = input_var
+        else:
+            _input_var = deepcopy(p.input_var)
+            if q is not None:
+                _input_var += deepcopy(q.input_var)
+                _input_var = sorted(set(_input_var), key=_input_var.index)
+        super().__init__(_input_var)
+        self.p = p
+        self.q = q
 
 
 class ValueLoss(Loss):
@@ -621,20 +645,21 @@ class Expectation(Loss):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
-        self._f = f
+        self.p = p
+        self.f = f
         self.sample_shape = torch.Size(sample_shape)
 
-        super().__init__(p, input_var=input_var)
+        super().__init__(input_var=input_var)
 
     @property
     def _symbol(self):
         p_text = "{" + self.p.prob_text + "}"
-        return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
+        return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.f.loss_text))
 
     def _get_eval(self, x_dict={}, **kwargs):
         samples_dicts = [self.p.sample(x_dict, reparam=True, return_all=True) for i in range(self.sample_shape.numel())]
 
-        loss_and_dicts = [self._f.eval(samples_dict, return_dict=True, **kwargs) for
+        loss_and_dicts = [self.f.eval(samples_dict, return_dict=True, **kwargs) for
                           samples_dict in samples_dicts]  # TODO: eval or _get_eval
         losses = [loss for loss, loss_sample_dict in loss_and_dicts]
         # sum over sample_shape

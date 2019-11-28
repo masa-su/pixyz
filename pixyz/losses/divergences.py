@@ -3,7 +3,7 @@ import torch
 from torch.distributions import kl_divergence
 
 from ..utils import get_dict_values
-from .losses import Loss
+from .losses import Divergence
 
 
 def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True, sample_shape=torch.Size([1])):
@@ -43,7 +43,7 @@ def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True, sample_shap
     return loss
 
 
-class AnalyticalKullbackLeibler(Loss):
+class AnalyticalKullbackLeibler(Divergence):
     def __init__(self, p, q, input_var=None, dim=None):
         self.dim = dim
         super().__init__(p, q, input_var)
