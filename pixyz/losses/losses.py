@@ -214,7 +214,7 @@ class Loss(object, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 
-class Divergence(Loss):
+class Divergence(Loss, abc.ABC):
     def __init__(self, p, q=None, input_var=None):
         """
         Parameters
