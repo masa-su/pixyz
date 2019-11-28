@@ -38,7 +38,7 @@ class LogProb(Loss):
     def _symbol(self):
         return sympy.Symbol("\\log {}".format(self.p.prob_text))
 
-    def _get_eval(self, x={}, **kwargs):
+    def forward(self, x={}, **kwargs):
         log_prob = self.p.get_log_prob(x, sum_features=self.sum_features, feature_dims=self.feature_dims)
         return log_prob, x
 
@@ -70,6 +70,6 @@ class Prob(LogProb):
     def _symbol(self):
         return sympy.Symbol(self.p.prob_text)
 
-    def _get_eval(self, x={}, **kwargs):
-        log_prob, x = super()._get_eval(x, **kwargs)
+    def forward(self, x={}, **kwargs):
+        log_prob, x = super().forward(x, **kwargs)
         return torch.exp(log_prob), x

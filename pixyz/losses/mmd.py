@@ -64,7 +64,7 @@ class MMD(Divergence):
     def _get_batch_n(self, x_dict):
         return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def forward(self, x_dict={}, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample from distributions

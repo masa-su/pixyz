@@ -191,7 +191,7 @@ class Loss(object, metaclass=abc.ABCMeta):
             raise ValueError("Input keys are not valid, expected {} but got {}.".format(self._input_var,
                                                                                         list(x_dict.keys())))
 
-        loss, x_dict = self._get_eval(x_dict, **kwargs)
+        loss, x_dict = self.forward(x_dict, **kwargs)
 
         if return_dict:
             return loss, x_dict
@@ -199,7 +199,7 @@ class Loss(object, metaclass=abc.ABCMeta):
         return loss
 
     @abc.abstractmethod
-    def _get_eval(self, x_dict, **kwargs):
+    def forward(self, x_dict, **kwargs):
         """
         Parameters
         ----------
@@ -262,7 +262,7 @@ class ValueLoss(Loss):
         self.loss1 = loss1
         self._input_var = []
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def forward(self, x_dict={}, **kwargs):
         return self.loss1, x_dict
 
     @property
@@ -291,7 +291,7 @@ class Parameter(Loss):
             raise ValueError()
         self._input_var = tolist(input_var)
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def forward(self, x_dict={}, **kwargs):
         return x_dict[self._input_var[0]], x_dict
 
     @property
@@ -327,15 +327,15 @@ class LossOperator(Loss):
         self.loss1 = loss1
         self.loss2 = loss2
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def forward(self, x_dict={}, **kwargs):
         if not isinstance(self.loss1, type(None)):
-            loss1, x1 = self.loss1._get_eval(x_dict, **kwargs)
+            loss1, x1 = self.loss1.forward(x_dict, **kwargs)
         else:
             loss1 = 0
             x1 = {}
 
         if not isinstance(self.loss2, type(None)):
-            loss2, x2 = self.loss2._get_eval(x_dict, **kwargs)
+            loss2, x2 = self.loss2.forward(x_dict, **kwargs)
         else:
             loss2 = 0
             x2 = {}
@@ -365,8 +365,8 @@ class AddLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol + self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 + loss2, x_dict
 
 
@@ -396,8 +396,8 @@ class SubLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol - self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 - loss2, x_dict
 
 
@@ -421,8 +421,8 @@ class MulLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol * self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 * loss2, x_dict
 
 
@@ -453,8 +453,8 @@ class DivLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol / self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 / loss2, x_dict
 
 
@@ -501,8 +501,8 @@ class NegLoss(LossSelfOperator):
     def _symbol(self):
         return -self.loss1._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return -loss, x_dict
 
 
@@ -530,8 +530,8 @@ class AbsLoss(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("|{}|".format(self.loss1.loss_text))
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.abs(), x_dict
 
 
@@ -565,8 +565,8 @@ class BatchMean(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("mean \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.mean(), x_dict
 
 
@@ -600,8 +600,8 @@ class BatchSum(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("sum \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.sum(), x_dict
 
 
@@ -656,11 +656,11 @@ class Expectation(Loss):
         p_text = "{" + self.p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.f.loss_text))
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def forward(self, x_dict={}, **kwargs):
         samples_dicts = [self.p.sample(x_dict, reparam=True, return_all=True) for i in range(self.sample_shape.numel())]
 
         loss_and_dicts = [self.f.eval(samples_dict, return_dict=True, **kwargs) for
-                          samples_dict in samples_dicts]  # TODO: eval or _get_eval
+                          samples_dict in samples_dicts]  # TODO: eval or forward
         losses = [loss for loss, loss_sample_dict in loss_and_dicts]
         # sum over sample_shape
         loss = torch.stack(losses).mean(dim=0)
