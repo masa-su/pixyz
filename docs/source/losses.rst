@@ -135,6 +135,14 @@ Parameter
     :members:
     :undoc-members:
 
+ValueLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses.losses
+.. autoclass:: ValueLoss
+    :members:
+    :undoc-members:
+
        
 Operators
 ----------------------------
@@ -178,6 +186,20 @@ DivLoss
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: DivLoss
+    :members:
+    :undoc-members:
+
+MinLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MinLoss
+    :members:
+    :undoc-members:
+
+MaxLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MaxLoss
     :members:
     :undoc-members:
 

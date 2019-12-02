@@ -255,7 +255,7 @@ class ValueLoss(Loss):
     2
     >>> loss = loss_cls.eval()
     >>> print(loss)
-    2
+    tensor(2.)
 
     """
     def __init__(self, loss1):
@@ -263,7 +263,8 @@ class ValueLoss(Loss):
         self._input_var = []
 
     def forward(self, x_dict={}, **kwargs):
-        return self.loss1, x_dict
+        # TODO: to gpu
+        return torch.tensor(self.loss1, dtype=torch.float), x_dict
 
     @property
     def _symbol(self):
@@ -358,7 +359,7 @@ class AddLoss(LossOperator):
     x + 2
     >>> loss = loss_cls.eval({"x": 3})
     >>> print(loss)
-    5
+    tensor(5.)
 
     """
     @property
@@ -383,13 +384,13 @@ class SubLoss(LossOperator):
     2 - x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    -2
+    tensor(-2.)
     >>> loss_cls = loss_cls_2 - loss_cls_1  # equals to SubLoss(loss_cls_2, loss_cls_1)
     >>> print(loss_cls)
     x - 2
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    2
+    tensor(2.)
 
     """
     @property
@@ -414,7 +415,7 @@ class MulLoss(LossOperator):
     2 x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    8
+    tensor(8.)
 
     """
     @property
@@ -439,13 +440,13 @@ class DivLoss(LossOperator):
     \\frac{2}{x}
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    0.5
+    tensor(0.5000)
     >>> loss_cls = loss_cls_2 / loss_cls_1  # equals to DivLoss(loss_cls_2, loss_cls_1)
     >>> print(loss_cls)
     \\frac{x}{2}
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    2.0
+    tensor(2.)
 
 
     """
@@ -456,6 +457,60 @@ class DivLoss(LossOperator):
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 / loss2, x_dict
+
+
+class MinLoss(LossOperator):
+    r"""
+    Apply the `min` operation to the loss.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> from pixyz.losses.losses import ValueLoss, Parameter, MinLoss
+    >>> loss_min= MinLoss(ValueLoss(3), ValueLoss(1))
+    >>> print(loss_min)
+    min \left(3, 1\right)
+    >>> print(loss_min.eval())
+    tensor(1.)
+    """
+    def __init__(self, loss1, loss2):
+        super().__init__(loss1, loss2)
+
+    @property
+    def _symbol(self):
+        return sympy.Symbol(f"min \\left({self.loss1.loss_text}, {self.loss2.loss_text}\\right)")
+
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
+        return torch.min(loss1, loss2), x_dict
+
+
+class MaxLoss(LossOperator):
+    r"""
+    Apply the `max` operation to the loss.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> from pixyz.losses.losses import ValueLoss, MaxLoss
+    >>> loss_max= MaxLoss(ValueLoss(3), ValueLoss(1))
+    >>> print(loss_max)
+    max \left(3, 1\right)
+    >>> print(loss_max.eval())
+    tensor(3.)
+    """
+    def __init__(self, loss1, loss2):
+        super().__init__(loss1, loss2)
+
+    @property
+    def _symbol(self):
+        return sympy.Symbol(f"max \\left({self.loss1.loss_text}, {self.loss2.loss_text}\\right)")
+
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
+        return torch.max(loss1, loss2), x_dict
 
 
 class LossSelfOperator(Loss):
