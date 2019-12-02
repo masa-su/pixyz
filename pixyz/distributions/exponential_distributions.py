@@ -51,7 +51,7 @@ class Bernoulli(DistributionBase):
 
 
 class RelaxedBernoulli(Bernoulli):
-    """Relaxed (re-parameterizable) Bernoulli distribution parameterized by :attr:`probs`."""
+    """Relaxed (re-parameterizable) Bernoulli distribution parameterized by :attr:`probs` and :attr:`temperature`."""
     def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), temperature=torch.tensor(0.1),
                  probs=None):
         super(Bernoulli, self).__init__(cond_var, var, name, features_shape, **_valid_param_dict({
@@ -128,7 +128,10 @@ class Categorical(DistributionBase):
 
 
 class RelaxedCategorical(Categorical):
-    """Relaxed (re-parameterizable) categorical distribution parameterized by :attr:`probs`."""
+    """
+    Relaxed (re-parameterizable) categorical distribution parameterized by :attr:`probs` and :attr:`temperature`.
+    Notes: a shape of temperature should contain the event shape of this Categorical distribution.
+    """
     def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), temperature=torch.tensor(0.1),
                  probs=None):
         super(Categorical, self).__init__(cond_var, var, name, features_shape,
