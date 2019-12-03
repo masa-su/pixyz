@@ -40,6 +40,11 @@ Expectation
     :members:
     :undoc-members:
 
+REINFORCE
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: REINFORCE
+
 Entropy
 --------
 

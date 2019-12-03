@@ -58,6 +58,10 @@ class Deterministic(Distribution):
     def sample_mean(self, x_dict):
         return self.sample(x_dict, return_all=False)[self._var[0]]
 
+    @property
+    def has_reparam(self):
+        return True
+
 
 class DataDistribution(Distribution):
     """
@@ -101,3 +105,7 @@ class DataDistribution(Distribution):
         """
 
         return self.var
+
+    @property
+    def has_reparam(self):
+        return True

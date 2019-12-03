@@ -159,6 +159,17 @@ class Loss(object, metaclass=abc.ABCMeta):
         """
         return BatchSum(self)
 
+    def detach(self):
+        """Return an instance of :class:`pixyz.losses.losses.Detach`.
+
+        Returns
+        -------
+        pixyz.losses.losses.Detach
+            An instance of :class:`pixyz.losses.losses.Detach`
+
+        """
+        return Detach(self)
+
     def expectation(self, p, input_var=None, sample_shape=torch.Size()):
         """Return an instance of :class:`pixyz.losses.Expectation`.
 
@@ -484,7 +495,7 @@ class NegLoss(LossSelfOperator):
 
 class AbsLoss(LossSelfOperator):
     """
-    Apply the `abs` operation to two losses.
+    Apply the `abs` operation to the loss.
 
     Examples
     --------
@@ -581,6 +592,21 @@ class BatchSum(LossSelfOperator):
         return loss.sum(), x_dict
 
 
+class Detach(LossSelfOperator):
+    r"""
+    Apply the `detach` method to the loss.
+
+    """
+
+    @property
+    def _symbol(self):
+        return sympy.Symbol("detach \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it?
+
+    def _get_eval(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+        return loss.detach(), x_dict
+
+
 class Expectation(Loss):
     r"""
     Expectation of a given function (Monte Carlo approximation).
@@ -598,7 +624,7 @@ class Expectation(Loss):
     Examples
     --------
     >>> import torch
-    >>> from pixyz.distributions import Normal
+    >>> from pixyz.distributions import Normal, Bernoulli
     >>> from pixyz.losses import LogProb
     >>> q = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"],
     ...            features_shape=[10]) # q(z|x)
@@ -611,18 +637,28 @@ class Expectation(Loss):
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP
     tensor([-12.8181, -12.6062])
-    >>> loss_cls = LogProb(p).expectation(q, sample_shape=(5,)) # equals to Expectation(q, LogProb(p))
+    >>> loss_cls = LogProb(p).expectation(q, sample_shape=(5,))
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP
+    >>> q = Bernoulli(probs=torch.tensor(0.5), var=["x"], cond_var=[], features_shape=[10]) # q(x)
+    >>> p = Bernoulli(probs=torch.tensor(0.3), var=["x"], cond_var=[], features_shape=[10]) # p(x)
+    >>> loss_cls = p.log_prob().expectation(q, sample_shape=[64])
+    >>> train_loss = loss_cls.eval()
+    >>> print(train_loss) # doctest: +SKIP
+    tensor([46.7559])
+    >>> eval_loss = loss_cls.eval(test_mode=True)
+    >>> print(eval_loss) # doctest: +SKIP
+    tensor([-7.6047])
 
     """
 
-    def __init__(self, p, f, input_var=None, sample_shape=torch.Size([1])):
+    def __init__(self, p, f, input_var=None, sample_shape=torch.Size([1]), reparam=True):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
         self._f = f
         self.sample_shape = torch.Size(sample_shape)
+        self.reparam = reparam
 
         super().__init__(p, input_var=input_var)
 
@@ -632,13 +668,58 @@ class Expectation(Loss):
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
 
     def _get_eval(self, x_dict={}, **kwargs):
-        samples_dicts = [self.p.sample(x_dict, reparam=True, return_all=True) for i in range(self.sample_shape.numel())]
+        samples_dicts = [self.p.sample(x_dict, reparam=self.reparam, return_all=True) for i in range(self.sample_shape.numel())]
 
         loss_and_dicts = [self._f.eval(samples_dict, return_dict=True, **kwargs) for
-                          samples_dict in samples_dicts]  # TODO: eval or _get_eval
+                          samples_dict in samples_dicts]
+
         losses = [loss for loss, loss_sample_dict in loss_and_dicts]
         # sum over sample_shape
         loss = torch.stack(losses).mean(dim=0)
         samples_dicts[0].update(loss_and_dicts[0][1])
 
         return loss, samples_dicts[0]
+
+
+def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1]), reparam=True):
+    r"""
+    Surrogate Loss for Policy Gradient Method (REINFORCE) with a given reward function :math:`f` and a given baseline :math:`b`.
+
+    .. math::
+
+        \mathbb{E}_{p(x)}[detach(f(x)-b(x))\log p(x)+f(x)-b(x)].
+
+    in this function, :math:`f` and :math:`b` is assumed to :attr:`pixyz.Loss`.
+
+    Parameters
+    ----------
+    p : :class:`pixyz.distributions.Distribution`
+            Distribution for expectation.
+    f : :class:`pixyz.losses.Loss`
+            reward function
+    b : :class:`pixyz.losses.Loss`
+            baseline function
+
+    Returns
+    -------
+    surrogate_loss : :class:`pixyz.losses.Loss`
+            policy gradient can be calcurated from a gradient of this surrogate loss.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal, Bernoulli
+    >>> from pixyz.losses import LogProb
+    >>> q = Bernoulli(probs=torch.tensor(0.5), var=["x"], cond_var=[], features_shape=[10]) # q(x)
+    >>> p = Bernoulli(probs=torch.tensor(0.3), var=["x"], cond_var=[], features_shape=[10]) # p(x)
+    >>> loss_cls = REINFORCE(q, p.log_prob(), sample_shape=[64])
+    >>> train_loss = loss_cls.eval(test_mode=True)
+    >>> print(train_loss) # doctest: +SKIP
+    tensor([46.7559])
+    >>> loss_cls = p.log_prob().expectation(q, sample_shape=[64])
+    >>> test_loss = loss_cls.eval()
+    >>> print(test_loss) # doctest: +SKIP
+    tensor([-7.6047])
+
+    """
+    return Expectation(p, (f - b).detach() * p.log_prob() + (f - b), input_var, sample_shape, reparam=reparam)

@@ -73,6 +73,10 @@ class TransformedDistribution(Distribution):
 
         return output_dict
 
+    @property
+    def has_reparam(self):
+        return self.prior.has_reparam
+
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, compute_jacobian=False):
         # prior
         log_prob_prior = self.prior.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
@@ -205,6 +209,10 @@ class InverseTransformedDistribution(Distribution):
             return sample_dict
 
         return output_dict
+
+    @property
+    def has_reparam(self):
+        return self.prior.has_reparam
 
     def inference(self, x_dict, return_all=True, compute_jacobian=False):
         # flow transformation

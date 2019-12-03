@@ -35,6 +35,10 @@ class Normal(DistributionBase):
     def distribution_name(self):
         return "Normal"
 
+    @property
+    def has_reparam(self):
+        return True
+
 
 class Bernoulli(DistributionBase):
     """Bernoulli distribution parameterized by :attr:`probs`."""
@@ -52,6 +56,10 @@ class Bernoulli(DistributionBase):
     @property
     def distribution_name(self):
         return "Bernoulli"
+
+    @property
+    def has_reparam(self):
+        return False
 
 
 class RelaxedBernoulli(Bernoulli):
@@ -97,6 +105,10 @@ class RelaxedBernoulli(Bernoulli):
             else:
                 raise ValueError()
 
+    @property
+    def has_reparam(self):
+        return True
+
 
 class FactorizedBernoulli(Bernoulli):
     """
@@ -139,6 +151,10 @@ class Categorical(DistributionBase):
     @property
     def distribution_name(self):
         return "Categorical"
+
+    @property
+    def has_reparam(self):
+        return False
 
 
 class RelaxedCategorical(Categorical):
@@ -192,6 +208,10 @@ class RelaxedCategorical(Categorical):
         self.set_dist(x_dict, sampling=False)
         return self.dist.variance
 
+    @property
+    def has_reparam(self):
+        return True
+
 
 class Multinomial(DistributionBase):
     """Multinomial distribution parameterized by :attr:`total_count` and :attr:`probs`."""
@@ -218,6 +238,10 @@ class Multinomial(DistributionBase):
     def distribution_name(self):
         return "Multinomial"
 
+    @property
+    def has_reparam(self):
+        return False
+
 
 class Dirichlet(DistributionBase):
     """Dirichlet distribution parameterized by :attr:`concentration`."""
@@ -236,6 +260,10 @@ class Dirichlet(DistributionBase):
     @property
     def distribution_name(self):
         return "Dirichlet"
+
+    @property
+    def has_reparam(self):
+        return True
 
 
 class Beta(DistributionBase):
@@ -256,6 +284,10 @@ class Beta(DistributionBase):
     @property
     def distribution_name(self):
         return "Beta"
+
+    @property
+    def has_reparam(self):
+        return True
 
 
 class Laplace(DistributionBase):
@@ -278,6 +310,10 @@ class Laplace(DistributionBase):
     def distribution_name(self):
         return "Laplace"
 
+    @property
+    def has_reparam(self):
+        return True
+
 
 class Gamma(DistributionBase):
     """
@@ -298,3 +334,7 @@ class Gamma(DistributionBase):
     @property
     def distribution_name(self):
         return "Gamma"
+
+    @property
+    def has_reparam(self):
+        return True

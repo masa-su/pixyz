@@ -336,6 +336,10 @@ class Distribution(nn.Module):
         """
         raise NotImplementedError()
 
+    @property
+    def has_reparam(self):
+        raise NotImplementedError()
+
     def sample_mean(self, x_dict={}):
         """Return the mean of the distribution.
 
@@ -743,16 +747,17 @@ class DistributionBase(Distribution):
             Generated sample formatted by :obj:`dict`.
 
         """
-        if reparam:
-            try:
-                _samples = self.dist.rsample(sample_shape=sample_shape)
-            except NotImplementedError():
-                raise ValueError("You cannot use the re-parameterization trick for this distribution.")
+        if reparam and self.dist.has_rsample:
+            _samples = self.dist.rsample(sample_shape=sample_shape)
         else:
             _samples = self.dist.sample(sample_shape=sample_shape)
         samples_dict = {self._var[0]: _samples}
 
         return samples_dict
+
+    @property
+    def has_reparam(self):
+        raise NotImplementedError()
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
@@ -954,6 +959,10 @@ class MultiplyDistribution(Distribution):
     def prob_factorized_text(self):
         return self._child.prob_factorized_text + self._parent.prob_factorized_text
 
+    @property
+    def has_reparam(self):
+        return self._parent.has_reparam and self._child.has_reparam
+
     def sample(self, x_dict={}, batch_n=None, return_all=True, reparam=False, **kwargs):
         # sample from the parent distribution
         parents_x_dict = x_dict
@@ -1104,6 +1113,10 @@ class ReplaceVarDistribution(Distribution):
     def distribution_name(self):
         return self.p.distribution_name
 
+    @property
+    def has_reparam(self):
+        return self.p.has_reparam
+
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)
@@ -1213,6 +1226,10 @@ class MarginalizeVarDistribution(Distribution):
     @property
     def distribution_name(self):
         return self.p.distribution_name
+
+    @property
+    def has_reparam(self):
+        return self.p.has_reparam
 
     @property
     def prob_factorized_text(self):
