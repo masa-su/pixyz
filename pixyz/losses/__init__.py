@@ -29,6 +29,7 @@ from .losses import (
     MinLoss,
     MaxLoss,
     Expectation,
+    REINFORCE,
 )
 
 from .iteration import (
@@ -52,6 +53,7 @@ __all__ = [
     'CrossEntropy',
     'StochasticReconstructionLoss',
     'Expectation',
+    'REINFORCE',
     'KullbackLeibler',
     'LogProb',
     'Prob',

@@ -155,6 +155,10 @@ class MixtureModel(Distribution):
 
         return output_dict
 
+    @property
+    def has_reparam(self):
+        return False
+
     def get_log_prob(self, x_dict, return_hidden=False, **kwargs):
         """Evaluate log-pdf, log p(x) (if return_hidden=False) or log p(x, z) (if return_hidden=True).
 
@@ -237,6 +241,9 @@ class PosteriorMixtureModel(Distribution):
 
     def sample(self, *args, **kwargs):
         raise NotImplementedError()
+
+    def has_reparam(self):
+        return False
 
     def get_log_prob(self, x_dict, **kwargs):
         # log p(z|x) = log p(x, z) - log p(x)

@@ -62,3 +62,7 @@ class CustomProb(Distribution):
             log_prob = sum_samples(log_prob)
 
         return log_prob
+
+    @property
+    def has_reparam(self):
+        return False
