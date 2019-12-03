@@ -53,31 +53,17 @@ class Loss(object, metaclass=abc.ABCMeta):
 
     """
 
-    def __init__(self, p, q=None, input_var=None):
+    def __init__(self, input_var=None):
         """
         Parameters
         ----------
-        p : pixyz.distributions.Distribution
-            Distribution.
-        q : pixyz.distributions.Distribution, defaults to None
-            Distribution.
         input_var : :obj:`list` of :obj:`str`, defaults to None
             Input variables of this loss function.
             In general, users do not need to set them explicitly
             because these depend on the given distributions and each loss function.
 
         """
-        self.p = p
-        self.q = q
-
-        if input_var is not None:
-            self._input_var = input_var
-        else:
-            _input_var = deepcopy(p.input_var)
-            if q is not None:
-                _input_var += deepcopy(q.input_var)
-                _input_var = sorted(set(_input_var), key=_input_var.index)
-            self._input_var = _input_var
+        self._input_var = input_var
 
     @property
     def input_var(self):
@@ -216,7 +202,7 @@ class Loss(object, metaclass=abc.ABCMeta):
             raise ValueError("Input keys are not valid, expected {} but got {}.".format(self._input_var,
                                                                                         list(x_dict.keys())))
 
-        loss, x_dict = self._get_eval(x_dict, **kwargs)
+        loss, x_dict = self.forward(x_dict, **kwargs)
 
         if return_dict:
             return loss, x_dict
@@ -224,8 +210,46 @@ class Loss(object, metaclass=abc.ABCMeta):
         return loss
 
     @abc.abstractmethod
-    def _get_eval(self, x_dict, **kwargs):
+    def forward(self, x_dict, **kwargs):
+        """
+        Parameters
+        ----------
+        x_dict : dict
+            Input variables.
+
+        Returns
+        -------
+        a tuple of :class:`pixyz.losses.Loss` and dict
+        deterministically calcurated loss and updated all samples.
+        """
         raise NotImplementedError()
+
+
+class Divergence(Loss, abc.ABC):
+    def __init__(self, p, q=None, input_var=None):
+        """
+        Parameters
+        ----------
+        p : pixyz.distributions.Distribution
+            Distribution.
+        q : pixyz.distributions.Distribution, defaults to None
+            Distribution.
+        input_var : :obj:`list` of :obj:`str`, defaults to None
+            Input variables of this loss function.
+            In general, users do not need to set them explicitly
+            because these depend on the given distributions and each loss function.
+
+        """
+        if input_var is not None:
+            _input_var = input_var
+        else:
+            _input_var = deepcopy(p.input_var)
+            if q is not None:
+                _input_var += deepcopy(q.input_var)
+                _input_var = sorted(set(_input_var), key=_input_var.index)
+        super().__init__(_input_var)
+        self.p = p
+        self.q = q
 
 
 class ValueLoss(Loss):
@@ -242,15 +266,16 @@ class ValueLoss(Loss):
     2
     >>> loss = loss_cls.eval()
     >>> print(loss)
-    2
+    tensor(2.)
 
     """
     def __init__(self, loss1):
         self.loss1 = loss1
         self._input_var = []
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        return self.loss1, x_dict
+    def forward(self, x_dict={}, **kwargs):
+        # TODO: to gpu
+        return torch.tensor(self.loss1, dtype=torch.float), x_dict
 
     @property
     def _symbol(self):
@@ -278,7 +303,7 @@ class Parameter(Loss):
             raise ValueError()
         self._input_var = tolist(input_var)
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def forward(self, x_dict={}, **kwargs):
         return x_dict[self._input_var[0]], x_dict
 
     @property
@@ -314,15 +339,15 @@ class LossOperator(Loss):
         self.loss1 = loss1
         self.loss2 = loss2
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def forward(self, x_dict={}, **kwargs):
         if not isinstance(self.loss1, type(None)):
-            loss1, x1 = self.loss1._get_eval(x_dict, **kwargs)
+            loss1, x1 = self.loss1.forward(x_dict, **kwargs)
         else:
             loss1 = 0
             x1 = {}
 
         if not isinstance(self.loss2, type(None)):
-            loss2, x2 = self.loss2._get_eval(x_dict, **kwargs)
+            loss2, x2 = self.loss2.forward(x_dict, **kwargs)
         else:
             loss2 = 0
             x2 = {}
@@ -345,15 +370,15 @@ class AddLoss(LossOperator):
     x + 2
     >>> loss = loss_cls.eval({"x": 3})
     >>> print(loss)
-    5
+    tensor(5.)
 
     """
     @property
     def _symbol(self):
         return self.loss1._symbol + self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 + loss2, x_dict
 
 
@@ -370,21 +395,21 @@ class SubLoss(LossOperator):
     2 - x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    -2
+    tensor(-2.)
     >>> loss_cls = loss_cls_2 - loss_cls_1  # equals to SubLoss(loss_cls_2, loss_cls_1)
     >>> print(loss_cls)
     x - 2
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    2
+    tensor(2.)
 
     """
     @property
     def _symbol(self):
         return self.loss1._symbol - self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 - loss2, x_dict
 
 
@@ -401,15 +426,15 @@ class MulLoss(LossOperator):
     2 x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    8
+    tensor(8.)
 
     """
     @property
     def _symbol(self):
         return self.loss1._symbol * self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 * loss2, x_dict
 
 
@@ -426,13 +451,13 @@ class DivLoss(LossOperator):
     \\frac{2}{x}
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    0.5
+    tensor(0.5000)
     >>> loss_cls = loss_cls_2 / loss_cls_1  # equals to DivLoss(loss_cls_2, loss_cls_1)
     >>> print(loss_cls)
     \\frac{x}{2}
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
-    2.0
+    tensor(2.)
 
 
     """
@@ -440,9 +465,63 @@ class DivLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol / self.loss2._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss1, loss2, x_dict = super()._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 / loss2, x_dict
+
+
+class MinLoss(LossOperator):
+    r"""
+    Apply the `min` operation to the loss.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> from pixyz.losses.losses import ValueLoss, Parameter, MinLoss
+    >>> loss_min= MinLoss(ValueLoss(3), ValueLoss(1))
+    >>> print(loss_min)
+    min \left(3, 1\right)
+    >>> print(loss_min.eval())
+    tensor(1.)
+    """
+    def __init__(self, loss1, loss2):
+        super().__init__(loss1, loss2)
+
+    @property
+    def _symbol(self):
+        return sympy.Symbol(f"min \\left({self.loss1.loss_text}, {self.loss2.loss_text}\\right)")
+
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
+        return torch.min(loss1, loss2), x_dict
+
+
+class MaxLoss(LossOperator):
+    r"""
+    Apply the `max` operation to the loss.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from pixyz.distributions import Normal
+    >>> from pixyz.losses.losses import ValueLoss, MaxLoss
+    >>> loss_max= MaxLoss(ValueLoss(3), ValueLoss(1))
+    >>> print(loss_max)
+    max \left(3, 1\right)
+    >>> print(loss_max.eval())
+    tensor(3.)
+    """
+    def __init__(self, loss1, loss2):
+        super().__init__(loss1, loss2)
+
+    @property
+    def _symbol(self):
+        return sympy.Symbol(f"max \\left({self.loss1.loss_text}, {self.loss2.loss_text}\\right)")
+
+    def forward(self, x_dict={}, **kwargs):
+        loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
+        return torch.max(loss1, loss2), x_dict
 
 
 class LossSelfOperator(Loss):
@@ -488,8 +567,8 @@ class NegLoss(LossSelfOperator):
     def _symbol(self):
         return -self.loss1._symbol
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return -loss, x_dict
 
 
@@ -517,8 +596,8 @@ class AbsLoss(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("|{}|".format(self.loss1.loss_text))
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.abs(), x_dict
 
 
@@ -552,8 +631,8 @@ class BatchMean(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("mean \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.mean(), x_dict
 
 
@@ -587,8 +666,8 @@ class BatchSum(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("sum \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.sum(), x_dict
 
 
@@ -656,18 +735,19 @@ class Expectation(Loss):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
-        self._f = f
+        self.p = p
+        self.f = f
         self.sample_shape = torch.Size(sample_shape)
         self.reparam = reparam
 
-        super().__init__(p, input_var=input_var)
+        super().__init__(input_var=input_var)
 
     @property
     def _symbol(self):
         p_text = "{" + self.p.prob_text + "}"
-        return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self._f.loss_text))
+        return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.f.loss_text))
 
-    def _get_eval(self, x_dict={}, **kwargs):
+    def forward(self, x_dict={}, **kwargs):
         samples_dicts = [self.p.sample(x_dict, reparam=self.reparam, return_all=True) for i in range(self.sample_shape.numel())]
 
         loss_and_dicts = [self._f.eval(samples_dict, return_dict=True, **kwargs) for
