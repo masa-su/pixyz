@@ -53,7 +53,7 @@ class AnalyticalKullbackLeibler(Loss):
         return sympy.Symbol("D_{{KL}} \\left[{}||{} \\right]".format(self.p.prob_text, self.q.prob_text))
 
     def _get_eval(self, x_dict, **kwargs):
-        if (not hasattr(self.p, 'distribution_torch_class')) or (not hasattr(self.q, 'distribution_torch_class')):
+        if (not hasattr(self.p, 'get_distribution_torch_class')) or (not hasattr(self.q, 'get_distribution_torch_class')):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "
                              "got %s and %s." % (self.p.distribution_name, self.q.distribution_name))
 
