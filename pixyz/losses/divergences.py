@@ -3,7 +3,7 @@ import torch
 from torch.distributions import kl_divergence
 
 from ..utils import get_dict_values
-from .losses import Loss
+from .losses import Divergence
 
 
 def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True, sample_shape=torch.Size([1])):
@@ -43,7 +43,7 @@ def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True, sample_shap
     return loss
 
 
-class AnalyticalKullbackLeibler(Loss):
+class AnalyticalKullbackLeibler(Divergence):
     def __init__(self, p, q, input_var=None, dim=None):
         self.dim = dim
         super().__init__(p, q, input_var)
@@ -52,8 +52,8 @@ class AnalyticalKullbackLeibler(Loss):
     def _symbol(self):
         return sympy.Symbol("D_{{KL}} \\left[{}||{} \\right]".format(self.p.prob_text, self.q.prob_text))
 
-    def _get_eval(self, x_dict, **kwargs):
-        if (not hasattr(self.p, 'distribution_torch_class')) or (not hasattr(self.q, 'distribution_torch_class')):
+    def forward(self, x_dict, **kwargs):
+        if (not hasattr(self.p, 'get_distribution_torch_class')) or (not hasattr(self.q, 'get_distribution_torch_class')):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "
                              "got %s and %s." % (self.p.distribution_name, self.q.distribution_name))
 

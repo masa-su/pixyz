@@ -1,11 +1,11 @@
 import sympy
 from torch import optim, nn
 import torch
-from .losses import Loss
+from .losses import Divergence
 from ..utils import get_dict_values, detach_dict
 
 
-class AdversarialLoss(Loss):
+class AdversarialLoss(Divergence):
     def __init__(self, p, q, discriminator, input_var=None,
                  optimizer=optim.Adam, optimizer_params={}):
         if p.var != q.var:
@@ -226,7 +226,7 @@ class AdversarialJensenShannon(AdversarialLoss):
         return sympy.Symbol("mean(D_{{JS}}^{{Adv}} \\left[{}||{} \\right])".format(self.p.prob_text,
                                                                                    self.q.prob_text))
 
-    def _get_eval(self, x_dict, discriminator=False, **kwargs):
+    def forward(self, x_dict, discriminator=False, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
@@ -387,7 +387,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         return sympy.Symbol("mean(D_{{KL}}^{{Adv}} \\left[{}||{} \\right])".format(self.p.prob_text,
                                                                                    self.q.prob_text))
 
-    def _get_eval(self, x_dict, discriminator=False, **kwargs):
+    def forward(self, x_dict, discriminator=False, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p

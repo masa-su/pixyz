@@ -25,7 +25,11 @@ from .adversarial_loss import (
 
 from .losses import (
     Parameter,
+    ValueLoss,
+    MinLoss,
+    MaxLoss,
     Expectation,
+    REINFORCE,
 )
 
 from .iteration import (
@@ -42,10 +46,14 @@ from .wasserstein import (
 
 __all__ = [
     'Parameter',
+    'ValueLoss',
+    'MinLoss',
+    'MaxLoss',
     'Entropy',
     'CrossEntropy',
     'StochasticReconstructionLoss',
     'Expectation',
+    'REINFORCE',
     'KullbackLeibler',
     'LogProb',
     'Prob',

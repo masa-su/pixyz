@@ -119,7 +119,7 @@ class IterativeLoss(Loss):
     def slice_step_fn(self, t, x):
         return {k: v[t] for k, v in x.items()}
 
-    def _get_eval(self, x_dict, **kwargs):
+    def forward(self, x_dict, **kwargs):
         series_x_dict = get_dict_values(x_dict, self.series_var, return_dict=True)
         step_loss_sum = 0
 

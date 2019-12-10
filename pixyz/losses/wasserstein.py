@@ -1,10 +1,10 @@
 from torch.nn.modules.distance import PairwiseDistance
 import sympy
-from .losses import Loss
+from .losses import Divergence
 from ..utils import get_dict_values
 
 
-class WassersteinDistance(Loss):
+class WassersteinDistance(Divergence):
     r"""
     Wasserstein distance.
 
@@ -62,7 +62,7 @@ class WassersteinDistance(Loss):
     def _get_batch_n(self, x_dict):
         return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
 
-    def _get_eval(self, x_dict, **kwargs):
+    def forward(self, x_dict, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
         # sample from distributions
