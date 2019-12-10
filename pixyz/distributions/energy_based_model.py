@@ -18,7 +18,6 @@ class EnergybasedDistribution(Distribution):
 
      """
 
-
     @property
     def distribution_name(self):
         return "Energy-based Model"
@@ -29,11 +28,11 @@ class EnergybasedDistribution(Distribution):
 
     def langevin(self, x_dict, lam=5e-3):
         _x_dict = dict((key, value.requires_grad_(True)) for key, value in x_dict.items())
-        energy = self.get_energy(_x_dict)
+        energy = self.get_energy(_x_dict).sum()  # take sum over batch
         energy.backward()
 
-        return dict((key, value - lam/2. * value.grad + torch.normal(torch.zeros_like(value),
-                                                                     torch.ones_like(value) * lam))
+        return dict((key, value.data - lam / 2. * value.grad.data + torch.normal(torch.zeros_like(value),
+                                                                                 torch.ones_like(value) * lam))
                     for key, value in _x_dict.items())
 
     def get_energy(self, x_dict={}):
@@ -46,15 +45,15 @@ class EnergybasedDistribution(Distribution):
 
     def get_log_prob(self, x_dict={}, mc_iter=10, lam=5e-3):
         energy = self.get_energy(x_dict)
-        partition = self.get_partition(x_dict, mc_iter=mc_iter, lam=lam)
-        return -energy + torch.log(partition)
+        log_partition = self.get_partition(x_dict, mc_iter=mc_iter, lam=lam)
+        return -energy + log_partition
 
     def sample(self, x_dict={}, mc_iter=10, lam=5e-3):
         if len(x_dict) > 0:
             x_dict = self._check_input(x_dict)
-
         output_dict = x_dict
-        for _ in range(mc_iter):
+
+        for i in range(mc_iter):
             output_dict = self.langevin(output_dict, lam)
 
         return output_dict
