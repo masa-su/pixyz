@@ -33,6 +33,8 @@ from .mixture_distributions import MixtureModel
 
 from .flow_distribution import TransformedDistribution, InverseTransformedDistribution
 
+from .energy_based_model import EnergybasedDistribution
+
 __all__ = [
     'Distribution',
     'CustomProb',
@@ -59,4 +61,6 @@ __all__ = [
 
     'TransformedDistribution',
     'InverseTransformedDistribution',
+
+    'EnergybasedDistribution',
 ]
