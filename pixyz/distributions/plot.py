@@ -17,6 +17,9 @@ rc("font", family="serif", size=12)
 rc("text", usetex=True)
 
 
+USE_DAFT = False
+
+
 def test_plot():
     dist = prepare_dist()
     plot(dist, "tmp_daft.png")
@@ -28,6 +31,7 @@ def prepare_dist():
     z_dim = 40
     a_dim = 50
     batch_n = 2
+    long_name = "too_long_name"
 
     class P1(Normal):
         def __init__(self):
@@ -46,7 +50,7 @@ def prepare_dist():
 
     class P2(Normal):
         def __init__(self):
-            super(P2, self).__init__(cond_var=["X", "y"], var=["z"], name="p_{2}")
+            super(P2, self).__init__(cond_var=[long_name, "y"], var=["z"], name="p_{2}")
 
             self.fc3 = nn.Linear(x_dim, 30)
             self.fc4 = nn.Linear(30 + y_dim, 400)
@@ -68,7 +72,7 @@ def prepare_dist():
     a = torch.from_numpy(np.random.random((batch_n, a_dim)).astype("float32"))
 
     p1 = P1()
-    p1_r = ReplaceVarDistribution(p1, {'x': 'X'})
+    p1_r = ReplaceVarDistribution(p1, {'x': long_name})
     p2 = P2()
     p3 = p2 * p1_r
     p3.name = "p_{3}"
@@ -116,26 +120,29 @@ class GeneralSugiyamaLayout:
             xyrange = get_vertex_range(c_layout.g.sV)
             for v in c_layout.g.sV:
                 v.view.xy = (v.view.xy[0] + top_left[0] - xyrange[0], v.view.xy[1] + top_left[1] - xyrange[2])
-            # TODO: daftの謎スケールのためのヒューリスティクス
-            top_left = [top_left[0] + xyrange[1] - xyrange[0], top_left[1]]
-            # top_left = [top_left[0] + xyrange[1] - xyrange[0] + self.margin, top_left[1]]
+            # # TODO: daftの謎スケールのためのヒューリスティクス
+            # top_left = [top_left[0] + xyrange[1] - xyrange[0], top_left[1]]
+            top_left = [top_left[0] + xyrange[1] - xyrange[0] + self.margin, top_left[1]]
 
 
 def plot(dist, filename):
     default_node_size = 1
-    # TODO: daftの謎スケールのためのヒューリスティクス
-    default_margin = 0.1
-    # default_margin = 1
+    # # TODO: daftの謎スケールのためのヒューリスティクス
+    # default_margin = 0.1
+    default_margin = 1
     glgraph = glg.Graph()
     make_dag_from_dist(dist, glgraph)
     layout = GeneralSugiyamaLayout(glgraph, default_node_size, default_margin)
     layout.draw()
 
-    draw_graph(glgraph, filename, default_node_size)
+    if USE_DAFT:
+        draw_graph_by_daft(glgraph, filename, default_node_size)
+    else:
+        draw_graph_by_pyplot(glgraph, filename, default_node_size)
 
 
 class PGMNode:
-    def __init__(self, var_name, observed=False):
+    def __init__(self, var_name, observed=True):
         self.var_name = var_name
         self.observed = observed
 
@@ -178,7 +185,7 @@ def make_dag_from_dist(dist: Distribution, glgraph: glg.Graph, var_dict=None):
         # 周辺化された変数を別表記する
         make_dag_from_dist(dist.p, glgraph, var_dict)
         for var_name in dist._marginalize_list:
-            var_dict[var_name].data = PGMNode(var_name, observed=True)
+            var_dict[var_name].data = PGMNode(var_name, observed=False)
     elif isinstance(dist, ReplaceVarDistribution):
         make_dag_from_dist(dist.p, glgraph, var_dict)
         replace_var_name(glgraph, var_dict, dist._replace_dict)
@@ -195,33 +202,63 @@ def make_dag_from_dist(dist: Distribution, glgraph: glg.Graph, var_dict=None):
                 glgraph.add_edge(glg.Edge(var_dict[cond_var_name], var_dict[var_name]))
 
 
-def add_arrow(ax, v1, v2):
+def add_arrow(ax, v1, v2, linewidth, shrink, path=None):
+    # arrowstyles=['-', '->', '-[', '-|>', '<-', '<->', '<|-', '<|-|>', ']-', ']-[', 'fancy', 'simple', 'wedge', '|-|']
     ax.annotate('', xy=v1, xycoords='data', xytext=v2, textcoords='data',
-                arrowprops=dict(arrowstyle='->', color='0.5',
-                                shrinkA=5, shrinkB=5,
-                                patchA=None, patchB=None,
+                arrowprops=dict(arrowstyle='-|>', color='k',
+                                path=path,
+                                shrinkA=shrink, shrinkB=shrink,
+                                # patchA=patchA, patchB=patchB,
+                                linewidth=linewidth,
+                                linestyle='-.',
                                 connectionstyle="arc3,rad=0.3"))
 
 
-def draw_graph(graph, filename, node_size):
+def get_edge_vertices(node0, node1, radius):
+    start = np.array(node0.view.xy)
+    end = np.array(node1.view.xy)
+    # direction = end - start
+    # v0 = start + radius * direction / np.linalg.norm(direction)
+    # v1 = end - radius * direction / np.linalg.norm(direction)
+    return start, end
+
+
+def add_edge(ax, e, node_size):
+    linewidth = node_size*4
+    # path = patches.Path([e.v[0].view.xy, e.v[1].view.xy])
+    node0, node1 = e.v
+    v0, v1 = get_edge_vertices(node0, node1, node_size/2)
+    add_arrow(ax, v0, v1, linewidth, node_size*33)
+
+
+def draw_graph_by_daft(graph, filename, node_size):
     pgm = glf2daft(graph, node_size)
     pgm.render()
     pgm.savefig(filename)
 
 
-def draw_graph_by_pyplot(graph, filename, node_size):
-    fig = plt.figure(frameon=False)
+def draw_graph_by_pyplot(graph, filename, node_size, transparent=False):
+    fig = plt.figure(frameon=not transparent)
     xyrange = get_vertex_range(graph.V())
     ax = fig.add_axes([0, 0, 1, 1], aspect=1.)
-    ax.set_xlim(*xyrange[:2])
-    ax.set_ylim(*xyrange[2:])
+    linewidth = node_size*4
+    pyplot_margin = linewidth/40
+    ax.set_xlim(xyrange[0] - pyplot_margin, xyrange[1] + pyplot_margin)
+    ax.set_ylim(xyrange[2] - pyplot_margin, xyrange[3] + pyplot_margin)
     ax.axis('off')
-    for v in graph.V():
-        ax.add_patch(patches.Circle(xy=v.view.xy, radius=node_size/2, fc='w', ec='black'))
 
     for e in graph.E():
-        add_arrow(ax, e.v[0].view.xy, e.v[1].view.xy)
+        add_edge(ax, e, node_size)
 
+    circles = {}
+    for v in graph.V():
+        fc = 'gray' if v.data.observed else 'w'
+        circles[v] = patches.Circle(xy=v.view.xy, radius=node_size/2, fc=fc, ec='k', linewidth=linewidth)
+        ax.add_patch(circles[v])
+        ax.text(v.view.xy[0], v.view.xy[1], rf"${v.data.var_name}$", fontsize=node_size*30,
+                verticalalignment='center', horizontalalignment='center')
+
+    ax.set_facecolor('w')
     with open(filename, 'wb') as f:
         fig.canvas.print_png(f)
 
@@ -233,7 +270,7 @@ def glf2daft(graph, node_size):
                      observed=v.data.observed, fixed=False, shape="ellipse")
 
     for e in graph.E():
-        pgm.add_edge(e.v[1].data.var_name, e.v[0].data.var_name)
+        pgm.add_edge(e.v[1].data.var_name, e.v[0].data.var_name, plot_params=dict(linestyle='-.'))
     return pgm
 
 
