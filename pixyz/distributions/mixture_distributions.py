@@ -242,6 +242,7 @@ class PosteriorMixtureModel(Distribution):
     def sample(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @property
     def has_reparam(self):
         return False
 
