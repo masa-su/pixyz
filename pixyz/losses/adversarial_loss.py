@@ -11,14 +11,14 @@ class AdversarialLoss(Divergence):
         if p.var != q.var:
             raise ValueError("The two distribution variables must be the same.")
 
+        super().__init__(p, q, input_var=input_var)
+
         if len(p.input_var) > 0:
             self.input_dist = p
         elif len(q.input_var) > 0:
             self.input_dist = q
         else:
             raise NotImplementedError()
-
-        super().__init__(p, q, input_var=input_var)
 
         self.loss_optimizer = optimizer
         self.loss_optimizer_params = optimizer_params

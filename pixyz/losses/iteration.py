@@ -77,6 +77,7 @@ class IterativeLoss(Loss):
 
     def __init__(self, step_loss, max_iter=None,
                  input_var=None, series_var=None, update_value={}, slice_step=None, timestep_var=["t"]):
+        super().__init__()
         self.step_loss = step_loss
         self.max_iter = max_iter
         self.update_value = update_value

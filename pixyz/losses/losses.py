@@ -8,7 +8,7 @@ from copy import deepcopy
 from ..utils import tolist
 
 
-class Loss(object, metaclass=abc.ABCMeta):
+class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
     """Loss class. In Pixyz, all loss classes are required to inherit this class.
 
     Examples
@@ -63,6 +63,7 @@ class Loss(object, metaclass=abc.ABCMeta):
             because these depend on the given distributions and each loss function.
 
         """
+        super().__init__()
         self._input_var = input_var
 
     @property
@@ -313,6 +314,7 @@ class Parameter(Loss):
 
 class LossOperator(Loss):
     def __init__(self, loss1, loss2):
+        super().__init__()
         _input_var = []
 
         if isinstance(loss1, Loss):
@@ -526,6 +528,7 @@ class MaxLoss(LossOperator):
 
 class LossSelfOperator(Loss):
     def __init__(self, loss1):
+        super().__init__()
         _input_var = []
 
         if isinstance(loss1, type(None)):
@@ -735,12 +738,11 @@ class Expectation(Loss):
 
         if input_var is None:
             input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
+        super().__init__(input_var=input_var)
         self.p = p
         self.f = f
         self.sample_shape = torch.Size(sample_shape)
         self.reparam = reparam
-
-        super().__init__(input_var=input_var)
 
     @property
     def _symbol(self):

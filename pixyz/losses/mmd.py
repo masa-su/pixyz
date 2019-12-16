@@ -36,6 +36,11 @@ class MMD(Divergence):
         if len(p.var) != 1:
             raise ValueError("A given distribution must have only one variable.")
 
+        if input_var is None:
+            input_var = p.input_var + q.input_var
+
+        super().__init__(p, q, input_var=input_var)
+
         if len(p.input_var) > 0:
             self.input_dist = p
         elif len(q.input_var) > 0:
@@ -51,11 +56,6 @@ class MMD(Divergence):
             raise NotImplementedError()
 
         self.kernel_params = kernel_params
-
-        if input_var is None:
-            input_var = p.input_var + q.input_var
-
-        super().__init__(p, q, input_var=input_var)
 
     @property
     def _symbol(self):
