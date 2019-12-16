@@ -191,7 +191,8 @@ class InverseTransformedDistribution(Distribution):
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all)
+        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all,
+                                        reparam=reparam)
 
         # inverse flow transformation
         _z = get_dict_values(sample_dict, self.flow_output_var)

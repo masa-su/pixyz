@@ -681,8 +681,8 @@ class Detach(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("detach \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it?
 
-    def _get_eval(self, x_dict={}, **kwargs):
-        loss, x_dict = self.loss1._get_eval(x_dict, **kwargs)
+    def forward(self, x_dict={}, **kwargs):
+        loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.detach(), x_dict
 
 
@@ -750,7 +750,7 @@ class Expectation(Loss):
     def forward(self, x_dict={}, **kwargs):
         samples_dicts = [self.p.sample(x_dict, reparam=self.reparam, return_all=True) for i in range(self.sample_shape.numel())]
 
-        loss_and_dicts = [self._f.eval(samples_dict, return_dict=True, **kwargs) for
+        loss_and_dicts = [self.f.eval(samples_dict, return_dict=True, **kwargs) for
                           samples_dict in samples_dicts]
 
         losses = [loss for loss, loss_sample_dict in loss_and_dicts]
