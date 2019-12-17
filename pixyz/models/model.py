@@ -7,7 +7,7 @@ from ..utils import tolist
 from ..distributions.distributions import Distribution
 
 
-class Model(nn.Module):
+class Model(object):
     """
     This class is for training and testing a loss class.
     It requires a defined loss class, distributions to train, and optimizer for initialization.
@@ -83,7 +83,6 @@ class Model(nn.Module):
         clip_grad_value : float or int
             Maximum allowed value of the gradients.
         """
-        super().__init__()
 
         # set losses
         self.loss_cls = None
@@ -126,7 +125,7 @@ class Model(nn.Module):
         else:
             self.test_loss_cls = loss
 
-    def train_(self, train_x_dict={}, **kwargs):
+    def train(self, train_x_dict={}, **kwargs):
         """Train the model.
 
         Parameters
@@ -159,7 +158,7 @@ class Model(nn.Module):
 
         return loss
 
-    def test_(self, test_x_dict={}, **kwargs):
+    def test(self, test_x_dict={}, **kwargs):
         """Test the model.
 
         Parameters
@@ -180,9 +179,3 @@ class Model(nn.Module):
             loss = self.test_loss_cls.eval(test_x_dict, **kwargs)
 
         return loss
-
-    def forward(self, x_dict={}, test_mode=True, **kwargs):
-        if not test_mode:
-            return self.train_(x_dict, **kwargs)
-        else:
-            return self.test_(x_dict, **kwargs)

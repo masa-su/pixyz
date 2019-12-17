@@ -1,6 +1,8 @@
 import abc
 import sympy
 import torch
+from torch.nn import DataParallel
+from torch.nn.parallel import DistributedDataParallel
 
 import numbers
 from copy import deepcopy
@@ -805,3 +807,25 @@ def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1])
 
     """
     return Expectation(p, (f - b).detach() * p.log_prob() + (f - b), input_var, sample_shape, reparam=reparam)
+
+
+class DataParalleledLoss(Loss):
+    def __init__(self, loss, distributed=False, **kwargs):
+        super().__init__(loss.input_var)
+        if distributed:
+            self.paralleled = DistributedDataParallel(loss, **kwargs)
+        else:
+            self.paralleled = DataParallel(loss, **kwargs)
+
+    def forward(self, x_dict, **kwargs):
+        return self.paralleled.forward(x_dict, **kwargs)
+
+    @property
+    def _symbol(self):
+        return self.paralleled.module._symbol
+
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.paralleled.module, name)

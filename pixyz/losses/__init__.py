@@ -30,6 +30,7 @@ from .losses import (
     MaxLoss,
     Expectation,
     REINFORCE,
+    DataParalleledLoss,
 )
 
 from .iteration import (
@@ -54,6 +55,7 @@ __all__ = [
     'StochasticReconstructionLoss',
     'Expectation',
     'REINFORCE',
+    'DataParalleledLoss',
     'KullbackLeibler',
     'LogProb',
     'Prob',
