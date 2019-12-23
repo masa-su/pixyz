@@ -273,16 +273,17 @@ class ValueLoss(Loss):
 
     """
     def __init__(self, loss1):
-        self.loss1 = loss1
+        super().__init__()
+        self.original_value = loss1
+        self.register_buffer('value', torch.tensor(loss1, dtype=torch.float))
         self._input_var = []
 
     def forward(self, x_dict={}, **kwargs):
-        # TODO: to gpu
-        return torch.tensor(self.loss1, dtype=torch.float), x_dict
+        return self.value, x_dict
 
     @property
     def _symbol(self):
-        return self.loss1
+        return self.original_value
 
 
 class Parameter(Loss):
@@ -304,7 +305,7 @@ class Parameter(Loss):
     def __init__(self, input_var):
         if not isinstance(input_var, str):
             raise ValueError()
-        self._input_var = tolist(input_var)
+        super().__init__(tolist(input_var))
 
     def forward(self, x_dict={}, **kwargs):
         return x_dict[self._input_var[0]], x_dict
@@ -546,11 +547,11 @@ class LossSelfOperator(Loss):
         self._input_var = _input_var
         self.loss1 = loss1
 
-    def train(self, x_dict={}, **kwargs):
-        return self.loss1.train(x_dict, **kwargs)
+    def loss_train(self, x_dict={}, **kwargs):
+        return self.loss1.loss_train(x_dict, **kwargs)
 
-    def test(self, x_dict={}, **kwargs):
-        return self.loss1.test(x_dict, **kwargs)
+    def loss_test(self, x_dict={}, **kwargs):
+        return self.loss1.loss_test(x_dict, **kwargs)
 
 
 class NegLoss(LossSelfOperator):
@@ -810,6 +811,61 @@ def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1])
 
 
 class DataParalleledLoss(Loss):
+    r"""
+    Loss class wrapper of torch.nn.DataParallel. It can be used as the original loss class.
+    `eval` & `forward` methods support data-parallel running.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from torch import optim
+    >>> from torch.nn import functional as F
+    >>> from pixyz.distributions import Bernoulli, Normal
+    >>> from pixyz.losses import StochasticReconstructionLoss, KullbackLeibler, DataParalleledLoss
+    >>> from pixyz.models import Model
+    >>> used_gpu_i = set()
+    >>> used_gpu_g = set()
+    >>> # Set distributions (Distribution API)
+    >>> class Inference(Normal):
+    ...     def __init__(self):
+    ...         super().__init__(cond_var=["x"], var=["z"], name="q")
+    ...         self.model_loc = torch.nn.Linear(128, 64)
+    ...         self.model_scale = torch.nn.Linear(128, 64)
+    ...     def forward(self, x):
+    ...         used_gpu_i.add(x.device.index)
+    ...         return {"loc": self.model_loc(x), "scale": F.softplus(self.model_scale(x))}
+    >>> class Generator(Bernoulli):
+    ...     def __init__(self):
+    ...         super().__init__(cond_var=["z"], var=["x"], name="p")
+    ...         self.model = torch.nn.Linear(64, 128)
+    ...     def forward(self, z):
+    ...         used_gpu_g.add(z.device.index)
+    ...         return {"probs": torch.sigmoid(self.model(z))}
+    >>> p = Generator()
+    >>> q = Inference()
+    >>> prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
+    ...                var=["z"], features_shape=[64], name="p_{prior}")
+    >>> # Define a loss function (Loss API)
+    >>> reconst = StochasticReconstructionLoss(q, p)
+    >>> kl = KullbackLeibler(q, prior)
+    >>> batch_loss_cls = (reconst - kl)
+    >>> # device settings
+    >>> device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    >>> device_count = torch.cuda.device_count()
+    >>> if device_count > 1:
+    ...     loss_cls = DataParalleledLoss(batch_loss_cls).mean().to(device)
+    ... else:
+    ...     loss_cls = batch_loss_cls.mean().to(device)
+    >>> # Set a model (Model API)
+    >>> model = Model(loss=loss_cls, distributions=[p, q],
+    ...               optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
+    >>> # Train and test the model
+    >>> data = torch.randn(2, 128).to(device)  # Pseudo data
+    >>> train_loss = model.train({"x": data})
+    >>> expected = set(range(device_count)) if torch.cuda.is_available() else {None}
+    >>> assert used_gpu_i==expected
+    >>> assert used_gpu_g==expected
+    """
     def __init__(self, loss, distributed=False, **kwargs):
         super().__init__(loss.input_var)
         if distributed:

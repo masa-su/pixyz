@@ -25,7 +25,6 @@ from .distributions import (
     MultiplyDistribution,
     MarginalizeVarDistribution,
     ReplaceVarDistribution,
-    DataParalleledDistribution,
 )
 
 from .poe import ProductOfNormal, ElementWiseProductOfNormal
@@ -54,7 +53,6 @@ __all__ = [
     'MultiplyDistribution',
     'ReplaceVarDistribution',
     'MarginalizeVarDistribution',
-    'DataParalleledDistribution',
     'ProductOfNormal',
     'ElementWiseProductOfNormal',
     'MixtureModel',

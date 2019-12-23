@@ -2,8 +2,6 @@ from __future__ import print_function
 import torch
 import re
 from torch import nn
-from torch.nn import DataParallel
-from torch.nn.parallel import DistributedDataParallel
 from copy import deepcopy
 
 from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
@@ -806,19 +804,6 @@ class DistributionBase(Distribution):
         output_dict = self.get_sample(reparam=reparam,
                                       sample_shape=sample_shape)
 
-        # input_size = torch.Size()
-        # input_device = None
-        # if len(x_dict) != 0:
-        #     input_tensor0 = list(x_dict.values())[0]
-        #     input_size = input_tensor0.size()
-        #     input_device = input_tensor0.device
-        # output_size = torch.Size()
-        # output_device = None
-        # if len(output_dict) != 0:
-        #     output_tensor0 = list(output_dict.values())[0]
-        #     output_size = output_tensor0.size()
-        #     output_device = output_tensor0.device
-        # print(f"input:{input_size} device={input_device}, \noutput:{output_size} device={output_device}")
         if return_all:
             x_dict.update(output_dict)
             return x_dict
@@ -1261,21 +1246,3 @@ class MarginalizeVarDistribution(Distribution):
             return super().__getattr__(item)
         except AttributeError:
             return self.p.__getattribute__(item)
-
-
-class DataParalleledDistribution(Distribution):
-    def __init__(self, dist, distributed=False, **kwargs):
-        super().__init__(dist.var, dist.cond_var, dist.name, dist.features_shape)
-        if distributed:
-            self.paralleled = DistributedDataParallel(dist, **kwargs)
-        else:
-            self.paralleled = DataParallel(dist, **kwargs)
-
-    def forward(self, x_dict, **kwargs):
-        return self.paralleled.forward(x_dict, **kwargs)
-
-    def __getattr__(self, name):
-        try:
-            return super().__getattr__(name)
-        except AttributeError:
-            return getattr(self.paralleled.module, name)

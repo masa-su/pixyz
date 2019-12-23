@@ -46,14 +46,14 @@ class WassersteinDistance(Divergence):
 
         super().__init__(p, q, input_var)
 
-        self.metric = metric
-
         if len(p.input_var) > 0:
             self.input_dist = p
         elif len(q.input_var) > 0:
             self.input_dist = q
         else:
             raise NotImplementedError()
+
+        self.metric = metric
 
     @property
     def _symbol(self):
