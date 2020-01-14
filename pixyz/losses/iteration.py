@@ -84,7 +84,7 @@ class IterativeLoss(Loss):
         self.timpstep_symbol = sympy.Symbol(self.timestep_var[0])
 
         if (series_var is None) and (max_iter is None):
-            raise ValueError
+            raise ValueError()
 
         self.slice_step = slice_step
         if self.slice_step:
