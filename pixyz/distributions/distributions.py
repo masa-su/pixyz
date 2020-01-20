@@ -652,7 +652,8 @@ class DistributionBase(Distribution):
                 if params_dict[key] in self._cond_var:
                     self.replace_params_dict[params_dict[key]] = key
                 else:
-                    raise ValueError()
+                    raise ValueError(f"parameter setting {key}:{params_dict[key]} is not valid"
+                                     f" because cond_var does not contains {params_dict[key]}.")
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
@@ -712,7 +713,9 @@ class DistributionBase(Distribution):
         """
         params = self.get_params(x_dict, **kwargs)
         if set(self.params_keys) != set(params.keys()):
-            raise ValueError()
+            raise ValueError(f"{type(self)} class requires following parameters:"
+                             f" {set(self.params_keys)}\n"
+                             f"but got {set(params.keys())}")
 
         self._dist = self.distribution_torch_class(**params)
 
@@ -892,7 +895,7 @@ class MultiplyDistribution(Distribution):
 
         """
         if not (isinstance(a, Distribution) and isinstance(b, Distribution)):
-            raise ValueError("Given inputs should be `pixyz.Distribution`, got {} and {}.".format(type(a), type(b)))
+            raise ValueError(f"Given inputs should be `pixyz.Distribution`, got {type(a)} and {type(b)}.")
 
         # Check parent-child relationship between two distributions.
         # If inherited variables (`_inh_var`) are exist (e.g. c in p(e|c)p(c|a,b)),
@@ -920,14 +923,14 @@ class MultiplyDistribution(Distribution):
         # Check if variables of two distributions are "recursive" (e.g. p(x|z)p(z|x)).
         _check_recursive_vars = _child.var + _parent.cond_var
         if len(_check_recursive_vars) != len(set(_check_recursive_vars)):
-            raise ValueError("Variables of two distributions, {} and {}, are recursive.".format(_child.prob_text,
-                                                                                                _parent.prob_text))
+            raise ValueError(f"Variables of two distributions,"
+                             f" {_child.prob_text} and {_parent.prob_text}, are recursive.")
 
         # Set variables.
         _var = _child.var + _parent.var
         if len(_var) != len(set(_var)):  # e.g. p(x|z)p(x|y)
-            raise ValueError("Variables of two distributions, {} and {}, are conflicted.".format(_child.prob_text,
-                                                                                                 _parent.prob_text))
+            raise ValueError(f"Variables of two distributionsl,"
+                             f" {_child.prob_text} and {_parent.prob_text}, are conflicted.")
 
         # Set conditional variables.
         _cond_var = _child.cond_var + _parent.cond_var
@@ -979,8 +982,8 @@ class MultiplyDistribution(Distribution):
         if parent_log_prob.size() == child_log_prob.size():
             return parent_log_prob + child_log_prob
 
-        raise ValueError("Two PDFs, {} and {}, have different sizes,"
-                         " so you must set sum_dim=True.".format(self._parent.prob_text, self._child.prob_text))
+        raise ValueError(f"Two PDFs, {self._parent.prob_text} and {self._child.prob_text}, have different sizes,"
+                         f" so you must modify these tensor sizes.")
 
     def __repr__(self):
         return self._parent.__repr__() + "\n" + self._child.__repr__()
@@ -1029,7 +1032,7 @@ class ReplaceVarDistribution(Distribution):
 
         """
         if not isinstance(p, Distribution):
-            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(p)))
+            raise ValueError(f"Given input should be `pixyz.Distribution`, got {type(p)}.")
 
         if isinstance(p, MultiplyDistribution):
             raise ValueError("`pixyz.MultiplyDistribution` is not supported for now.")
@@ -1042,7 +1045,7 @@ class ReplaceVarDistribution(Distribution):
         all_vars = _cond_var + _var
 
         if not (set(replace_dict.keys()) <= set(all_vars)):
-            raise ValueError()
+            raise ValueError("replace_dict has unknown variables.")
 
         _replace_inv_cond_var_dict = {replace_dict[var]: var for var in _cond_var if var in replace_dict.keys()}
         _replace_inv_dict = {value: key for key, value in replace_dict.items()}
@@ -1164,7 +1167,7 @@ class MarginalizeVarDistribution(Distribution):
         marginalize_list = tolist(marginalize_list)
 
         if not isinstance(p, Distribution):
-            raise ValueError("Given input must be `pixyz.distributions.Distribution`, got {}.".format(type(p)))
+            raise ValueError(f"Given input must be `pixyz.distributions.Distribution`, got {type(p)}.")
 
         if isinstance(p, DistributionBase):
             raise ValueError("`pixyz.distributions.DistributionBase` cannot be marginalized its variables.")
@@ -1173,10 +1176,10 @@ class MarginalizeVarDistribution(Distribution):
         _cond_var = deepcopy(p.cond_var)
 
         if not((set(marginalize_list)) < set(_var)):
-            raise ValueError()
+            raise ValueError("marginalize_list has unknown variables or it has all of variables of `p`.")
 
         if not((set(marginalize_list)).isdisjoint(set(_cond_var))):
-            raise ValueError()
+            raise ValueError("Conditional variables can not be marginalized.")
 
         if len(marginalize_list) == 0:
             raise ValueError("Length of `marginalize_list` must be at least 1, got 0.")
