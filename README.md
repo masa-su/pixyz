@@ -194,7 +194,7 @@ Next, we set the objective (loss) function of the model with defined distributio
 **Loss API** (`pixyz.losses.*`) enables you to define such loss function as if just writing mathematic formulas. The loss function of VAE (Eq.(1)) can easily be converted to the code style  as follows.
 ```python
 >>> from pixyz.losses import KullbackLeibler, LogProb, Expectation as E
->>> reconst = -E(q, LogProb(p)) # the reconstruction loss (it can also be written as `-p.log_prob().expectation()` or `StochasticReconstructionLoss(q, p)`)
+>>> reconst = -E(q, LogProb(p)) # the reconstruction loss (it can also be written as `-p.log_prob().expectation()`)
 >>> kl = KullbackLeibler(q, prior) # Kullback-Leibler divergence
 >>> loss_cls = (kl + reconst).mean()
 ```
