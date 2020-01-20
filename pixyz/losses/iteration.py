@@ -159,5 +159,4 @@ class IterativeLoss(Loss):
         # Restore original values
         x_dict.update(series_x_dict)
         x_dict.update(updated_x_dict)
-        
         return loss, x_dict

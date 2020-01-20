@@ -6,6 +6,7 @@ from .entropy import (
     CrossEntropy,
     Entropy,
     AnalyticalEntropy,
+    StochasticReconstructionLoss,
 )
 
 from .elbo import (
@@ -45,6 +46,7 @@ __all__ = [
     'CrossEntropy',
     'Entropy',
     'AnalyticalEntropy',
+    'StochasticReconstructionLoss',
     'Expectation',
     'KullbackLeibler',
     'LogProb',
