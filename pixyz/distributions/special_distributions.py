@@ -47,7 +47,7 @@ class Deterministic(Distribution):
         output_dict = self.forward(**_x_dict)
 
         if set(output_dict.keys()) != set(self._var):
-            raise ValueError("Output variables are not same as `var`.")
+            raise ValueError("Output variables are not the same as `var`.")
 
         if return_all:
             x_dict.update(output_dict)

@@ -8,7 +8,7 @@ from ..utils import get_dict_values, detach_dict
 class AdversarialLoss(Loss):
     def __init__(self, p, q, discriminator, input_var=None,
                  optimizer=optim.Adam, optimizer_params={}):
-        if p.var != q.var:
+        if set(p.var) != set(q.var):
             raise ValueError("The two distribution variables must be the same.")
 
         if len(p.input_var) > 0:

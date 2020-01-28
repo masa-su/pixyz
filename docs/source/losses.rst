@@ -64,12 +64,6 @@ AnalyticalEntropy
     :members:
     :undoc-members:
 
-StochasticReconstructionLoss
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: StochasticReconstructionLoss
-    :members:
-    :undoc-members:
 
 Lower bound
 ----------------------------

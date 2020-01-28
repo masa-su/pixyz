@@ -249,13 +249,10 @@ class Preprocess(Flow):
         z = self.logit(x)
 
         if compute_jacobian:
-            # log-det Jacobian of transformation (2)
+            # log-det Jacobian of transformation
             logdet_jacobian = F.softplus(z) + F.softplus(-z) \
                 - F.softplus(self.data_constraint.log() - (1. - self.data_constraint).log())
             logdet_jacobian = sum_samples(logdet_jacobian)
-
-            # log-det Jacobian of transformation (1)
-            logdet_jacobian = logdet_jacobian - np.log(256.) * z[0].numel()
 
             self._logdet_jacobian = logdet_jacobian
 
