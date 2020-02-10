@@ -3,6 +3,7 @@ import torch
 
 from pixyz.losses.losses import Loss
 from pixyz.losses.divergences import KullbackLeibler
+from pixyz.utils import lru_cache_for_sample_dict
 
 
 def Entropy(p, input_var=None, analytical=True, sample_shape=torch.Size([1])):
@@ -53,6 +54,7 @@ class AnalyticalEntropy(Loss):
         p_text = "{" + self.p.prob_text + "}"
         return sympy.Symbol(f"H \\left[ {p_text} \\right]")
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict, **kwargs):
         if not hasattr(self.p, 'get_distribution_torch_class'):
             raise ValueError("Entropy of this distribution cannot be evaluated, "

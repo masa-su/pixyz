@@ -1,7 +1,7 @@
 from torch.nn.modules.distance import PairwiseDistance
 import sympy
 from .losses import Divergence
-from ..utils import get_dict_values
+from ..utils import get_dict_values, lru_cache_for_sample_dict
 
 
 class WassersteinDistance(Divergence):
@@ -62,6 +62,7 @@ class WassersteinDistance(Divergence):
     def _get_batch_n(self, x_dict):
         return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 

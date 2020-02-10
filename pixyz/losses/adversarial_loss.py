@@ -2,7 +2,7 @@ import sympy
 from torch import optim, nn
 import torch
 from .losses import Divergence
-from ..utils import get_dict_values, detach_dict
+from ..utils import get_dict_values, detach_dict, lru_cache_for_sample_dict
 
 
 class AdversarialLoss(Divergence):
@@ -226,6 +226,7 @@ class AdversarialJensenShannon(AdversarialLoss):
         return sympy.Symbol("mean(D_{{JS}}^{{Adv}} \\left[{}||{} \\right])".format(self.p.prob_text,
                                                                                    self.q.prob_text))
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict, discriminator=False, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 
@@ -387,6 +388,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         return sympy.Symbol("mean(D_{{KL}}^{{Adv}} \\left[{}||{} \\right])".format(self.p.prob_text,
                                                                                    self.q.prob_text))
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict, discriminator=False, **kwargs):
         batch_n = self._get_batch_n(x_dict)
 

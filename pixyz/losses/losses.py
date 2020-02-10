@@ -5,7 +5,7 @@ import torch
 import numbers
 from copy import deepcopy
 
-from ..utils import tolist
+from ..utils import tolist, lru_cache_for_sample_dict
 
 
 class Loss(object, metaclass=abc.ABCMeta):
@@ -273,6 +273,7 @@ class ValueLoss(Loss):
         self.loss1 = loss1
         self._input_var = []
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         # TODO: to gpu
         return torch.tensor(self.loss1, dtype=torch.float), x_dict
@@ -303,6 +304,7 @@ class Parameter(Loss):
             raise ValueError()
         self._input_var = tolist(input_var)
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         return x_dict[self._input_var[0]], x_dict
 
@@ -339,6 +341,7 @@ class LossOperator(Loss):
         self.loss1 = loss1
         self.loss2 = loss2
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         if not isinstance(self.loss1, type(None)):
             loss1, x1 = self.loss1.forward(x_dict, **kwargs)
@@ -377,6 +380,7 @@ class AddLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol + self.loss2._symbol
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 + loss2, x_dict
@@ -408,6 +412,7 @@ class SubLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol - self.loss2._symbol
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 - loss2, x_dict
@@ -433,6 +438,7 @@ class MulLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol * self.loss2._symbol
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 * loss2, x_dict
@@ -465,6 +471,7 @@ class DivLoss(LossOperator):
     def _symbol(self):
         return self.loss1._symbol / self.loss2._symbol
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return loss1 / loss2, x_dict
@@ -492,6 +499,7 @@ class MinLoss(LossOperator):
     def _symbol(self):
         return sympy.Symbol(f"min \\left({self.loss1.loss_text}, {self.loss2.loss_text}\\right)")
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return torch.min(loss1, loss2), x_dict
@@ -519,6 +527,7 @@ class MaxLoss(LossOperator):
     def _symbol(self):
         return sympy.Symbol(f"max \\left({self.loss1.loss_text}, {self.loss2.loss_text}\\right)")
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
         return torch.max(loss1, loss2), x_dict
@@ -567,6 +576,7 @@ class NegLoss(LossSelfOperator):
     def _symbol(self):
         return -self.loss1._symbol
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return -loss, x_dict
@@ -596,6 +606,7 @@ class AbsLoss(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("|{}|".format(self.loss1.loss_text))
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.abs(), x_dict
@@ -631,6 +642,7 @@ class BatchMean(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("mean \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.mean(), x_dict
@@ -666,6 +678,7 @@ class BatchSum(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("sum \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.sum(), x_dict
@@ -681,6 +694,7 @@ class Detach(LossSelfOperator):
     def _symbol(self):
         return sympy.Symbol("detach \\left({} \\right)".format(self.loss1.loss_text))  # TODO: fix it?
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         loss, x_dict = self.loss1.forward(x_dict, **kwargs)
         return loss.detach(), x_dict
@@ -747,6 +761,7 @@ class Expectation(Loss):
         p_text = "{" + self.p.prob_text + "}"
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.f.loss_text))
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict={}, **kwargs):
         samples_dicts = [self.p.sample(x_dict, reparam=self.reparam, return_all=True) for i in range(self.sample_shape.numel())]
 

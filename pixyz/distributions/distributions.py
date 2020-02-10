@@ -5,7 +5,7 @@ from torch import nn
 from copy import deepcopy
 
 from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
-    tolist, sum_samples, convert_latex_name
+    tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict
 from ..losses import LogProb, Prob
 
 
@@ -768,6 +768,7 @@ class DistributionBase(Distribution):
 
         return log_prob
 
+    @lru_cache_for_sample_dict()
     def get_params(self, params_dict={}, **kwargs):
         params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)

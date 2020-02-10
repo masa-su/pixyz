@@ -2,7 +2,7 @@ import sympy
 import torch
 from torch.distributions import kl_divergence
 
-from ..utils import get_dict_values
+from ..utils import get_dict_values, lru_cache_for_sample_dict
 from .losses import Divergence
 
 
@@ -52,6 +52,7 @@ class AnalyticalKullbackLeibler(Divergence):
     def _symbol(self):
         return sympy.Symbol("D_{{KL}} \\left[{}||{} \\right]".format(self.p.prob_text, self.q.prob_text))
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict, **kwargs):
         if (not hasattr(self.p, 'get_distribution_torch_class')) or (not hasattr(self.q, 'get_distribution_torch_class')):
             raise ValueError("Divergence between these two distributions cannot be evaluated, "

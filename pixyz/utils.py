@@ -1,3 +1,4 @@
+import functools
 import torch
 import sympy
 from IPython.display import Math
@@ -174,6 +175,65 @@ def replace_dict_keys_split(dicts, replace_list_dict):
                    if key not in list(replace_list_dict.keys())}
 
     return replaced_dict, remain_dict
+
+
+# immutable dict class
+class FrozenSampleDict:
+    def __init__(self, dict_):
+        self.dict = dict_
+
+    def __hash__(self):
+        hashes = [(hash(key), hash(value)) for key, value in self.dict.items()]
+        return hash(tuple(hashes))
+
+    def __eq__(self, other):
+        class EqTensor:
+            def __init__(self, tensor):
+                self.tensor = tensor
+
+            def __eq__(self, other):
+                if not torch.is_tensor(self.tensor):
+                    return self.tensor == other.tensor
+                return torch.all(self.tensor.eq(other.tensor))
+        return {key: EqTensor(value) for key, value in self.dict.items()} ==\
+               {key: EqTensor(value) for key, value in other.dict.items()}
+
+
+# dictionary arguments of the target function must be sample dict
+def lru_cache_for_sample_dict(maxsize=2):
+    raw_decorating_function = functools.lru_cache(maxsize=maxsize, typed=False)
+
+    def decorating_function(user_function):
+        def wrapped_user_function(sender, *args, **kwargs):
+            new_args = list(args)
+            new_kwargs = dict(kwargs)
+            for i in range(len(args)):
+                if isinstance(args[i], FrozenSampleDict):
+                    new_args[i] = args[i].dict
+            for key in kwargs.keys():
+                if isinstance(kwargs[key], FrozenSampleDict):
+                    new_kwargs[key] = kwargs[key].dict
+            return user_function(sender, *new_args, **new_kwargs)
+
+        def frozen(wrapper):
+            def frozen_wrapper(sender, *args, **kwargs):
+                new_args = list(args)
+                new_kwargs = dict(kwargs)
+                for i in range(len(args)):
+                    if isinstance(args[i], list):
+                        new_args[i] = tuple(args[i])
+                    elif isinstance(args[i], dict):
+                        new_args[i] = FrozenSampleDict(args[i])
+                for key in kwargs.keys():
+                    if isinstance(kwargs[key], list):
+                        new_kwargs[key] = tuple(kwargs[key])
+                    elif isinstance(kwargs[key], dict):
+                        new_kwargs[key] = FrozenSampleDict(kwargs[key])
+                result = wrapper(sender, *new_args, **new_kwargs)
+                return result
+            return frozen_wrapper
+        return frozen(raw_decorating_function(wrapped_user_function))
+    return decorating_function
 
 
 def tolist(a):

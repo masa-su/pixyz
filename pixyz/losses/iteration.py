@@ -2,7 +2,7 @@ from copy import deepcopy
 import sympy
 
 from .losses import Loss
-from ..utils import get_dict_values
+from ..utils import get_dict_values, lru_cache_for_sample_dict
 
 
 class IterativeLoss(Loss):
@@ -119,6 +119,7 @@ class IterativeLoss(Loss):
     def slice_step_fn(self, t, x):
         return {k: v[t] for k, v in x.items()}
 
+    @lru_cache_for_sample_dict()
     def forward(self, x_dict, **kwargs):
         series_x_dict = get_dict_values(x_dict, self.series_var, return_dict=True)
         step_loss_sum = 0
