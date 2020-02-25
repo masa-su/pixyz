@@ -5,7 +5,7 @@ import torch
 import numbers
 from copy import deepcopy
 
-from ..utils import tolist, lru_cache_for_sample_dict
+from ..utils import tolist, lru_cache_for_sample_dict, ConstSampleDict
 
 
 class Loss(object, metaclass=abc.ABCMeta):
@@ -202,7 +202,16 @@ class Loss(object, metaclass=abc.ABCMeta):
             raise ValueError("Input keys are not valid, expected {} but got {}.".format(self._input_var,
                                                                                         list(x_dict.keys())))
 
-        loss, x_dict = self.forward(x_dict, **kwargs)
+        # for memoization
+        const_dict = ConstSampleDict(x_dict)
+        new_kwargs = dict(kwargs)
+        for key in kwargs.keys():
+            if isinstance(kwargs[key], list):
+                new_kwargs[key] = tuple(kwargs[key])
+            elif isinstance(kwargs[key], dict):
+                new_kwargs[key] = ConstSampleDict(kwargs[key])
+
+        loss, x_dict = self.forward(const_dict, **new_kwargs)
 
         if return_dict:
             return loss, x_dict
