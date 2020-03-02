@@ -65,33 +65,25 @@ class RelaxedBernoulli(Bernoulli):
         super(Bernoulli, self).__init__(cond_var, var, name, features_shape, **_valid_param_dict({
             'probs': probs, 'temperature': temperature}))
 
-    def get_params_keys(self, relaxing=True, **kwargs):
-        if relaxing:
-            return ["probs", "temperature"]
-        else:
-            return ["probs"]
+    def get_params_keys(self, **kwargs):
+        return ["probs", "temperature"]
 
-    def get_distribution_torch_class(self, relaxing=True, **kwargs):
+    def get_distribution_torch_class(self, **kwargs):
         """Use relaxed version only when sampling"""
-        if relaxing:
-            return RelaxedBernoulliTorch
-        else:
-            return BernoulliTorch
+        return RelaxedBernoulliTorch
 
     @property
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def set_dist(self, x_dict={}, relaxing=True, batch_n=None, **kwargs):
-        super().set_dist(x_dict, relaxing, batch_n, **kwargs)
+    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+        raise NotImplementedError()
 
     def sample_mean(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.mean
+        raise NotImplementedError()
 
     def sample_variance(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.variance
+        raise NotImplementedError()
 
     @property
     def has_reparam(self):
@@ -153,33 +145,25 @@ class RelaxedCategorical(Categorical):
         super(Categorical, self).__init__(cond_var, var, name, features_shape,
                                           **_valid_param_dict({'probs': probs, 'temperature': temperature}))
 
-    def get_params_keys(self, relaxing=True, **kwargs):
-        if relaxing:
-            return ['probs', 'temperature']
-        else:
-            return ['probs']
+    def get_params_keys(self, **kwargs):
+        return ['probs', 'temperature']
 
-    def get_distribution_torch_class(self, relaxing=True, **kwargs):
+    def get_distribution_torch_class(self, **kwargs):
         """Use relaxed version only when sampling"""
-        if relaxing:
-            return RelaxedOneHotCategoricalTorch
-        else:
-            return CategoricalTorch
+        return RelaxedOneHotCategoricalTorch
 
     @property
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def set_dist(self, x_dict={}, relaxing=True, batch_n=None, **kwargs):
-        super().set_dist(x_dict, relaxing, batch_n, **kwargs)
+    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+        raise NotImplementedError()
 
     def sample_mean(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.mean
+        raise NotImplementedError()
 
     def sample_variance(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.variance
+        raise NotImplementedError()
 
     @property
     def has_reparam(self):
