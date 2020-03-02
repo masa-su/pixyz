@@ -178,7 +178,7 @@ def replace_dict_keys_split(dicts, replace_list_dict):
 
 
 # immutable dict class
-class ConstSampleDict:
+class FrozenSampleDict:
     def __init__(self, dict_):
         self.dict = dict_
 
@@ -208,31 +208,31 @@ def lru_cache_for_sample_dict(maxsize=2):
             new_args = list(args)
             new_kwargs = dict(kwargs)
             for i in range(len(args)):
-                if isinstance(args[i], ConstSampleDict):
+                if isinstance(args[i], FrozenSampleDict):
                     new_args[i] = args[i].dict
             for key in kwargs.keys():
-                if isinstance(kwargs[key], ConstSampleDict):
+                if isinstance(kwargs[key], FrozenSampleDict):
                     new_kwargs[key] = kwargs[key].dict
             return user_function(sender, *new_args, **new_kwargs)
 
-        # def frozen(wrapper):
-        #     def frozen_wrapper(sender, *args, **kwargs):
-        #         new_args = list(args)
-        #         new_kwargs = dict(kwargs)
-        #         for i in range(len(args)):
-        #             if isinstance(args[i], list):
-        #                 new_args[i] = tuple(args[i])
-        #             elif isinstance(args[i], dict):
-        #                 new_args[i] = ConstSampleDict(args[i])
-        #         for key in kwargs.keys():
-        #             if isinstance(kwargs[key], list):
-        #                 new_kwargs[key] = tuple(kwargs[key])
-        #             elif isinstance(kwargs[key], dict):
-        #                 new_kwargs[key] = FrozenSampleDict(kwargs[key])
-        #         result = wrapper(sender, *new_args, **new_kwargs)
-        #         return result
-        #     return frozen_wrapper
-        return raw_decorating_function(wrapped_user_function)
+        def frozen(wrapper):
+            def frozen_wrapper(sender, *args, **kwargs):
+                new_args = list(args)
+                new_kwargs = dict(kwargs)
+                for i in range(len(args)):
+                    if isinstance(args[i], list):
+                        new_args[i] = tuple(args[i])
+                    elif isinstance(args[i], dict):
+                        new_args[i] = FrozenSampleDict(args[i])
+                for key in kwargs.keys():
+                    if isinstance(kwargs[key], list):
+                        new_kwargs[key] = tuple(kwargs[key])
+                    elif isinstance(kwargs[key], dict):
+                        new_kwargs[key] = FrozenSampleDict(kwargs[key])
+                result = wrapper(sender, *new_args, **new_kwargs)
+                return result
+            return frozen_wrapper
+        return frozen(raw_decorating_function(wrapped_user_function))
     return decorating_function
 
 
