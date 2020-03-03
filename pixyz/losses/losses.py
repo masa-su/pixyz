@@ -16,7 +16,7 @@ class Loss(object, metaclass=abc.ABCMeta):
     >>> import torch
     >>> from torch.nn import functional as F
     >>> from pixyz.distributions import Bernoulli, Normal
-    >>> from pixyz.losses import StochasticReconstructionLoss, KullbackLeibler
+    >>> from pixyz.losses import KullbackLeibler
     ...
     >>> # Set distributions
     >>> class Inference(Normal):
@@ -40,7 +40,7 @@ class Loss(object, metaclass=abc.ABCMeta):
     ...                var=["z"], features_shape=[64], name="p_{prior}")
     ...
     >>> # Define a loss function (VAE)
-    >>> reconst = StochasticReconstructionLoss(q, p)
+    >>> reconst = -p.log_prob().expectation(q)
     >>> kl = KullbackLeibler(q, prior)
     >>> loss_cls = (reconst - kl).mean()
     >>> print(loss_cls)
@@ -490,7 +490,7 @@ class MinLoss(LossOperator):
 
     @property
     def _symbol(self):
-        return sympy.Symbol(f"min \\left({self.loss1.loss_text}, {self.loss2.loss_text}\\right)")
+        return sympy.Symbol("min \\left({}, {}\\right)".format(self.loss1.loss_text, self.loss2.loss_text))
 
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)
@@ -517,7 +517,7 @@ class MaxLoss(LossOperator):
 
     @property
     def _symbol(self):
-        return sympy.Symbol(f"max \\left({self.loss1.loss_text}, {self.loss2.loss_text}\\right)")
+        return sympy.Symbol("max \\left({}, {}\\right)".format(self.loss1.loss_text, self.loss2.loss_text))
 
     def forward(self, x_dict={}, **kwargs):
         loss1, loss2, x_dict = super().forward(x_dict, **kwargs)

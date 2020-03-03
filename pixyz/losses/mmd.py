@@ -30,7 +30,7 @@ class MMD(Divergence):
     """
 
     def __init__(self, p, q, input_var=None, kernel="gaussian", **kernel_params):
-        if p.var != q.var:
+        if set(p.var) != set(q.var):
             raise ValueError("The two distribution variables must be the same.")
 
         if len(p.var) != 1:

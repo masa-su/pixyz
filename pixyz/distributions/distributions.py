@@ -656,7 +656,8 @@ class DistributionBase(Distribution):
                 if params_dict[key] in self._cond_var:
                     self.replace_params_dict[params_dict[key]] = key
                 else:
-                    raise ValueError()
+                    raise ValueError("parameter setting {}:{} is not valid because cond_var does not contains {}."
+                                     .format(key, params_dict[key], params_dict[key]))
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
@@ -714,7 +715,8 @@ class DistributionBase(Distribution):
         """
         params = self.get_params(x_dict, relaxing=relaxing, **kwargs)
         if set(self.get_params_keys(relaxing=relaxing, **kwargs)) != set(params.keys()):
-            raise ValueError()
+            raise ValueError("{} class requires following parameters:"
+                             " {}\nbut got {}".format(type(self), set(self.params_keys)), set(params.keys()))
 
         self._dist = self.get_distribution_torch_class(relaxing=relaxing, **kwargs)(**params)
 
@@ -1185,10 +1187,10 @@ class MarginalizeVarDistribution(Distribution):
         _cond_var = deepcopy(p.cond_var)
 
         if not((set(marginalize_list)) < set(_var)):
-            raise ValueError()
+            raise ValueError("marginalize_list has unknown variables or it has all of variables of `p`.")
 
         if not((set(marginalize_list)).isdisjoint(set(_cond_var))):
-            raise ValueError()
+            raise ValueError("Conditional variables can not be marginalized.")
 
         if len(marginalize_list) == 0:
             raise ValueError("Length of `marginalize_list` must be at least 1, got 0.")

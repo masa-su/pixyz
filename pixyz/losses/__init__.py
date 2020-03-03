@@ -5,7 +5,6 @@ from .divergences import (
 from .entropy import (
     Entropy,
     CrossEntropy,
-    StochasticReconstructionLoss,
 )
 
 from .elbo import (
@@ -51,7 +50,6 @@ __all__ = [
     'MaxLoss',
     'Entropy',
     'CrossEntropy',
-    'StochasticReconstructionLoss',
     'Expectation',
     'REINFORCE',
     'KullbackLeibler',

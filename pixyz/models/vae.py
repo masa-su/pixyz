@@ -2,7 +2,6 @@ from torch import optim
 
 from ..models.model import Model
 from ..utils import tolist
-from ..losses import StochasticReconstructionLoss
 
 
 class VAE(Model):
@@ -47,8 +46,7 @@ class VAE(Model):
         distributions = [encoder, decoder] + tolist(other_distributions)
 
         # set losses
-        reconstruction =\
-            StochasticReconstructionLoss(encoder, decoder)
+        reconstruction = -decoder.log_prob().expectation(encoder)
         loss = (reconstruction + regularizer).mean()
 
         super().__init__(loss, test_loss=loss,
