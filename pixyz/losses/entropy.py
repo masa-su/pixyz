@@ -54,7 +54,7 @@ class AnalyticalEntropy(Loss):
         return sympy.Symbol(f"H \\left[ {p_text} \\right]")
 
     def forward(self, x_dict, **kwargs):
-        if not hasattr(self.p, 'get_distribution_torch_class'):
+        if not hasattr(self.p, 'distribution_torch_class'):
             raise ValueError("Entropy of this distribution cannot be evaluated, "
                              "got %s." % self.p.distribution_name)
 

@@ -679,11 +679,13 @@ class DistributionBase(Distribution):
         raise ValueError("the shape of a given parameter {} and features_shape {} "
                          "do not match.".format(features.size(), self.features_shape))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         """list: Return the list of parameter names for this distribution."""
         raise NotImplementedError()
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         """Return the class of PyTorch distribution."""
         raise NotImplementedError()
 
@@ -695,7 +697,7 @@ class DistributionBase(Distribution):
     def set_dist(self, x_dict={}, batch_n=None, **kwargs):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
-        This requires that :attr:`get_params_keys` and :attr:`get_distribution_torch_class` are set.
+        This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
 
         Parameters
         ----------
@@ -711,10 +713,10 @@ class DistributionBase(Distribution):
 
         """
         params = self.get_params(x_dict, **kwargs)
-        if set(self.get_params_keys(**kwargs)) != set(params.keys()):
+        if set(self.params_keys) != set(params.keys()):
             raise ValueError()
 
-        self._dist = self.get_distribution_torch_class(**kwargs)(**params)
+        self._dist = self.distribution_torch_class(**params)
 
         # expand batch_n
         if batch_n:
@@ -773,7 +775,7 @@ class DistributionBase(Distribution):
         output_dict.update(params_dict)
 
         # append constant parameters to output_dict
-        constant_params_dict = get_dict_values(dict(self.named_buffers()), self.get_params_keys(**kwargs),
+        constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys,
                                                return_dict=True)
         output_dict.update(constant_params_dict)
 
