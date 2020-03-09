@@ -667,7 +667,7 @@ class DistributionBase(Distribution):
     def _check_features_shape(self, features):
         # scalar
         if features.size() == torch.Size():
-            features = features.expand(self.features_shape)
+            features = features.expand(self.features_shape).clone()
 
         if self.features_shape == torch.Size():
             self._features_shape = features.shape
