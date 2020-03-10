@@ -667,10 +667,13 @@ class DistributionBase(Distribution):
     def _check_features_shape(self, features):
         # scalar
         if features.size() == torch.Size():
-            features = features.expand(self.features_shape).clone()
+            features = features.expand(self.features_shape)
 
         if self.features_shape == torch.Size():
             self._features_shape = features.shape
+
+        if not features.is_contiguous():
+            features = features.contiguous()
 
         if features.size() == self.features_shape:
             batches = features.unsqueeze(0)
