@@ -11,14 +11,14 @@ class AdversarialLoss(Divergence):
         if p.var != q.var:
             raise ValueError("The two distribution variables must be the same.")
 
+        super().__init__(p, q, input_var=input_var)
+
         if len(p.input_var) > 0:
             self.input_dist = p
         elif len(q.input_var) > 0:
             self.input_dist = q
         else:
             raise NotImplementedError()
-
-        super().__init__(p, q, input_var=input_var)
 
         self.loss_optimizer = optimizer
         self.loss_optimizer_params = optimizer_params
@@ -68,7 +68,7 @@ class AdversarialLoss(Divergence):
         """
         raise NotImplementedError()
 
-    def train(self, train_x_dict, **kwargs):
+    def loss_train(self, train_x_dict, **kwargs):
         """Train the evaluation metric (discriminator).
 
         Parameters
@@ -96,7 +96,7 @@ class AdversarialLoss(Divergence):
 
         return loss
 
-    def test(self, test_x_dict, **kwargs):
+    def loss_test(self, test_x_dict, **kwargs):
         """Test the evaluation metric (discriminator).
 
         Parameters
@@ -205,7 +205,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     >>> print(loss_d) # doctest: +SKIP
     tensor(1.4990, grad_fn=<AddBackward0>)
     >>> # When training the evaluation metric (discriminator), use the train method.
-    >>> train_loss = loss_cls.train({"x": sample_x})
+    >>> train_loss = loss_cls.loss_train({"x": sample_x})
 
     References
     ----------
@@ -278,11 +278,11 @@ class AdversarialJensenShannon(AdversarialLoss):
 
         return y_p_loss + y_q_loss
 
-    def train(self, train_x_dict, **kwargs):
-        return super().train(train_x_dict, **kwargs)
+    def loss_train(self, train_x_dict, **kwargs):
+        return super().loss_train(train_x_dict, **kwargs)
 
-    def test(self, test_x_dict, **kwargs):
-        return super().test(test_x_dict, **kwargs)
+    def loss_test(self, test_x_dict, **kwargs):
+        return super().loss_test(test_x_dict, **kwargs)
 
 
 class AdversarialKullbackLeibler(AdversarialLoss):
@@ -371,7 +371,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     >>> print(loss_d) # doctest: +SKIP
     tensor(1.9321, grad_fn=<AddBackward0>)
     >>> # When training the evaluation metric (discriminator), use the train method.
-    >>> train_loss = loss_cls.train({"x": sample_x})
+    >>> train_loss = loss_cls.loss_train({"x": sample_x})
 
     References
     ----------
@@ -439,11 +439,11 @@ class AdversarialKullbackLeibler(AdversarialLoss):
 
         return self.bce_loss(y_p, t_p) + self.bce_loss(y_q, t_q)
 
-    def train(self, train_x_dict, **kwargs):
-        return super().train(train_x_dict, **kwargs)
+    def loss_train(self, train_x_dict, **kwargs):
+        return super().loss_train(train_x_dict, **kwargs)
 
-    def test(self, test_x_dict, **kwargs):
-        return super().test(test_x_dict, **kwargs)
+    def loss_test(self, test_x_dict, **kwargs):
+        return super().loss_test(test_x_dict, **kwargs)
 
 
 class AdversarialWassersteinDistance(AdversarialJensenShannon):
@@ -526,7 +526,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     >>> print(loss_d) # doctest: +SKIP
     tensor(-0.3802, grad_fn=<NegBackward>)
     >>> # When training the evaluation metric (discriminator), use the train method.
-    >>> train_loss = loss_cls.train({"x": sample_x})
+    >>> train_loss = loss_cls.loss_train({"x": sample_x})
 
     References
     ----------
@@ -553,8 +553,8 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
             y_q = y_q.detach()
         return torch.mean(y_p) - torch.mean(y_q)
 
-    def train(self, train_x_dict, **kwargs):
-        loss = super().train(train_x_dict, **kwargs)
+    def loss_train(self, train_x_dict, **kwargs):
+        loss = super().loss_train(train_x_dict, **kwargs)
 
         # Clip weights of discriminator
         for params in self.d.parameters():
@@ -562,5 +562,5 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
 
         return loss
 
-    def test(self, test_x_dict, **kwargs):
-        return super().test(test_x_dict, **kwargs)
+    def loss_test(self, test_x_dict, **kwargs):
+        return super().loss_test(test_x_dict, **kwargs)

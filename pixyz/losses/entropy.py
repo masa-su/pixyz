@@ -41,12 +41,12 @@ def Entropy(p, input_var=None, analytical=True, sample_shape=torch.Size([1])):
 
 class AnalyticalEntropy(Loss):
     def __init__(self, p, input_var=None):
-        self.p = p
         if input_var is None:
             _input_var = p.input_var.copy()
         else:
             _input_var = input_var
         super().__init__(_input_var)
+        self.p = p
 
     @property
     def _symbol(self):

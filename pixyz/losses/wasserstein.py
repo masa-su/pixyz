@@ -41,6 +41,11 @@ class WassersteinDistance(Divergence):
         if len(p.var) != 1:
             raise ValueError("A given distribution must have only one variable.")
 
+        if input_var is None:
+            input_var = p.input_var + q.input_var
+
+        super().__init__(p, q, input_var)
+
         if len(p.input_var) > 0:
             self.input_dist = p
         elif len(q.input_var) > 0:
@@ -49,11 +54,6 @@ class WassersteinDistance(Divergence):
             raise NotImplementedError()
 
         self.metric = metric
-
-        if input_var is None:
-            input_var = p.input_var + q.input_var
-
-        super().__init__(p, q, input_var)
 
     @property
     def _symbol(self):
