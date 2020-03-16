@@ -18,7 +18,7 @@ class Model(object):
     >>> from torch import optim
     >>> from torch.nn import functional as F
     >>> from pixyz.distributions import Bernoulli, Normal
-    >>> from pixyz.losses import StochasticReconstructionLoss, KullbackLeibler
+    >>> from pixyz.losses import KullbackLeibler
     ...
     >>> # Set distributions (Distribution API)
     >>> class Inference(Normal):
@@ -42,7 +42,7 @@ class Model(object):
     ...                var=["z"], features_shape=[64], name="p_{prior}")
     ...
     >>> # Define a loss function (Loss API)
-    >>> reconst = StochasticReconstructionLoss(q, p)
+    >>> reconst = -p.log_prob().expectation(q)
     >>> kl = KullbackLeibler(q, prior)
     >>> loss_cls = (reconst - kl).mean()
     >>> print(loss_cls)

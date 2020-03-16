@@ -58,10 +58,6 @@ CrossEntropy
 
 .. autofunction:: CrossEntropy
 
-StochasticReconstructionLoss
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autofunction:: StochasticReconstructionLoss
 
 Lower bound
 ----------------------------

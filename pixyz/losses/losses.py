@@ -18,7 +18,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
     >>> import torch
     >>> from torch.nn import functional as F
     >>> from pixyz.distributions import Bernoulli, Normal
-    >>> from pixyz.losses import StochasticReconstructionLoss, KullbackLeibler
+    >>> from pixyz.losses import KullbackLeibler
     ...
     >>> # Set distributions
     >>> class Inference(Normal):
@@ -42,7 +42,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
     ...                var=["z"], features_shape=[64], name="p_{prior}")
     ...
     >>> # Define a loss function (VAE)
-    >>> reconst = StochasticReconstructionLoss(q, p)
+    >>> reconst = -p.log_prob().expectation(q)
     >>> kl = KullbackLeibler(q, prior)
     >>> loss_cls = (reconst - kl).mean()
     >>> print(loss_cls)
