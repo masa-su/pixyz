@@ -656,9 +656,8 @@ class DistributionBase(Distribution):
                 if params_dict[key] in self._cond_var:
                     self.replace_params_dict[params_dict[key]] = key
                 else:
-                    raise ValueError("parameter setting {}:{} is not valid"
-                                     " because cond_var does not contains {}.".format(
-                        key, params_dict[key], params_dict[key]))
+                    raise ValueError("parameter setting {}:{} is not valid because cond_var does not contains {}."
+                                     .format(key, params_dict[key], params_dict[key]))
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
