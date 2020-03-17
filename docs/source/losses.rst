@@ -58,10 +58,6 @@ CrossEntropy
 
 .. autofunction:: CrossEntropy
 
-StochasticReconstructionLoss
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autofunction:: StochasticReconstructionLoss
 
 Lower bound
 ----------------------------
@@ -233,5 +229,19 @@ BatchSum
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: BatchSum
+    :members:
+    :undoc-members:
+
+Detach
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Detach
+    :members:
+    :undoc-members:
+
+DataParalleledLoss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: DataParalleledLoss
     :members:
     :undoc-members:

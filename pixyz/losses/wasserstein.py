@@ -35,11 +35,16 @@ class WassersteinDistance(Divergence):
     """
 
     def __init__(self, p, q, metric=PairwiseDistance(p=2), input_var=None):
-        if p.var != q.var:
+        if set(p.var) != set(q.var):
             raise ValueError("The two distribution variables must be the same.")
 
         if len(p.var) != 1:
             raise ValueError("A given distribution must have only one variable.")
+
+        if input_var is None:
+            input_var = p.input_var + q.input_var
+
+        super().__init__(p, q, input_var)
 
         if len(p.input_var) > 0:
             self.input_dist = p
@@ -49,11 +54,6 @@ class WassersteinDistance(Divergence):
             raise NotImplementedError()
 
         self.metric = metric
-
-        if input_var is None:
-            input_var = p.input_var + q.input_var
-
-        super().__init__(p, q, input_var)
 
     @property
     def _symbol(self):

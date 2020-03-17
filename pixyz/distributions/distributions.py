@@ -656,7 +656,9 @@ class DistributionBase(Distribution):
                 if params_dict[key] in self._cond_var:
                     self.replace_params_dict[params_dict[key]] = key
                 else:
-                    raise ValueError()
+                    raise ValueError("parameter setting {}:{} is not valid"
+                                     " because cond_var does not contains {}.".format(
+                        key, params_dict[key], params_dict[key]))
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
@@ -714,7 +716,8 @@ class DistributionBase(Distribution):
         """
         params = self.get_params(x_dict, **kwargs)
         if set(self.params_keys) != set(params.keys()):
-            raise ValueError()
+            raise ValueError("{} class requires following parameters: {}\n"
+                             "but got {}".format(type(self), set(self.params_keys), set(params.keys())))
 
         self._dist = self.distribution_torch_class(**params)
 
@@ -988,7 +991,7 @@ class MultiplyDistribution(Distribution):
             return parent_log_prob + child_log_prob
 
         raise ValueError("Two PDFs, {} and {}, have different sizes,"
-                         " so you must set sum_dim=True.".format(self._parent.prob_text, self._child.prob_text))
+                         " so you must modify these tensor sizes.".format(self._parent.prob_text, self._child.prob_text))
 
     def __repr__(self):
         return self._parent.__repr__() + "\n" + self._child.__repr__()
@@ -1050,7 +1053,7 @@ class ReplaceVarDistribution(Distribution):
         all_vars = _cond_var + _var
 
         if not (set(replace_dict.keys()) <= set(all_vars)):
-            raise ValueError()
+            raise ValueError("replace_dict has unknown variables.")
 
         _replace_inv_cond_var_dict = {replace_dict[var]: var for var in _cond_var if var in replace_dict.keys()}
         _replace_inv_dict = {value: key for key, value in replace_dict.items()}
@@ -1185,10 +1188,10 @@ class MarginalizeVarDistribution(Distribution):
         _cond_var = deepcopy(p.cond_var)
 
         if not((set(marginalize_list)) < set(_var)):
-            raise ValueError()
+            raise ValueError("marginalize_list has unknown variables or it has all of variables of `p`.")
 
         if not((set(marginalize_list)).isdisjoint(set(_cond_var))):
-            raise ValueError()
+            raise ValueError("Conditional variables can not be marginalized.")
 
         if len(marginalize_list) == 0:
             raise ValueError("Length of `marginalize_list` must be at least 1, got 0.")
