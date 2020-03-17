@@ -70,7 +70,7 @@ class GAN(Model):
 
         """
         if adversarial_loss:
-            d_loss = self.loss_cls.train(train_x_dict, **kwargs)
+            d_loss = self.loss_cls.loss_train(train_x_dict, **kwargs)
         loss = super().train(train_x_dict, **kwargs)
 
         if adversarial_loss:
@@ -100,6 +100,6 @@ class GAN(Model):
         """
         loss = super().test(test_x_dict, **kwargs)
         if adversarial_loss:
-            d_loss = self.loss_cls.test(test_x_dict, **kwargs)
+            d_loss = self.loss_cls.loss_test(test_x_dict, **kwargs)
             return loss, d_loss
         return loss

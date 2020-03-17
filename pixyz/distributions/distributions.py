@@ -990,7 +990,7 @@ class MultiplyDistribution(Distribution):
             return parent_log_prob + child_log_prob
 
         raise ValueError("Two PDFs, {} and {}, have different sizes,"
-                         " so you must set sum_dim=True.".format(self._parent.prob_text, self._child.prob_text))
+                         " so you must modify these tensor sizes.".format(self._parent.prob_text, self._child.prob_text))
 
     def __repr__(self):
         return self._parent.__repr__() + "\n" + self._child.__repr__()
@@ -1052,7 +1052,7 @@ class ReplaceVarDistribution(Distribution):
         all_vars = _cond_var + _var
 
         if not (set(replace_dict.keys()) <= set(all_vars)):
-            raise ValueError()
+            raise ValueError("replace_dict has unknown variables.")
 
         _replace_inv_cond_var_dict = {replace_dict[var]: var for var in _cond_var if var in replace_dict.keys()}
         _replace_inv_dict = {value: key for key, value in replace_dict.items()}
