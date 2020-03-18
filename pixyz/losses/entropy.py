@@ -51,7 +51,7 @@ class AnalyticalEntropy(Loss):
     @property
     def _symbol(self):
         p_text = "{" + self.p.prob_text + "}"
-        return sympy.Symbol(f"H \\left[ {p_text} \\right]")
+        return sympy.Symbol("H \\left[ {} \\right]".format(p_text))
 
     def forward(self, x_dict, **kwargs):
         if not hasattr(self.p, 'distribution_torch_class'):
@@ -99,6 +99,7 @@ def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size
     return loss
 
 
-def StochasticReconstructionLoss(encoder, decoder, input_var=None, sample_shape=torch.Size([1])):
-    raise NotImplementedError("This function is obsolete."
-                              " please use `-decoder.log_prob().expectation(encoder)` instead of it.")
+class StochasticReconstructionLoss(Loss):
+    def __init__(self, encoder, decoder, input_var=None, sample_shape=torch.Size([1])):
+        raise NotImplementedError("This function is obsolete."
+                                  " please use `-decoder.log_prob().expectation(encoder)` instead of it.")
