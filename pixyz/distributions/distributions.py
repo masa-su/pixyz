@@ -656,8 +656,8 @@ class DistributionBase(Distribution):
                 if params_dict[key] in self._cond_var:
                     self.replace_params_dict[params_dict[key]] = key
                 else:
-                    raise ValueError(f"parameter setting {key}:{params_dict[key]} is not valid"
-                                     f" because cond_var does not contains {params_dict[key]}.")
+                    raise ValueError("parameter setting {}:{} is not valid because cond_var does not contains {}."
+                                     .format(key, params_dict[key], params_dict[key]))
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
@@ -715,9 +715,8 @@ class DistributionBase(Distribution):
         """
         params = self.get_params(x_dict, relaxing=relaxing, **kwargs)
         if set(self.get_params_keys(relaxing=relaxing, **kwargs)) != set(params.keys()):
-            raise ValueError(f"{type(self)} class requires following parameters:"
-                             f" {set(self.get_params_keys(relaxing=relaxing, **kwargs))}\n"
-                             f"but got {set(params.keys())}")
+            raise ValueError("{} class requires following parameters:"
+                             " {}\nbut got {}".format(type(self), set(self.params_keys)), set(params.keys()))
 
         self._dist = self.get_distribution_torch_class(relaxing=relaxing, **kwargs)(**params)
 
@@ -899,7 +898,7 @@ class MultiplyDistribution(Distribution):
 
         """
         if not (isinstance(a, Distribution) and isinstance(b, Distribution)):
-            raise ValueError(f"Given inputs should be `pixyz.Distribution`, got {type(a)} and {type(b)}.")
+            raise ValueError("Given inputs should be `pixyz.Distribution`, got {} and {}.".format(type(a), type(b)))
 
         # Check parent-child relationship between two distributions.
         # If inherited variables (`_inh_var`) are exist (e.g. c in p(e|c)p(c|a,b)),
@@ -927,14 +926,14 @@ class MultiplyDistribution(Distribution):
         # Check if variables of two distributions are "recursive" (e.g. p(x|z)p(z|x)).
         _check_recursive_vars = _child.var + _parent.cond_var
         if len(_check_recursive_vars) != len(set(_check_recursive_vars)):
-            raise ValueError(f"Variables of two distributions,"
-                             f" {_child.prob_text} and {_parent.prob_text}, are recursive.")
+            raise ValueError("Variables of two distributions, {} and {}, are recursive.".format(_child.prob_text,
+                                                                                                _parent.prob_text))
 
         # Set variables.
         _var = _child.var + _parent.var
         if len(_var) != len(set(_var)):  # e.g. p(x|z)p(x|y)
-            raise ValueError(f"Variables of two distributionsl,"
-                             f" {_child.prob_text} and {_parent.prob_text}, are conflicted.")
+            raise ValueError("Variables of two distributions, {} and {}, are conflicted.".format(_child.prob_text,
+                                                                                                 _parent.prob_text))
 
         # Set conditional variables.
         _cond_var = _child.cond_var + _parent.cond_var
@@ -990,8 +989,8 @@ class MultiplyDistribution(Distribution):
         if parent_log_prob.size() == child_log_prob.size():
             return parent_log_prob + child_log_prob
 
-        raise ValueError(f"Two PDFs, {self._parent.prob_text} and {self._child.prob_text}, have different sizes,"
-                         f" so you must modify these tensor sizes.")
+        raise ValueError("Two PDFs, {} and {}, have different sizes,"
+                         " so you must modify these tensor sizes.".format(self._parent.prob_text, self._child.prob_text))
 
     def __repr__(self):
         return self._parent.__repr__() + "\n" + self._child.__repr__()
@@ -1040,7 +1039,7 @@ class ReplaceVarDistribution(Distribution):
 
         """
         if not isinstance(p, Distribution):
-            raise ValueError(f"Given input should be `pixyz.Distribution`, got {type(p)}.")
+            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(p)))
 
         if isinstance(p, MultiplyDistribution):
             raise ValueError("`pixyz.MultiplyDistribution` is not supported for now.")
@@ -1179,7 +1178,7 @@ class MarginalizeVarDistribution(Distribution):
         marginalize_list = tolist(marginalize_list)
 
         if not isinstance(p, Distribution):
-            raise ValueError(f"Given input must be `pixyz.distributions.Distribution`, got {type(p)}.")
+            raise ValueError("Given input must be `pixyz.distributions.Distribution`, got {}.".format(type(p)))
 
         if isinstance(p, DistributionBase):
             raise ValueError("`pixyz.distributions.DistributionBase` cannot be marginalized its variables.")
