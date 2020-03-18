@@ -821,7 +821,7 @@ class DataParalleledLoss(Loss):
     >>> from torch import optim
     >>> from torch.nn import functional as F
     >>> from pixyz.distributions import Bernoulli, Normal
-    >>> from pixyz.losses import StochasticReconstructionLoss, KullbackLeibler, DataParalleledLoss
+    >>> from pixyz.losses import KullbackLeibler, DataParalleledLoss
     >>> from pixyz.models import Model
     >>> used_gpu_i = set()
     >>> used_gpu_g = set()
@@ -846,7 +846,7 @@ class DataParalleledLoss(Loss):
     >>> prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
     ...                var=["z"], features_shape=[64], name="p_{prior}")
     >>> # Define a loss function (Loss API)
-    >>> reconst = StochasticReconstructionLoss(q, p)
+    >>> reconst = -p.log_prob().expectation(q)
     >>> kl = KullbackLeibler(q, prior)
     >>> batch_loss_cls = (reconst - kl)
     >>> # device settings

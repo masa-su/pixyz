@@ -680,11 +680,13 @@ class DistributionBase(Distribution):
         raise ValueError("the shape of a given parameter {} and features_shape {} "
                          "do not match.".format(features.size(), self.features_shape))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         """list: Return the list of parameter names for this distribution."""
         raise NotImplementedError()
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         """Return the class of PyTorch distribution."""
         raise NotImplementedError()
 
@@ -693,17 +695,15 @@ class DistributionBase(Distribution):
         """Return the instance of PyTorch distribution."""
         return self._dist
 
-    def set_dist(self, x_dict={}, relaxing=False, batch_n=None, **kwargs):
+    def set_dist(self, x_dict={}, batch_n=None, **kwargs):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
-        This requires that :attr:`get_params_keys` and :attr:`get_distribution_torch_class` are set.
+        This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
 
         Parameters
         ----------
         x_dict : :obj:`dict`, defaults to {}.
             Parameters of this distribution.
-        relaxing : :obj:`bool`, defaults to False.
-            Choose whether to use relaxed_* in PyTorch distribution.
         batch_n : :obj:`int`, defaults to None.
             Set batch size of parameters.
         **kwargs
@@ -713,12 +713,12 @@ class DistributionBase(Distribution):
         -------
 
         """
-        params = self.get_params(x_dict, relaxing=relaxing, **kwargs)
-        if set(self.get_params_keys(relaxing=relaxing, **kwargs)) != set(params.keys()):
-            raise ValueError("{} class requires following parameters:"
-                             " {}\nbut got {}".format(type(self), set(self.params_keys)), set(params.keys()))
+        params = self.get_params(x_dict, **kwargs)
+        if set(self.params_keys) != set(params.keys()):
+            raise ValueError("{} class requires following parameters: {}\n"
+                             "but got {}".format(type(self), set(self.params_keys), set(params.keys())))
 
-        self._dist = self.get_distribution_torch_class(relaxing=relaxing, **kwargs)(**params)
+        self._dist = self.distribution_torch_class(**params)
 
         # expand batch_n
         if batch_n:
@@ -761,7 +761,7 @@ class DistributionBase(Distribution):
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self.set_dist(_x_dict, relaxing=False)
+        self.set_dist(_x_dict)
 
         x_targets = get_dict_values(x_dict, self._var)
         log_prob = self.dist.log_prob(*x_targets)
@@ -777,7 +777,7 @@ class DistributionBase(Distribution):
         output_dict.update(params_dict)
 
         # append constant parameters to output_dict
-        constant_params_dict = get_dict_values(dict(self.named_buffers()), self.get_params_keys(**kwargs),
+        constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys,
                                                return_dict=True)
         output_dict.update(constant_params_dict)
 
@@ -785,7 +785,7 @@ class DistributionBase(Distribution):
 
     def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self.set_dist(_x_dict, relaxing=False)
+        self.set_dist(_x_dict)
 
         entropy = self.dist.entropy()
         if sum_features:
@@ -1076,9 +1076,9 @@ class ReplaceVarDistribution(Distribution):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
         return self.p.get_params(params_dict)
 
-    def set_dist(self, x_dict={}, sampling=False, batch_n=None, **kwargs):
+    def set_dist(self, x_dict={}, batch_n=None, **kwargs):
         x_dict = replace_dict_keys(x_dict, self._replace_inv_cond_var_dict)
-        return self.p.set_dist(x_dict=x_dict, relaxing=sampling, batch_n=batch_n, **kwargs)
+        return self.p.set_dist(x_dict=x_dict, batch_n=batch_n, **kwargs)
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)

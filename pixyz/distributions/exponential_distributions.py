@@ -23,10 +23,12 @@ class Normal(DistributionBase):
     def __init__(self, cond_var=[], var=['x'], name='p', features_shape=torch.Size(), loc=None, scale=None):
         super().__init__(cond_var, var, name, features_shape, **_valid_param_dict({'loc': loc, 'scale': scale}))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         return ["loc", "scale"]
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         return NormalTorch
 
     @property
@@ -43,10 +45,12 @@ class Bernoulli(DistributionBase):
     def __init__(self, cond_var=[], var=['x'], name='p', features_shape=torch.Size(), probs=None):
         super().__init__(cond_var, var, name, features_shape, **_valid_param_dict({'probs': probs}))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         return ["probs"]
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         return BernoulliTorch
 
     @property
@@ -65,33 +69,27 @@ class RelaxedBernoulli(Bernoulli):
         super(Bernoulli, self).__init__(cond_var, var, name, features_shape, **_valid_param_dict({
             'probs': probs, 'temperature': temperature}))
 
-    def get_params_keys(self, relaxing=True, **kwargs):
-        if relaxing:
-            return ["probs", "temperature"]
-        else:
-            return ["probs"]
+    @property
+    def params_keys(self):
+        return ["probs", "temperature"]
 
-    def get_distribution_torch_class(self, relaxing=True, **kwargs):
+    @property
+    def distribution_torch_class(self):
         """Use relaxed version only when sampling"""
-        if relaxing:
-            return RelaxedBernoulliTorch
-        else:
-            return BernoulliTorch
+        return RelaxedBernoulliTorch
 
     @property
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def set_dist(self, x_dict={}, relaxing=True, batch_n=None, **kwargs):
-        super().set_dist(x_dict, relaxing, batch_n, **kwargs)
+    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+        raise NotImplementedError()
 
     def sample_mean(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.mean
+        raise NotImplementedError()
 
     def sample_variance(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.variance
+        raise NotImplementedError()
 
     @property
     def has_reparam(self):
@@ -128,10 +126,12 @@ class Categorical(DistributionBase):
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape,
                          **_valid_param_dict({'probs': probs}))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         return ["probs"]
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         return CategoricalTorch
 
     @property
@@ -153,33 +153,27 @@ class RelaxedCategorical(Categorical):
         super(Categorical, self).__init__(cond_var, var, name, features_shape,
                                           **_valid_param_dict({'probs': probs, 'temperature': temperature}))
 
-    def get_params_keys(self, relaxing=True, **kwargs):
-        if relaxing:
-            return ['probs', 'temperature']
-        else:
-            return ['probs']
+    @property
+    def params_keys(self):
+        return ['probs', 'temperature']
 
-    def get_distribution_torch_class(self, relaxing=True, **kwargs):
+    @property
+    def distribution_torch_class(self):
         """Use relaxed version only when sampling"""
-        if relaxing:
-            return RelaxedOneHotCategoricalTorch
-        else:
-            return CategoricalTorch
+        return RelaxedOneHotCategoricalTorch
 
     @property
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def set_dist(self, x_dict={}, relaxing=True, batch_n=None, **kwargs):
-        super().set_dist(x_dict, relaxing, batch_n, **kwargs)
+    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+        raise NotImplementedError()
 
     def sample_mean(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.mean
+        raise NotImplementedError()
 
     def sample_variance(self, x_dict={}):
-        self.set_dist(x_dict, relaxing=False)
-        return self.dist.variance
+        raise NotImplementedError()
 
     @property
     def has_reparam(self):
@@ -199,10 +193,12 @@ class Multinomial(DistributionBase):
     def total_count(self):
         return self._total_count
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         return ["probs"]
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         return MultinomialTorch
 
     @property
@@ -220,10 +216,12 @@ class Dirichlet(DistributionBase):
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape,
                          **_valid_param_dict({'concentration': concentration}))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         return ["concentration"]
 
-    def get_distribution_torch_class(self, kwargs):
+    @property
+    def distribution_torch_class(self):
         return DirichletTorch
 
     @property
@@ -242,10 +240,12 @@ class Beta(DistributionBase):
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape,
                          **_valid_param_dict({'concentration1': concentration1, 'concentration0': concentration0}))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         return ["concentration1", "concentration0"]
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         return BetaTorch
 
     @property
@@ -265,10 +265,12 @@ class Laplace(DistributionBase):
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape,
                          **_valid_param_dict({'loc': loc, 'scale': scale}))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         return ["loc", "scale"]
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         return LaplaceTorch
 
     @property
@@ -288,10 +290,12 @@ class Gamma(DistributionBase):
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape,
                          **_valid_param_dict({'concentration': concentration, 'rate': rate}))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         return ["concentration", "rate"]
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         return GammaTorch
 
     @property
