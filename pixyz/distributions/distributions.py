@@ -673,6 +673,9 @@ class DistributionBase(Distribution):
         if self.features_shape == torch.Size():
             self._features_shape = features.shape
 
+        if not features.is_contiguous():
+            features = features.contiguous()
+
         if features.size() == self.features_shape:
             batches = features.unsqueeze(0)
             return batches
