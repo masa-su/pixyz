@@ -82,14 +82,63 @@ class RelaxedBernoulli(Bernoulli):
     def distribution_name(self):
         return "RelaxedBernoulli"
 
-    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
-        raise NotImplementedError()
+    def set_dist(self, x_dict={}, batch_n=None, sampling=False, **kwargs):
+        """Set :attr:`dist` as PyTorch distributions given parameters.
 
-    def sample_mean(self, x_dict={}):
-        raise NotImplementedError()
+        This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
 
-    def sample_variance(self, x_dict={}):
-        raise NotImplementedError()
+        Parameters
+        ----------
+        x_dict : :obj:`dict`, defaults to {}.
+            Parameters of this distribution.
+        batch_n : :obj:`int`, defaults to None.
+            Set batch size of parameters.
+        **kwargs
+            Arbitrary keyword arguments.
+
+        Returns
+        -------
+
+        """
+        params = self.get_params(x_dict, **kwargs)
+        if set(self.params_keys) != set(params.keys()):
+            raise ValueError("{} class requires following parameters: {}\n"
+                             "but got {}".format(type(self), set(self.params_keys), set(params.keys())))
+
+        if sampling:
+            self._dist = self.distribution_torch_class(**params)
+        else:
+            hard_params_keys = ["probs"]
+            self._dist = BernoulliTorch(**get_dict_values(params, hard_params_keys, return_dict=True))
+
+        # expand batch_n
+        if batch_n:
+            batch_shape = self._dist.batch_shape
+            if batch_shape[0] == 1:
+                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
+            elif batch_shape[0] == batch_n:
+                return
+            else:
+                raise ValueError()
+
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        # check whether the input is valid or convert it to valid dictionary.
+        x_dict = self._check_input(x_dict)
+        input_dict = {}
+
+        # conditioned
+        if len(self.input_var) != 0:
+            input_dict.update(get_dict_values(x_dict, self.input_var, return_dict=True))
+
+        self.set_dist(input_dict, batch_n=batch_n, sampling=True)
+        output_dict = self.get_sample(reparam=reparam,
+                                      sample_shape=sample_shape)
+
+        if return_all:
+            x_dict.update(output_dict)
+            return x_dict
+
+        return output_dict
 
     @property
     def has_reparam(self):
@@ -166,14 +215,63 @@ class RelaxedCategorical(Categorical):
     def distribution_name(self):
         return "RelaxedCategorical"
 
-    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
-        raise NotImplementedError()
+    def set_dist(self, x_dict={}, batch_n=None, sampling=False, **kwargs):
+        """Set :attr:`dist` as PyTorch distributions given parameters.
 
-    def sample_mean(self, x_dict={}):
-        raise NotImplementedError()
+        This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
 
-    def sample_variance(self, x_dict={}):
-        raise NotImplementedError()
+        Parameters
+        ----------
+        x_dict : :obj:`dict`, defaults to {}.
+            Parameters of this distribution.
+        batch_n : :obj:`int`, defaults to None.
+            Set batch size of parameters.
+        **kwargs
+            Arbitrary keyword arguments.
+
+        Returns
+        -------
+
+        """
+        params = self.get_params(x_dict, **kwargs)
+        if set(self.params_keys) != set(params.keys()):
+            raise ValueError("{} class requires following parameters: {}\n"
+                             "but got {}".format(type(self), set(self.params_keys), set(params.keys())))
+
+        if sampling:
+            self._dist = self.distribution_torch_class(**params)
+        else:
+            hard_params_keys = ["probs"]
+            self._dist = BernoulliTorch(**get_dict_values(params, hard_params_keys, return_dict=True))
+
+        # expand batch_n
+        if batch_n:
+            batch_shape = self._dist.batch_shape
+            if batch_shape[0] == 1:
+                self._dist = self._dist.expand(torch.Size([batch_n]) + batch_shape[1:])
+            elif batch_shape[0] == batch_n:
+                return
+            else:
+                raise ValueError()
+
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        # check whether the input is valid or convert it to valid dictionary.
+        x_dict = self._check_input(x_dict)
+        input_dict = {}
+
+        # conditioned
+        if len(self.input_var) != 0:
+            input_dict.update(get_dict_values(x_dict, self.input_var, return_dict=True))
+
+        self.set_dist(input_dict, batch_n=batch_n, sampling=True)
+        output_dict = self.get_sample(reparam=reparam,
+                                      sample_shape=sample_shape)
+
+        if return_all:
+            x_dict.update(output_dict)
+            return x_dict
+
+        return output_dict
 
     @property
     def has_reparam(self):

@@ -4,7 +4,7 @@ import re
 from torch import nn
 from copy import deepcopy
 
-from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
+from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values, \
     tolist, sum_samples, convert_latex_name
 from ..losses import LogProb, Prob
 
@@ -993,7 +993,8 @@ class MultiplyDistribution(Distribution):
             return parent_log_prob + child_log_prob
 
         raise ValueError("Two PDFs, {} and {}, have different sizes,"
-                         " so you must modify these tensor sizes.".format(self._parent.prob_text, self._child.prob_text))
+                         " so you must modify these tensor sizes.".format(self._parent.prob_text,
+                                                                          self._child.prob_text))
 
     def __repr__(self):
         return self._parent.__repr__() + "\n" + self._child.__repr__()
@@ -1189,10 +1190,10 @@ class MarginalizeVarDistribution(Distribution):
         _var = deepcopy(p.var)
         _cond_var = deepcopy(p.cond_var)
 
-        if not((set(marginalize_list)) < set(_var)):
+        if not ((set(marginalize_list)) < set(_var)):
             raise ValueError("marginalize_list has unknown variables or it has all of variables of `p`.")
 
-        if not((set(marginalize_list)).isdisjoint(set(_cond_var))):
+        if not ((set(marginalize_list)).isdisjoint(set(_cond_var))):
             raise ValueError("Conditional variables can not be marginalized.")
 
         if len(marginalize_list) == 0:
