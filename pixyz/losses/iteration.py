@@ -2,7 +2,7 @@ from copy import deepcopy
 import sympy
 
 from .losses import Loss
-from ..utils import get_dict_values
+from ..utils import get_dict_values, replace_dict_keys
 
 
 class IterativeLoss(Loss):
@@ -152,8 +152,7 @@ class IterativeLoss(Loss):
             step_loss_sum += step_loss
 
             # update
-            for key, value in self.update_value.items():
-                x_dict.update({value: x_dict[key]})
+            x_dict = replace_dict_keys(x_dict, self.update_value)
 
         loss = step_loss_sum
 
