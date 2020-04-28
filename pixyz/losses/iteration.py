@@ -76,7 +76,7 @@ class IterativeLoss(Loss):
     """
 
     def __init__(self, step_loss, max_iter=None,
-                 input_var=None, series_var=None, update_value={}, slice_step=None, timestep_var=["t"]):
+                 series_var=None, update_value={}, slice_step=None, timestep_var=["t"]):
         super().__init__()
         self.step_loss = step_loss
         self.max_iter = max_iter
@@ -91,16 +91,15 @@ class IterativeLoss(Loss):
         if self.slice_step:
             self.step_loss = self.step_loss.expectation(self.slice_step)
 
-        if input_var is not None:
-            self._input_var = input_var
-        else:
-            _input_var = []
-            _input_var += deepcopy(self.step_loss.input_var)
+        _input_var = []
+        _input_var += deepcopy(self.step_loss.input_var)
+        _input_var += series_var
+        _input_var += update_value.values()
 
-            self._input_var = sorted(set(_input_var), key=_input_var.index)
+        self._input_var = sorted(set(_input_var), key=_input_var.index)
 
-            if slice_step:
-                self._input_var.remove(timestep_var[0])  # delete a time-step variable from input_var
+        if slice_step:
+            self._input_var.remove(timestep_var[0])  # delete a time-step variable from input_var
 
         self.series_var = series_var
 
@@ -145,7 +144,7 @@ class IterativeLoss(Loss):
                 x_dict.update(self.slice_step_fn(t, series_x_dict))
 
             # evaluate
-            step_loss, samples = self.step_loss.eval(x_dict, return_dict=True)
+            step_loss, samples = self.step_loss.eval(x_dict, return_dict=True, return_all=False)
             x_dict.update(samples)
             if mask is not None:
                 step_loss *= mask[t]
@@ -159,4 +158,5 @@ class IterativeLoss(Loss):
         # Restore original values
         x_dict.update(series_x_dict)
         x_dict.update(updated_x_dict)
+        # TODO: x_dict contains no-updated variables.
         return loss, x_dict

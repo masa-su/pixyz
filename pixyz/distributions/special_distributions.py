@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 from .distributions import Distribution
-from ..utils import get_dict_values
 
 
 class Deterministic(Distribution):
@@ -42,14 +41,14 @@ class Deterministic(Distribution):
         return "Deterministic"
 
     def sample(self, x_dict={}, return_all=True, **kwargs):
-        x_dict = self._check_input(x_dict)
-        _x_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
-        output_dict = self.forward(**_x_dict)
+        input_dict = self._get_input_dict(x_dict)
+        output_dict = self.forward(**input_dict)
 
         if set(output_dict.keys()) != set(self._var):
             raise ValueError("Output variables are not the same as `var`.")
 
         if return_all:
+            x_dict = x_dict.copy()
             x_dict.update(output_dict)
             return x_dict
 
@@ -92,7 +91,7 @@ class DataDistribution(Distribution):
         return "Data distribution"
 
     def sample(self, x_dict={}, **kwargs):
-        output_dict = self._check_input(x_dict)
+        output_dict = self._get_input_dict(x_dict)
         return output_dict
 
     def sample_mean(self, x_dict):

@@ -166,7 +166,7 @@ class Distribution(nn.Module):
         """torch.Size or list: Shape of features of this distribution."""
         return self._features_shape
 
-    def _check_input(self, input, var=None):
+    def _get_input_dict(self, input, var=None):
         """Check the type of given input.
         If the input type is :obj:`dict`, this method checks whether the input keys contains the :attr:`var` list.
         In case that its type is :obj:`list` or :obj:`tensor`, it returns the output formatted in :obj:`dict`.
@@ -203,7 +203,7 @@ class Distribution(nn.Module):
         elif type(input) is dict:
             if not (set(list(input.keys())) >= set(var)):
                 raise ValueError("Input keys are not valid.")
-            input_dict = input.copy()
+            input_dict = get_dict_values(input, var, return_dict=True)
 
         else:
             raise ValueError("The type of input is not valid, got %s." % type(input))
@@ -798,18 +798,13 @@ class DistributionBase(Distribution):
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # check whether the input is valid or convert it to valid dictionary.
-        x_dict = self._check_input(x_dict)
-        input_dict = {}
-
-        # conditioned
-        if len(self.input_var) != 0:
-            input_dict.update(get_dict_values(x_dict, self.input_var, return_dict=True))
+        input_dict = self._get_input_dict(x_dict)
 
         self.set_dist(input_dict, batch_n=batch_n)
-        output_dict = self.get_sample(reparam=reparam,
-                                      sample_shape=sample_shape)
+        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
+            x_dict = x_dict.copy()
             x_dict.update(output_dict)
             return x_dict
 
@@ -976,7 +971,7 @@ class MultiplyDistribution(Distribution):
         output_dict = self._child.sample(x_dict=child_x_dict, batch_n=batch_n,
                                          return_all=True, reparam=reparam)
 
-        if return_all is False:
+        if not return_all:
             output_dict = get_dict_values(output_dict, self._var, return_dict=True)
             return output_dict
 
@@ -1085,15 +1080,20 @@ class ReplaceVarDistribution(Distribution):
         return self.p.set_dist(x_dict=x_dict, batch_n=batch_n, **kwargs)
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
-        input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
+        # check whether the input is valid or convert it to valid dictionary.
+        input_dict = self._get_input_dict(x_dict)
         replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
 
         output_dict = self.p.sample(replaced_input_dict, batch_n=batch_n, sample_shape=sample_shape,
                                     return_all=False, reparam=reparam, **kwargs)
         output_dict = replace_dict_keys(output_dict, self._replace_dict)
 
-        x_dict.update(output_dict)
-        return x_dict
+        if return_all:
+            x_dict = x_dict.copy()
+            x_dict.update(output_dict)
+            return x_dict
+
+        return output_dict
 
     def get_log_prob(self, x_dict, **kwargs):
         input_dict = get_dict_values(x_dict, self.cond_var + self.var, return_dict=True)

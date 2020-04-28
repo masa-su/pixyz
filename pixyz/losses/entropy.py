@@ -33,8 +33,6 @@ def Entropy(p, input_var=None, analytical=True, sample_shape=torch.Size([1])):
     if analytical:
         loss = AnalyticalEntropy(p, input_var=input_var)
     else:
-        if input_var is None:
-            input_var = p.input_var
         loss = -p.log_prob().expectation(p, input_var, sample_shape=sample_shape)
     return loss
 
@@ -44,7 +42,7 @@ class AnalyticalEntropy(Loss):
         if input_var is None:
             _input_var = p.input_var.copy()
         else:
-            _input_var = input_var
+            _input_var = list(input_var)
         super().__init__(_input_var)
         self.p = p
 
@@ -60,7 +58,7 @@ class AnalyticalEntropy(Loss):
 
         entropy = self.p.get_entropy(x_dict)
 
-        return entropy, x_dict
+        return entropy, {}
 
 
 def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size([1])):
@@ -92,9 +90,6 @@ def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size
     if analytical:
         loss = Entropy(p) + KullbackLeibler(p, q)
     else:
-        if input_var is None:
-            input_var = list(set(p.input_var + q.input_var) - set(p.var))
-
         loss = -q.log_prob().expectation(p, input_var, sample_shape=sample_shape)
     return loss
 

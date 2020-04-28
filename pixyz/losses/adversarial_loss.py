@@ -402,12 +402,12 @@ class AdversarialKullbackLeibler(AdversarialLoss):
             # sample y_q from d
             y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
 
-            return self.d_loss(y_p, y_q, batch_n), x_dict
+            return self.d_loss(y_p, y_q, batch_n), {}
 
         # sample y from d
         y_p = get_dict_values(self.d.sample(x_p_dict), self.d.var)[0]
 
-        return self.g_loss(y_p, batch_n), x_dict
+        return self.g_loss(y_p, batch_n), {}
 
     def g_loss(self, y_p, batch_n):
         """Evaluate a generator loss given an output of the discriminator.

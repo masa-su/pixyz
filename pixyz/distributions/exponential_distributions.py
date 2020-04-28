@@ -123,18 +123,13 @@ class RelaxedBernoulli(Bernoulli):
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # check whether the input is valid or convert it to valid dictionary.
-        x_dict = self._check_input(x_dict)
-        input_dict = {}
-
-        # conditioned
-        if len(self.input_var) != 0:
-            input_dict.update(get_dict_values(x_dict, self.input_var, return_dict=True))
+        input_dict = self._get_input_dict(x_dict)
 
         self.set_dist(input_dict, batch_n=batch_n, sampling=True)
-        output_dict = self.get_sample(reparam=reparam,
-                                      sample_shape=sample_shape)
+        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
+            x_dict = x_dict.copy()
             x_dict.update(output_dict)
             return x_dict
 
@@ -256,18 +251,13 @@ class RelaxedCategorical(Categorical):
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         # check whether the input is valid or convert it to valid dictionary.
-        x_dict = self._check_input(x_dict)
-        input_dict = {}
-
-        # conditioned
-        if len(self.input_var) != 0:
-            input_dict.update(get_dict_values(x_dict, self.input_var, return_dict=True))
+        input_dict = self._get_input_dict(x_dict)
 
         self.set_dist(input_dict, batch_n=batch_n, sampling=True)
-        output_dict = self.get_sample(reparam=reparam,
-                                      sample_shape=sample_shape)
+        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
+            x_dict = x_dict.copy()
             x_dict.update(output_dict)
             return x_dict
 

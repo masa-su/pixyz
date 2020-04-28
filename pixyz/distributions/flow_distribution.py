@@ -18,17 +18,19 @@ class TransformedDistribution(Distribution):
 
     """
 
-    def __init__(self, prior, flow, var, name="p"):
+    def __init__(self, prior, flow, flow_output_var, name="p"):
         if flow.in_features:
             features_shape = [flow.in_features]
         else:
             features_shape = torch.Size()
 
-        super().__init__(var=var, cond_var=prior.cond_var, name=name, features_shape=features_shape)
+        super().__init__(var=flow_output_var + prior.var,
+                         cond_var=prior.cond_var, name=name, features_shape=features_shape)
         self.prior = prior
         self.flow = flow  # FlowList
 
-        self._flow_input_var = prior.var
+        self._flow_input_var = list(prior.var)
+        self._flow_output_var = list(flow_output_var)
 
     @property
     def distribution_name(self):
@@ -40,8 +42,13 @@ class TransformedDistribution(Distribution):
         return self._flow_input_var
 
     @property
+    def flow_output_var(self):
+        """list: Output variables of the flow module."""
+        return self._flow_output_var
+
+    @property
     def prob_factorized_text(self):
-        flow_text = "{}=f_{{flow}}({})".format(self.var[0], self.flow_input_var[0])
+        flow_text = "{}=f_{{flow}}({})".format(self.flow_output_var[0], self.flow_input_var[0])
         prob_text = "{}({})".format(self._name, flow_text)
 
         return prob_text
@@ -60,16 +67,20 @@ class TransformedDistribution(Distribution):
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
                compute_jacobian=True):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all)
+        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False)
 
         # flow transformation
         _x = get_dict_values(sample_dict, self.flow_input_var)[0]
         z = self.forward(_x, compute_jacobian=compute_jacobian)
-        output_dict = {self.var[0]: z}
+
+        output_dict = {self.flow_output_var[0]: z}
+
+        output_dict.update(sample_dict)
 
         if return_all:
-            sample_dict.update(output_dict)
-            return sample_dict
+            x_dict = x_dict.copy()
+            x_dict.update(output_dict)
+            return x_dict
 
         return output_dict
 
@@ -160,7 +171,7 @@ class InverseTransformedDistribution(Distribution):
         self.prior = prior
         self.flow = flow  # FlowList
 
-        self._flow_output_var = prior.var
+        self._flow_output_var = list(prior.var)
 
     @property
     def distribution_name(self):
@@ -189,14 +200,15 @@ class InverseTransformedDistribution(Distribution):
         """
         return self.flow.logdet_jacobian
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               return_hidden=True):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all,
+        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
                                         reparam=reparam)
 
         # inverse flow transformation
         _z = get_dict_values(sample_dict, self.flow_output_var)
-        _y = get_dict_values(sample_dict, self.cond_var)
+        _y = get_dict_values(x_dict, self.cond_var)
 
         if len(_y) == 0:
             x = self.inverse(_z[0])
@@ -205,9 +217,13 @@ class InverseTransformedDistribution(Distribution):
 
         output_dict = {self.var[0]: x}
 
+        if return_hidden:
+            output_dict.update(sample_dict)
+
         if return_all:
-            sample_dict.update(output_dict)
-            return sample_dict
+            x_dict = x_dict.copy()
+            x_dict.update(output_dict)
+            return x_dict
 
         return output_dict
 
