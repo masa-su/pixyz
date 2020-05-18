@@ -646,22 +646,6 @@ class DistributionBase(Distribution):
             If the values of these dictionaries contain parameters which are named as strings, which means that
             these parameters are set as `variables`, the correspondences between these values and the true name of
             these parameters are stored as :obj:`dict` (:attr:`replace_params_dict`).
-
-        Examples
-        --------
-        >>> # This is not an example of _set_buffers. It's just a test. It will be deleted.
-        >>> from os.path import join as pjoin
-        >>> from pixyz.distributions import Normal
-        >>> tmpdir = '.'
-        >>> no_contiguous_tensor = torch.zeros(2, 3).T
-        >>> ones = torch.ones_like(no_contiguous_tensor)
-        >>> p = Normal(loc=no_contiguous_tensor, scale=ones)
-        >>> save_path = pjoin(tmpdir, "tmp.pt")
-        >>> torch.save(p.state_dict(), save_path)
-        >>> # it needs copy of tensor
-        >>> q = Normal(loc=ones, scale=ones)
-        >>> _ = q.load_state_dict(torch.load(save_path))
-        >>> assert torch.all(no_contiguous_tensor == q.loc).item()
         """
 
         self.replace_params_dict = {}
