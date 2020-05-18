@@ -93,6 +93,8 @@ class RelaxedBernoulli(Bernoulli):
             Parameters of this distribution.
         batch_n : :obj:`int`, defaults to None.
             Set batch size of parameters.
+        sampling : :obj:`bool` defaults to False.
+            If it is false, the distribution will not be relaxed to compute log_prob.
         **kwargs
             Arbitrary keyword arguments.
 
@@ -221,6 +223,8 @@ class RelaxedCategorical(Categorical):
             Parameters of this distribution.
         batch_n : :obj:`int`, defaults to None.
             Set batch size of parameters.
+        sampling : :obj:`bool` defaults to False.
+            If it is false, the distribution will not be relaxed to compute log_prob.
         **kwargs
             Arbitrary keyword arguments.
 

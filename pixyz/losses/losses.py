@@ -789,16 +789,24 @@ def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1])
     Parameters
     ----------
     p : :class:`pixyz.distributions.Distribution`
-            Distribution for expectation.
+        Distribution for expectation.
     f : :class:`pixyz.losses.Loss`
-            reward function
-    b : :class:`pixyz.losses.Loss`
-            baseline function
+        reward function
+    b : :class:`pixyz.losses.Loss` default to pixyz.losses.ValueLoss(0)
+        baseline function
+    input_var : :obj:`list` of :obj:`str`, defaults to None
+        Input variables of this loss function.
+        In general, users do not need to set them explicitly
+        because these depend on the given distributions and each loss function.
+    sample_shape : :class:`torch.Size` default to torch.Size([1])
+        sample size for expectation
+    reparam : :obj: bool default to True
+        using reparameterization in internal sampling
 
     Returns
     -------
     surrogate_loss : :class:`pixyz.losses.Loss`
-            policy gradient can be calcurated from a gradient of this surrogate loss.
+        policy gradient can be calcurated from a gradient of this surrogate loss.
 
     Examples
     --------
@@ -817,7 +825,7 @@ def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1])
     tensor([-7.6047])
 
     """
-    return Expectation(p, (f - b).detach() * p.log_prob() + (f - b), input_var, sample_shape, reparam=reparam)
+    return Expectation(p, (f - b).detach() * p.log_prob() + (f - b), None, sample_shape, reparam=reparam)
 
 
 class DataParalleledLoss(Loss):

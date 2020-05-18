@@ -267,10 +267,10 @@ class Distribution(nn.Module):
         ----------
         x_dict : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`, defaults to {}
             Input variables.
-        sample_shape : :obj:`list` or :obj:`NoneType`, defaults to torch.Size()
-            Shape of generating samples.
         batch_n : :obj:`int`, defaults to None.
             Set batch size of parameters.
+        sample_shape : :obj:`list` or :obj:`NoneType`, defaults to torch.Size()
+            Shape of generating samples.
         return_all : :obj:`bool`, defaults to True
             Choose whether the output contains input variables.
         reparam : :obj:`bool`, defaults to False.
