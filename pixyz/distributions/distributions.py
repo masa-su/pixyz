@@ -656,7 +656,8 @@ class DistributionBase(Distribution):
                 if params_dict[key] in self._cond_var:
                     self.replace_params_dict[params_dict[key]] = key
                 else:
-                    raise ValueError()
+                    raise ValueError("parameter setting {}:{} is not valid because cond_var does not contains {}."
+                                     .format(key, params_dict[key], params_dict[key]))
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
@@ -672,6 +673,9 @@ class DistributionBase(Distribution):
         if self.features_shape == torch.Size():
             self._features_shape = features.shape
 
+        if not features.is_contiguous():
+            features = features.contiguous()
+
         if features.size() == self.features_shape:
             batches = features.unsqueeze(0)
             return batches
@@ -679,11 +683,13 @@ class DistributionBase(Distribution):
         raise ValueError("the shape of a given parameter {} and features_shape {} "
                          "do not match.".format(features.size(), self.features_shape))
 
-    def get_params_keys(self, **kwargs):
+    @property
+    def params_keys(self):
         """list: Return the list of parameter names for this distribution."""
         raise NotImplementedError()
 
-    def get_distribution_torch_class(self, **kwargs):
+    @property
+    def distribution_torch_class(self):
         """Return the class of PyTorch distribution."""
         raise NotImplementedError()
 
@@ -692,17 +698,15 @@ class DistributionBase(Distribution):
         """Return the instance of PyTorch distribution."""
         return self._dist
 
-    def set_dist(self, x_dict={}, relaxing=False, batch_n=None, **kwargs):
+    def set_dist(self, x_dict={}, batch_n=None, **kwargs):
         """Set :attr:`dist` as PyTorch distributions given parameters.
 
-        This requires that :attr:`get_params_keys` and :attr:`get_distribution_torch_class` are set.
+        This requires that :attr:`params_keys` and :attr:`distribution_torch_class` are set.
 
         Parameters
         ----------
         x_dict : :obj:`dict`, defaults to {}.
             Parameters of this distribution.
-        relaxing : :obj:`bool`, defaults to False.
-            Choose whether to use relaxed_* in PyTorch distribution.
         batch_n : :obj:`int`, defaults to None.
             Set batch size of parameters.
         **kwargs
@@ -712,11 +716,12 @@ class DistributionBase(Distribution):
         -------
 
         """
-        params = self.get_params(x_dict, relaxing=relaxing, **kwargs)
-        if set(self.get_params_keys(relaxing=relaxing, **kwargs)) != set(params.keys()):
-            raise ValueError()
+        params = self.get_params(x_dict, **kwargs)
+        if set(self.params_keys) != set(params.keys()):
+            raise ValueError("{} class requires following parameters: {}\n"
+                             "but got {}".format(type(self), set(self.params_keys), set(params.keys())))
 
-        self._dist = self.get_distribution_torch_class(relaxing=relaxing, **kwargs)(**params)
+        self._dist = self.distribution_torch_class(**params)
 
         # expand batch_n
         if batch_n:
@@ -759,7 +764,7 @@ class DistributionBase(Distribution):
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self.set_dist(_x_dict, relaxing=False)
+        self.set_dist(_x_dict)
 
         x_targets = get_dict_values(x_dict, self._var)
         log_prob = self.dist.log_prob(*x_targets)
@@ -776,7 +781,7 @@ class DistributionBase(Distribution):
         output_dict.update(params_dict)
 
         # append constant parameters to output_dict
-        constant_params_dict = get_dict_values(dict(self.named_buffers()), self.get_params_keys(**kwargs),
+        constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys,
                                                return_dict=True)
         output_dict.update(constant_params_dict)
 
@@ -784,7 +789,7 @@ class DistributionBase(Distribution):
 
     def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
-        self.set_dist(_x_dict, relaxing=False)
+        self.set_dist(_x_dict)
 
         entropy = self.dist.entropy()
         if sum_features:
@@ -989,7 +994,8 @@ class MultiplyDistribution(Distribution):
             return parent_log_prob + child_log_prob
 
         raise ValueError("Two PDFs, {} and {}, have different sizes,"
-                         " so you must set sum_dim=True.".format(self._parent.prob_text, self._child.prob_text))
+                         " so you must modify these tensor sizes.".format(self._parent.prob_text,
+                                                                          self._child.prob_text))
 
     def __repr__(self):
         return self._parent.__repr__() + "\n" + self._child.__repr__()
@@ -1051,7 +1057,7 @@ class ReplaceVarDistribution(Distribution):
         all_vars = _cond_var + _var
 
         if not (set(replace_dict.keys()) <= set(all_vars)):
-            raise ValueError()
+            raise ValueError("replace_dict has unknown variables.")
 
         _replace_inv_cond_var_dict = {replace_dict[var]: var for var in _cond_var if var in replace_dict.keys()}
         _replace_inv_dict = {value: key for key, value in replace_dict.items()}
@@ -1075,9 +1081,9 @@ class ReplaceVarDistribution(Distribution):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
         return self.p.get_params(params_dict)
 
-    def set_dist(self, x_dict={}, sampling=False, batch_n=None, **kwargs):
+    def set_dist(self, x_dict={}, batch_n=None, **kwargs):
         x_dict = replace_dict_keys(x_dict, self._replace_inv_cond_var_dict)
-        return self.p.set_dist(x_dict=x_dict, relaxing=sampling, batch_n=batch_n, **kwargs)
+        return self.p.set_dist(x_dict=x_dict, batch_n=batch_n, **kwargs)
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
@@ -1185,11 +1191,11 @@ class MarginalizeVarDistribution(Distribution):
         _var = deepcopy(p.var)
         _cond_var = deepcopy(p.cond_var)
 
-        if not((set(marginalize_list)) < set(_var)):
-            raise ValueError()
+        if not ((set(marginalize_list)) < set(_var)):
+            raise ValueError("marginalize_list has unknown variables or it has all of variables of `p`.")
 
-        if not((set(marginalize_list)).isdisjoint(set(_cond_var))):
-            raise ValueError()
+        if not ((set(marginalize_list)).isdisjoint(set(_cond_var))):
+            raise ValueError("Conditional variables can not be marginalized.")
 
         if len(marginalize_list) == 0:
             raise ValueError("Length of `marginalize_list` must be at least 1, got 0.")

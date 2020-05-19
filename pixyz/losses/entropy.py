@@ -41,20 +41,20 @@ def Entropy(p, input_var=None, analytical=True, sample_shape=torch.Size([1])):
 
 class AnalyticalEntropy(Loss):
     def __init__(self, p, input_var=None):
-        self.p = p
         if input_var is None:
             _input_var = p.input_var.copy()
         else:
             _input_var = input_var
         super().__init__(_input_var)
+        self.p = p
 
     @property
     def _symbol(self):
         p_text = "{" + self.p.prob_text + "}"
-        return sympy.Symbol(f"H \\left[ {p_text} \\right]")
+        return sympy.Symbol("H \\left[ {} \\right]".format(p_text))
 
     def forward(self, x_dict, **kwargs):
-        if not hasattr(self.p, 'get_distribution_torch_class'):
+        if not hasattr(self.p, 'distribution_torch_class'):
             raise ValueError("Entropy of this distribution cannot be evaluated, "
                              "got %s." % self.p.distribution_name)
 
@@ -99,37 +99,7 @@ def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size
     return loss
 
 
-def StochasticReconstructionLoss(encoder, decoder, input_var=None, sample_shape=torch.Size([1])):
-    r"""
-    Reconstruction Loss (Monte Carlo approximation).
-
-    .. math::
-
-        -\mathbb{E}_{q(z|x)}[\log p(x|z)] \approx -\frac{1}{L}\sum_{l=1}^L \log p(x|z_l),
-         \quad \text{where} \quad z_l \sim q(z|x).
-
-    Note:
-        This class is a special case of the :attr:`Expectation` class.
-
-    Examples
-    --------
-    >>> import torch
-    >>> from pixyz.distributions import Normal
-    >>> q = Normal(loc="x", scale=torch.tensor(1.), var=["z"], cond_var=["x"], features_shape=[64], name="q") # q(z|x)
-    >>> p = Normal(loc="z", scale=torch.tensor(1.), var=["x"], cond_var=["z"], features_shape=[64], name="p") # p(x|z)
-    >>> loss_cls = StochasticReconstructionLoss(q, p)
-    >>> print(loss_cls)
-    - \mathbb{E}_{q(z|x)} \left[\log p(x|z) \right]
-    >>> loss = loss_cls.eval({"x": torch.randn(1,64)})
-    """
-    if input_var is None:
-        input_var = encoder.input_var
-
-    if not (set(decoder.var) <= set(input_var)):
-        raise ValueError("Variable {} (in the `{}` class) is not included"
-                         " in `input_var` of the `{}` class.".format(decoder.var,
-                                                                     decoder.__class__.__name__,
-                                                                     encoder.__class__.__name__))
-
-    loss = -decoder.log_prob().expectation(encoder, input_var, sample_shape=sample_shape)
-    return loss
+class StochasticReconstructionLoss(Loss):
+    def __init__(self, encoder, decoder, input_var=None, sample_shape=torch.Size([1])):
+        raise NotImplementedError("This function is obsolete."
+                                  " please use `-decoder.log_prob().expectation(encoder)` instead of it.")

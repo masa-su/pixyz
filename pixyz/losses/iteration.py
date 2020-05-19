@@ -77,6 +77,7 @@ class IterativeLoss(Loss):
 
     def __init__(self, step_loss, max_iter=None,
                  input_var=None, series_var=None, update_value={}, slice_step=None, timestep_var=["t"]):
+        super().__init__()
         self.step_loss = step_loss
         self.max_iter = max_iter
         self.update_value = update_value
@@ -84,7 +85,7 @@ class IterativeLoss(Loss):
         self.timpstep_symbol = sympy.Symbol(self.timestep_var[0])
 
         if (series_var is None) and (max_iter is None):
-            raise ValueError
+            raise ValueError()
 
         self.slice_step = slice_step
         if self.slice_step:
@@ -121,6 +122,8 @@ class IterativeLoss(Loss):
 
     def forward(self, x_dict, **kwargs):
         series_x_dict = get_dict_values(x_dict, self.series_var, return_dict=True)
+        updated_x_dict = get_dict_values(x_dict, list(self.update_value.values()), return_dict=True)
+
         step_loss_sum = 0
 
         # set max_iter
@@ -154,5 +157,7 @@ class IterativeLoss(Loss):
 
         loss = step_loss_sum
 
+        # Restore original values
         x_dict.update(series_x_dict)
+        x_dict.update(updated_x_dict)
         return loss, x_dict
