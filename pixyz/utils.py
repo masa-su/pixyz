@@ -5,6 +5,7 @@ from IPython.display import Math
 import pixyz
 
 _EPSILON = 1e-07
+CACHE_SIZE = 0
 
 
 def set_epsilon(eps):
@@ -199,8 +200,54 @@ class FrozenSampleDict:
                {key: EqTensor(value) for key, value in other.dict.items()}
 
 
-# dictionary arguments of the target function must be sample dict
-def lru_cache_for_sample_dict(maxsize=2):
+def lru_cache_for_sample_dict(maxsize=0):
+    """
+    Memoize the calculation result linked to the argument of sample dict.
+    Note that dictionary arguments of the target function must be sample dict.
+
+    Parameters
+    ----------
+    maxsize: cache size prepared for the target method
+
+    Returns
+    -------
+    decorator function
+
+    Examples
+    --------
+    >>> import time
+    >>> import torch.nn as nn
+    >>> import pixyz.utils as utils
+    >>> # utils.CACHE_SIZE = 2  # you can also use this module option to enable all memoization of distribution
+    >>> import pixyz.distributions as pd
+    >>> class LongEncoder(pd.Normal):
+    ...     def __init__(self):
+    ...         super().__init__(cond_var=['y'], var=['x'])
+    ...         self.nn = nn.Sequential(*(nn.Linear(1,1) for i in range(10000)))
+    ...     def forward(self, y):
+    ...         return {'loc': self.nn(y), 'scale': torch.ones(1,1)}
+    ...     @lru_cache_for_sample_dict(maxsize=2)
+    ...     def get_params(self, params_dict={}, **kwargs):
+    ...         return super().get_params(params_dict, **kwargs)
+    >>> def measure_time(func):
+    ...     start = time.time()
+    ...     func()
+    ...     elapsed_time = time.time() - start
+    ...     return elapsed_time
+    >>> le = LongEncoder()
+    >>> y = torch.ones(1, 1)
+    >>> t_sample1 = measure_time(lambda:le.sample({'y': y}))
+    >>> print ("sample1:{0}".format(t_sample1) + "[sec]") # doctest: +SKIP
+    >>> t_log_prob = measure_time(lambda:le.get_log_prob({'x': y, 'y': y}))
+    >>> print ("log_prob:{0}".format(t_log_prob) + "[sec]") # doctest: +SKIP
+    >>> t_sample2 = measure_time(lambda:le.sample({'y': y}))
+    >>> print ("sample2:{0}".format(t_sample2) + "[sec]") # doctest: +SKIP
+    >>> assert t_sample1 > t_sample2, "processing time increases: {0}".format(t_sample2 - t_sample1)
+    """
+    if not CACHE_SIZE and not maxsize:
+        return lambda x: x
+    if not maxsize:
+        maxsize = CACHE_SIZE
     raw_decorating_function = functools.lru_cache(maxsize=maxsize, typed=False)
 
     def decorating_function(user_function):
