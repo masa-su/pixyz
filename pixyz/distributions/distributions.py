@@ -646,7 +646,6 @@ class DistributionBase(Distribution):
             If the values of these dictionaries contain parameters which are named as strings, which means that
             these parameters are set as `variables`, the correspondences between these values and the true name of
             these parameters are stored as :obj:`dict` (:attr:`replace_params_dict`).
-
         """
 
         self.replace_params_dict = {}
@@ -661,7 +660,8 @@ class DistributionBase(Distribution):
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
-                self.register_buffer(key, features_checked)
+                # clone features to make it contiguous & to make it independent.
+                self.register_buffer(key, features_checked.clone())
             else:
                 raise ValueError()
 
@@ -672,9 +672,6 @@ class DistributionBase(Distribution):
 
         if self.features_shape == torch.Size():
             self._features_shape = features.shape
-
-        if not features.is_contiguous():
-            features = features.contiguous()
 
         if features.size() == self.features_shape:
             batches = features.unsqueeze(0)
