@@ -1,9 +1,11 @@
+import functools
 import torch
 import sympy
 from IPython.display import Math
 import pixyz
 
 _EPSILON = 1e-07
+CACHE_SIZE = 0
 
 
 def set_epsilon(eps):
@@ -174,6 +176,111 @@ def replace_dict_keys_split(dicts, replace_list_dict):
                    if key not in list(replace_list_dict.keys())}
 
     return replaced_dict, remain_dict
+
+
+# immutable dict class
+class FrozenSampleDict:
+    def __init__(self, dict_):
+        self.dict = dict_
+
+    def __hash__(self):
+        hashes = [(hash(key), hash(value)) for key, value in self.dict.items()]
+        return hash(tuple(hashes))
+
+    def __eq__(self, other):
+        class EqTensor:
+            def __init__(self, tensor):
+                self.tensor = tensor
+
+            def __eq__(self, other):
+                if not torch.is_tensor(self.tensor):
+                    return self.tensor == other.tensor
+                return torch.all(self.tensor.eq(other.tensor))
+        return {key: EqTensor(value) for key, value in self.dict.items()} ==\
+               {key: EqTensor(value) for key, value in other.dict.items()}
+
+
+def lru_cache_for_sample_dict(maxsize=0):
+    """
+    Memoize the calculation result linked to the argument of sample dict.
+    Note that dictionary arguments of the target function must be sample dict.
+
+    Parameters
+    ----------
+    maxsize: cache size prepared for the target method
+
+    Returns
+    -------
+    decorator function
+
+    Examples
+    --------
+    >>> import time
+    >>> import torch.nn as nn
+    >>> import pixyz.utils as utils
+    >>> # utils.CACHE_SIZE = 2  # you can also use this module option to enable all memoization of distribution
+    >>> import pixyz.distributions as pd
+    >>> class LongEncoder(pd.Normal):
+    ...     def __init__(self):
+    ...         super().__init__(cond_var=['y'], var=['x'])
+    ...         self.nn = nn.Sequential(*(nn.Linear(1,1) for i in range(10000)))
+    ...     def forward(self, y):
+    ...         return {'loc': self.nn(y), 'scale': torch.ones(1,1)}
+    ...     @lru_cache_for_sample_dict(maxsize=2)
+    ...     def get_params(self, params_dict={}, **kwargs):
+    ...         return super().get_params(params_dict, **kwargs)
+    >>> def measure_time(func):
+    ...     start = time.time()
+    ...     func()
+    ...     elapsed_time = time.time() - start
+    ...     return elapsed_time
+    >>> le = LongEncoder()
+    >>> y = torch.ones(1, 1)
+    >>> t_sample1 = measure_time(lambda:le.sample({'y': y}))
+    >>> print ("sample1:{0}".format(t_sample1) + "[sec]") # doctest: +SKIP
+    >>> t_log_prob = measure_time(lambda:le.get_log_prob({'x': y, 'y': y}))
+    >>> print ("log_prob:{0}".format(t_log_prob) + "[sec]") # doctest: +SKIP
+    >>> t_sample2 = measure_time(lambda:le.sample({'y': y}))
+    >>> print ("sample2:{0}".format(t_sample2) + "[sec]") # doctest: +SKIP
+    >>> assert t_sample1 > t_sample2, "processing time increases: {0}".format(t_sample2 - t_sample1)
+    """
+    if not CACHE_SIZE and not maxsize:
+        return lambda x: x
+    if not maxsize:
+        maxsize = CACHE_SIZE
+    raw_decorating_function = functools.lru_cache(maxsize=maxsize, typed=False)
+
+    def decorating_function(user_function):
+        def wrapped_user_function(sender, *args, **kwargs):
+            new_args = list(args)
+            new_kwargs = dict(kwargs)
+            for i in range(len(args)):
+                if isinstance(args[i], FrozenSampleDict):
+                    new_args[i] = args[i].dict
+            for key in kwargs.keys():
+                if isinstance(kwargs[key], FrozenSampleDict):
+                    new_kwargs[key] = kwargs[key].dict
+            return user_function(sender, *new_args, **new_kwargs)
+
+        def frozen(wrapper):
+            def frozen_wrapper(sender, *args, **kwargs):
+                new_args = list(args)
+                new_kwargs = dict(kwargs)
+                for i in range(len(args)):
+                    if isinstance(args[i], list):
+                        new_args[i] = tuple(args[i])
+                    elif isinstance(args[i], dict):
+                        new_args[i] = FrozenSampleDict(args[i])
+                for key in kwargs.keys():
+                    if isinstance(kwargs[key], list):
+                        new_kwargs[key] = tuple(kwargs[key])
+                    elif isinstance(kwargs[key], dict):
+                        new_kwargs[key] = FrozenSampleDict(kwargs[key])
+                result = wrapper(sender, *new_args, **new_kwargs)
+                return result
+            return frozen_wrapper
+        return frozen(raw_decorating_function(wrapped_user_function))
+    return decorating_function
 
 
 def tolist(a):
