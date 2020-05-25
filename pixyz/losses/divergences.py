@@ -33,9 +33,6 @@ def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True, sample_shap
     >>> loss_cls.eval() # doctest: +SKIP
     tensor([31.4713])
     """
-    if input_var is None:
-        input_var = p.input_var
-
     if analytical:
         loss = AnalyticalKullbackLeibler(p, q, input_var, dim)
     else:
@@ -45,6 +42,8 @@ def KullbackLeibler(p, q, input_var=None, dim=None, analytical=True, sample_shap
 
 class AnalyticalKullbackLeibler(Divergence):
     def __init__(self, p, q, input_var=None, dim=None):
+        if input_var is None:
+            input_var = list(set(p.input_var) | set(q.input_var))
         self.dim = dim
         super().__init__(p, q, input_var)
 
@@ -67,11 +66,11 @@ class AnalyticalKullbackLeibler(Divergence):
 
         if self.dim:
             divergence = torch.sum(divergence, dim=self.dim)
-            return divergence, x_dict
+            return divergence, {}
 
         dim_list = list(torch.arange(divergence.dim()))
         divergence = torch.sum(divergence, dim=dim_list[1:])
-        return divergence, x_dict
+        return divergence, {}
 
         """
         if (self._p1.distribution_name == "vonMisesFisher" and \

@@ -86,7 +86,7 @@ class MMD(Divergence):
         pq_kernel = self.kernel(p_x, q_x, **self.kernel_params).sum() / (p_x_dim * q_x_dim)
         mmd_loss = p_kernel + q_kernel - 2 * pq_kernel
 
-        return mmd_loss, x_dict
+        return mmd_loss, {}
 
 
 def pairwise_distance_matrix(x, y, metric="euclidean"):

@@ -74,4 +74,4 @@ class WassersteinDistance(Divergence):
 
         distance = self.metric(p_x, q_x)
 
-        return distance, x_dict
+        return distance, {}

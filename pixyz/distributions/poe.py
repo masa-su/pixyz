@@ -204,7 +204,7 @@ class ProductOfNormal(Normal):
 
         return output_loc, torch.sqrt(output_variance)
 
-    def _check_input(self, x, var=None):
+    def _get_input_dict(self, x, var=None):
         if var is None:
             var = self.input_var
 
@@ -222,7 +222,7 @@ class ProductOfNormal(Normal):
         else:
             raise ValueError("The type of input is not valid, got %s." % type(x))
 
-        return checked_x
+        return get_dict_values(checked_x, var, return_dict=True)
 
     def log_prob(self, sum_features=True, feature_dims=None):
         raise NotImplementedError()
@@ -306,26 +306,8 @@ class ElementWiseProductOfNormal(ProductOfNormal):
 
         super().__init__(p=p, name=name, features_shape=features_shape)
 
-    def _check_input(self, x, var=None):
-        if var is None:
-            var = self.input_var
-
-        if type(x) is torch.Tensor:
-            checked_x = {var[0]: x}
-
-        elif type(x) is list:
-            # TODO: we need to check if all the elements contained in this list are torch.Tensor.
-            checked_x = dict(zip(var, x))
-
-        elif type(x) is dict:
-            if not (set(list(x.keys())) >= set(var)):
-                raise ValueError("Input keys are not valid.")
-            checked_x = x
-
-        else:
-            raise ValueError("The type of input is not valid, got %s." % type(x))
-
-        return checked_x
+    def _get_input_dict(self, x, var=None):
+        return super(ProductOfNormal)._get_input_dict(x, var)
 
     @staticmethod
     def _get_mask(inputs, index):

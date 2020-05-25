@@ -40,7 +40,7 @@ class LogProb(Loss):
 
     def forward(self, x={}, **kwargs):
         log_prob = self.p.get_log_prob(x, sum_features=self.sum_features, feature_dims=self.feature_dims)
-        return log_prob, x
+        return log_prob, {}
 
 
 class Prob(LogProb):
@@ -72,4 +72,4 @@ class Prob(LogProb):
 
     def forward(self, x={}, **kwargs):
         log_prob, x = super().forward(x, **kwargs)
-        return torch.exp(log_prob), x
+        return torch.exp(log_prob), {}
