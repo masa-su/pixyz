@@ -8,6 +8,7 @@
 [![Pytorch Version](https://img.shields.io/badge/pytorch-1.0-yellow.svg)](https://github.com/masa-su/pixyz)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
 [![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=master)](https://github.com/masa-su/pixyz)
+[![Downloads](https://pepy.tech/badge/pixyz)](https://pepy.tech/project/pixyz)
 
 [Docs](https://docs.pixyz.io) | [Examples](https://github.com/masa-su/pixyz/tree/master/examples) | [Pixyzoo](https://github.com/masa-su/pixyzoo)
 
@@ -54,12 +55,12 @@ $ pip install -e pixyz
 ## Quick Start
 
 Here, we consider to implement a variational auto-encoder (VAE) which is one of the most well-known deep generative models. VAE is composed of a inference model
-<img src="https://latex.codecogs.com/gif.latex?q_{\phi}(z|x)" />
+<img src="https://latex.codecogs.com/gif.latex?q_%7B%5Cphi%7D%28z%7Cx%29" alt="q_{\phi}(z|x)"/>
 and a generative model
-<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x,z)=p_{\theta}(x|z)p(z)" />
+<img src="https://latex.codecogs.com/gif.latex?p_%7B%5Ctheta%7D%28x%2Cz%29%3Dp_%7B%5Ctheta%7D%28x%7Cz%29p%28z%29" alt="p_{\theta}(x,z)=p_{\theta}(x|z)p(z)"/>
  , each of which is defined by DNN, and this loss function (negative ELBO) is as follows.
 
-<img src="https://latex.codecogs.com/gif.latex?\mathcal{L}(x;\phi,\theta)=-E_{q_{\phi}(z|x)}\left[\log{p_{\theta}(x|z)}\right]+D_{KL}\left[q_{\phi}(z|x)||p_{prior}(z)\right]" /> (1)
+<img src="https://latex.codecogs.com/gif.latex?\mathcal{L}(x;\phi,\theta)=-E_{q_{\phi}(z|x)}\left[\log{p_{\theta}(x|z)}\right]+D_{KL}\left[q_{\phi}(z|x)||p_{prior}(z)\right]" alt="\mathcal{L}(x;\phi,\theta)=-E_{q_{\phi}(z|x)}\left[\log{p_{\theta}(x|z)}\right]+D_{KL}\left[q_{\phi}(z|x)||p_{prior}(z)\right]"/> (1)
 
 In Pixyz, deep generative models are implemented in the following three steps:
 1. [Define distributions(Distribution API）](#1-define-distributionsdistribution-api)
@@ -68,16 +69,16 @@ In Pixyz, deep generative models are implemented in the following three steps:
 
 ### 1. Define distributions(Distribution API)
 First, we need to define two distributions (
-<img src="https://latex.codecogs.com/gif.latex?q_{\phi}(z|x)" />
+<img src="https://latex.codecogs.com/gif.latex?q_%7B%5Cphi%7D%28z%7Cx%29" alt="q_{\phi}(z|x)"/>
 ,
-<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x|z)" />
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x|z)" alt="p_{\theta}(x|z)"/>
 ) with DNNs. In Pixyz, you can do this by building DNN modules just as you do in PyTorch. The main difference is that you should inherit the `pixyz.distributions.*` class (**Distribution API**), instead of `torch.nn.Module` .
 
 For example, 
-<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x|z)" />
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x|z)" alt="p_{\theta}(x|z)"/>
 (Bernoulli) 
 and
-<img src="https://latex.codecogs.com/gif.latex?q_{\phi}(z|x)" />
+<img src="https://latex.codecogs.com/gif.latex?q_%7B%5Cphi%7D%28z%7Cx%29" alt="q_{\phi}(z|x)"/>
 (normal) are implemented as follows.
 
 ```python
@@ -113,7 +114,7 @@ Once defined, you can create instances of these classes.
 ```
 
 In VAE,
-<img src="https://latex.codecogs.com/gif.latex?p(z)" />
+<img src="https://latex.codecogs.com/gif.latex?p(z)" alt="p(z)"/>
 , a prior of the generative model,  is usually defined as the standard normal distribution, without using DNNs. 
 Such an instance can be created from `pixyz.distributions.*` as
 ```python
@@ -152,7 +153,7 @@ Conveniently, each distribution instance can **perform sampling** over given sam
 As in this example, samples are represented in dictionary forms in which the keys correspond to random variable names and the values are their realized values.
 
 Moreover, the instance of joint distribution
-<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x,z)=p_{\theta}(x|z)p(z)" />
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x,z)=p_{\theta}(x|z)p(z)" alt="p_{\theta}(x,z)=p_{\theta}(x|z)p(z)"/>
 can be created by **the product of distribution instances**. 
 ```python
 >>> p_joint = p * prior
@@ -222,9 +223,9 @@ Finally, Model API (`pixyz.models.Model`) can train the loss function given the 
 >>> train_loss = model.train({"x": x_tensor}) # train the model given training data (x_tensor) 
 ```
 After training the model, you can perform generation and inference on the model by sampling from
-<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x,z)" />
+<img src="https://latex.codecogs.com/gif.latex?p_{\theta}(x,z)" alt="p_{\theta}(x,z)"/>
 and
-<img src="https://latex.codecogs.com/gif.latex?q_{\phi}(z|x)" />
+<img src="https://latex.codecogs.com/gif.latex?q_%7B%5Cphi%7D%28z%7Cx%29" alt="q_{\phi}(z|x)"/>
 , respectively.
 
 ## More information
