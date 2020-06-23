@@ -1,12 +1,195 @@
 from __future__ import print_function
 import torch
 import re
+import networkx as nx
 from torch import nn
 from copy import deepcopy
 
 from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
     tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict
 from ..losses import LogProb, Prob
+
+
+class DistGraph:
+    def __init__(self, original=None, name='p'):
+        self.graph = nx.DiGraph()
+        self.global_option = {}
+        self.marginalize_list = set()
+        self.name = convert_latex_name(name)
+        if original:
+            self.graph.update(original.graph)
+            self.global_option.update(original.global_option)
+            self.marginalize_list.update(original.marginalize_list)
+
+    def appended(self, atom_dist, name='p'):
+        scg = DistGraph(self, name=name)
+        var = atom_dist.var[0]
+        if var in scg.graph:
+            raise ValueError()
+        scg.graph.add_node(var, atom=atom_dist)
+        # self.atom_distributions[var] = atom_dist
+        for cond in atom_dist.cond_var:
+            scg.graph.add_edge(cond, var)
+        return scg
+
+    def set_option(self, option_dict, var=[]):
+        if not var:
+            self.global_option.update(option_dict)
+        else:
+            self.graph.add_node(var, option=option_dict)
+
+    def united(self, other):
+        if any(node in self.var + list(self.marginalize_list) for node in other.var + list(other.marginalize_list)):
+            raise ValueError()
+        scg = DistGraph(self)
+        scg.graph.update(other.graph)
+        return scg
+
+    def marginalized(self, marginalize_list):
+        if len(marginalize_list) == 0:
+            raise ValueError("Length of `marginalize_list` must be at least 1, got 0.")
+        if not set(marginalize_list) < set(self.var):
+            raise ValueError("marginalize_list has unknown variables or it has all of variables of `p`.")
+        if not ((set(marginalize_list)).isdisjoint(set(self.cond_var))):
+            raise ValueError("Conditional variables can not be marginalized.")
+
+        new_graph = DistGraph(self)
+        new_graph.marginalize_list.update(marginalize_list)
+        return new_graph
+
+    def node_distribution(self, var):
+        return self.graph.nodes(data='atom')[var]
+
+    def node_option(self, var):
+        option = self.graph.nodes(data='option')[var]
+        return option if option else {}
+
+    def topological_sorted_distribution(self):
+        for var in nx.topological_sort(self.graph):
+            dist = self.node_distribution(var)
+            if dist:
+                yield var, dist
+
+    @property
+    def input_var(self):
+        return [var for var in self.graph
+                if self.node_distribution(var) is None or isinstance(
+                    self.node_distribution(var), type('DataDistribution'))]
+
+    @property
+    def cond_var(self):
+        return [var for var in self.graph if self.node_distribution(var) is None]
+
+    @property
+    def var(self):
+        return [var for var in self.graph
+                if self.node_distribution(var) is not None and var not in self.marginalize_list]
+
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        sample_option = dict(self.global_option)
+        sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape,
+                                  return_all=False, reparam=reparam))
+        # ignore return_all because overriding is now under control.
+        if not(set(x_dict.keys()) >= set(self.input_var)):
+            raise ValueError("Input keys are not valid, expected {} but got {}.".format(set(self.input_var),
+                                                                                        set(x_dict.keys())))
+
+        values = get_dict_values(x_dict, self.input_var, return_dict=True)
+        for var, dist in self.topological_sorted_distribution():
+            if any(cond not in values for cond in self.graph.pred[var]):
+                raise ValueError("lack of some condition variable")
+            input_dict = get_dict_values(values, self.graph.pred[var], return_dict=True)
+            option = sample_option
+            option.update(self.node_option(var))
+            values[var] = dist.sample(input_dict, **option)[var]
+        result_dict = delete_dict_values(values, self.marginalize_list)
+        if return_all:
+            output_dict = dict(delete_dict_values(x_dict, self.input_var))
+            output_dict.update(result_dict)
+            return output_dict
+        else:
+            return delete_dict_values(result_dict, self.input_var)
+
+    # def sample_scgraph(self):
+    #     pass
+
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+        if len(self.marginalize_list) > 0:
+            # TODO: Deterministic分布のmarginalizeの場合はその変数が辞書に含まれない限りは対数尤度を定義してよい
+            raise NotImplementedError()
+        log_prob_option = dict(self.global_option)
+        log_prob_option.update(dict(sum_features=sum_features, feature_dims=feature_dims))
+        if not(set(x_dict.keys()) >= set(self.graph)):
+            raise ValueError("Input keys are not valid, expected {} but got {}.".format(set(self.graph),
+                                                                                        set(x_dict.keys())))
+
+        values = get_dict_values(x_dict, list(self.graph), return_dict=True)
+        log_prob = None
+        prev_dist = None
+        for var, dist in self.topological_sorted_distribution():
+            input_dict = get_dict_values(values, list(self.graph.pred[var]) + [var], return_dict=True)
+            option = log_prob_option
+            option.update(self.node_option(var))
+            new_log_prob = dist.get_log_prob(input_dict, **option)
+            if log_prob is None:
+                log_prob = new_log_prob
+            else:
+                if log_prob.size() != new_log_prob.size():
+                    raise ValueError("Two PDFs, {} and {}, have different sizes,"
+                                     " so you must modify these tensor sizes."
+                                     .format(prev_dist.prob_text,
+                                             dist.prob_text))
+                log_prob += new_log_prob
+            prev_dist = dist
+        if log_prob is None:
+            return 0
+        return log_prob
+
+    @property
+    def has_reparam(self):
+        return all(self.node_distribution(var) is None or self.node_distribution(var).has_reparam for var in self.graph)
+
+    def __repr__(self):
+        text = "\n".join(repr(dist) for _, dist in self.topological_sorted_distribution())
+        return text
+
+    @property
+    def prob_factorized_text(self):
+        text = ""
+        for var, dist in self.topological_sorted_distribution():
+            factor_text = dist.prob_factorized_text
+            text = factor_text + text
+        if self.marginalize_list:
+            integral_symbol = len(self.marginalize_list) * "\\int "
+            # TODO: var -> convert_latex_name(var) ?
+            integral_variables = ["d" + var for var in self.marginalize_list]
+            integral_variables = "".join(integral_variables)
+
+            return "{}{}{}".format(integral_symbol, text, integral_variables)
+        return text
+
+    def __str__(self):
+        # Distribution
+        text = "Distribution:\n  {}\n".format(self.prob_joint_factorized_and_text)
+
+        # Network architecture (`repr`)
+        network_text = repr(self)
+        network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
+        text += "Network architecture:\n{}".format(network_text)
+        return text
+
+    @property
+    def prob_text(self):
+        return "{}({}{})".format(self.name, ','.join(convert_latex_name(var_name) for var_name in self.var),
+                                 '' if len(self.cond_var) == 0 else
+                                 '|' + ','.join(convert_latex_name(var_name) for var_name in self.cond_var))
+
+    @property
+    def prob_joint_factorized_and_text(self):
+        if self.prob_factorized_text == self.prob_text:
+            return self.prob_text
+        else:
+            return "{} = {}".format(self.prob_text, self.prob_factorized_text)
 
 
 class Distribution(nn.Module):
@@ -66,7 +249,7 @@ class Distribution(nn.Module):
       )
     """
 
-    def __init__(self, var, cond_var=[], name="p", features_shape=torch.Size()):
+    def __init__(self, var, cond_var=[], name="p", features_shape=torch.Size(), graph=None):
         """
         Parameters
         ----------
@@ -90,9 +273,12 @@ class Distribution(nn.Module):
 
         self._cond_var = cond_var
         self._var = var
+        self.graph = graph
 
         self._features_shape = torch.Size(features_shape)
         self._name = convert_latex_name(name)
+        if self.graph:
+            self._name = self.graph.name
 
         self._prob_text = None
         self._prob_factorized_text = None
@@ -111,6 +297,7 @@ class Distribution(nn.Module):
     def name(self, name):
         if type(name) is str:
             self._name = name
+            self.graph.name = name
             return
 
         raise ValueError("Name of the distribution class must be a string type.")
@@ -118,11 +305,15 @@ class Distribution(nn.Module):
     @property
     def var(self):
         """list: Variables of this distribution."""
+        if self.graph:
+            return self.graph.var
         return self._var
 
     @property
     def cond_var(self):
         """list: Conditional variables of this distribution."""
+        if self.graph:
+            return self.graph.cond_var
         return self._cond_var
 
     @property
@@ -131,14 +322,19 @@ class Distribution(nn.Module):
         Normally, it has same values as :attr:`cond_var`.
 
         """
+        if self.graph:
+            return self.graph.input_var
         return self._cond_var
 
     @property
     def prob_text(self):
         """str: Return a formula of the (joint) probability distribution."""
-        _var_text = [','.join([convert_latex_name(var_name) for var_name in self._var])]
-        if len(self._cond_var) != 0:
-            _var_text += [','.join([convert_latex_name(var_name) for var_name in self._cond_var])]
+        if self.graph:
+            return self.graph.prob_text
+
+        _var_text = [','.join([convert_latex_name(var_name) for var_name in self.var])]
+        if len(self.cond_var) != 0:
+            _var_text += [','.join([convert_latex_name(var_name) for var_name in self.cond_var])]
 
         _prob_text = "{}({})".format(
             self._name,
@@ -150,11 +346,16 @@ class Distribution(nn.Module):
     @property
     def prob_factorized_text(self):
         """str: Return a formula of the factorized probability distribution."""
+        if self.graph:
+            return self.graph.prob_factorized_text
         return self.prob_text
 
     @property
     def prob_joint_factorized_and_text(self):
         """str: Return a formula of the factorized and the (joint) probability distributions."""
+        if self.graph:
+            return self.graph.prob_joint_factorized_and_text
+
         if self.prob_factorized_text == self.prob_text:
             prob_text = self.prob_text
         else:
@@ -209,54 +410,6 @@ class Distribution(nn.Module):
             raise ValueError("The type of input is not valid, got %s." % type(input))
 
         return input_dict
-
-    def get_params(self, params_dict={}):
-        """This method aims to get parameters of this distributions from constant parameters set in initialization
-        and outputs of DNNs.
-
-        Parameters
-        ----------
-        params_dict : :obj:`dict`, defaults to {}
-            Input parameters.
-
-        Returns
-        -------
-        output_dict : dict
-            Output parameters.
-
-        Examples
-        --------
-        >>> from pixyz.distributions import Normal
-        >>> dist_1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
-        ...                 features_shape=[1])
-        >>> print(dist_1)
-        Distribution:
-          p(x)
-        Network architecture:
-          Normal(
-            name=p, distribution_name=Normal,
-            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([1])
-            (loc): torch.Size([1, 1])
-            (scale): torch.Size([1, 1])
-          )
-        >>> dist_1.get_params()
-        {'loc': tensor([[0.]]), 'scale': tensor([[1.]])}
-
-        >>> dist_2 = Normal(loc=torch.tensor(0.), scale="z", cond_var=["z"], var=["x"])
-        >>> print(dist_2)
-        Distribution:
-          p(x|z)
-        Network architecture:
-          Normal(
-            name=p, distribution_name=Normal,
-            var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
-            (loc): torch.Size([1])
-          )
-        >>> dist_2.get_params({"z": torch.tensor(1.)})
-        {'scale': tensor(1.), 'loc': tensor([0.])}
-
-        """
-        raise NotImplementedError()
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
                reparam=False):
@@ -334,10 +487,14 @@ class Distribution(nn.Module):
                         0.3686,  0.6311, -1.1208, 0.3656, -0.6683]])}
 
         """
+        if self.graph:
+            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam)
         raise NotImplementedError()
 
     @property
     def has_reparam(self):
+        if self.graph:
+            return self.graph.has_reparam
         raise NotImplementedError()
 
     def sample_mean(self, x_dict={}):
@@ -401,6 +558,7 @@ class Distribution(nn.Module):
         """
         raise NotImplementedError()
 
+    # TODO: 派生クラスで定義されていないと循環呼び出しになってしまう
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         """Giving variables, this method returns values of log-pdf.
 
@@ -439,6 +597,8 @@ class Distribution(nn.Module):
         tensor([-21.5251])
 
         """
+        if self.graph:
+            return self.graph.get_log_prob(x_dict, sum_features, feature_dims)
         raise NotImplementedError()
 
     def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
@@ -601,6 +761,8 @@ class Distribution(nn.Module):
         return MultiplyDistribution(self, other)
 
     def __str__(self):
+        if self.graph:
+            return str(self.graph)
         # Distribution
         text = "Distribution:\n  {}\n".format(self.prob_joint_factorized_and_text)
 
@@ -632,6 +794,7 @@ class DistributionBase(Distribution):
 
     def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), **kwargs):
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
+        self.graph = DistGraph().appended(self, name=name)
 
         self._set_buffers(**kwargs)
         self._dist = None
@@ -772,6 +935,51 @@ class DistributionBase(Distribution):
 
     @lru_cache_for_sample_dict()
     def get_params(self, params_dict={}, **kwargs):
+        """This method aims to get parameters of this distributions from constant parameters set in initialization
+        and outputs of DNNs.
+
+        Parameters
+        ----------
+        params_dict : :obj:`dict`, defaults to {}
+            Input parameters.
+
+        Returns
+        -------
+        output_dict : dict
+            Output parameters.
+
+        Examples
+        --------
+        >>> from pixyz.distributions import Normal
+        >>> dist_1 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
+        ...                 features_shape=[1])
+        >>> print(dist_1)
+        Distribution:
+          p(x)
+        Network architecture:
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([1])
+            (loc): torch.Size([1, 1])
+            (scale): torch.Size([1, 1])
+          )
+        >>> dist_1.get_params()
+        {'loc': tensor([[0.]]), 'scale': tensor([[1.]])}
+
+        >>> dist_2 = Normal(loc=torch.tensor(0.), scale="z", cond_var=["z"], var=["x"])
+        >>> print(dist_2)
+        Distribution:
+          p(x|z)
+        Network architecture:
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+            (loc): torch.Size([1])
+          )
+        >>> dist_2.get_params({"z": torch.tensor(1.)})
+        {'scale': tensor(1.), 'loc': tensor([0.])}
+
+        """
         params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
         output_dict = self.forward(**vars_dict)
 
@@ -818,6 +1026,11 @@ class DistributionBase(Distribution):
 
     def forward(self, **params):
         return params
+
+    @property
+    def prob_factorized_text(self):
+        """str: Return a formula of the factorized probability distribution."""
+        return self.prob_text
 
 
 class MultiplyDistribution(Distribution):
@@ -893,104 +1106,10 @@ class MultiplyDistribution(Distribution):
             Distribution.
 
         """
-        if not (isinstance(a, Distribution) and isinstance(b, Distribution)):
-            raise ValueError("Given inputs should be `pixyz.Distribution`, got {} and {}.".format(type(a), type(b)))
-
-        # Check parent-child relationship between two distributions.
-        # If inherited variables (`_inh_var`) are exist (e.g. c in p(e|c)p(c|a,b)),
-        # then p(e|c) is a child and p(c|a,b) is a parent, otherwise it is opposite.
-        _vars_a_b = a.cond_var + b.var
-        _vars_b_a = b.cond_var + a.var
-        _inh_var_a_b = [var for var in set(_vars_a_b) if _vars_a_b.count(var) > 1]
-        _inh_var_b_a = [var for var in set(_vars_b_a) if _vars_b_a.count(var) > 1]
-
-        if len(_inh_var_a_b) > 0:
-            _child = a
-            _parent = b
-            _inh_var = _inh_var_a_b
-
-        elif len(_inh_var_b_a) > 0:
-            _child = b
-            _parent = a
-            _inh_var = _inh_var_b_a
-
-        else:
-            _child = a
-            _parent = b
-            _inh_var = []
-
-        # Check if variables of two distributions are "recursive" (e.g. p(x|z)p(z|x)).
-        _check_recursive_vars = _child.var + _parent.cond_var
-        if len(_check_recursive_vars) != len(set(_check_recursive_vars)):
-            raise ValueError("Variables of two distributions, {} and {}, are recursive.".format(_child.prob_text,
-                                                                                                _parent.prob_text))
-
-        # Set variables.
-        _var = _child.var + _parent.var
-        if len(_var) != len(set(_var)):  # e.g. p(x|z)p(x|y)
-            raise ValueError("Variables of two distributions, {} and {}, are conflicted.".format(_child.prob_text,
-                                                                                                 _parent.prob_text))
-
-        # Set conditional variables.
-        _cond_var = _child.cond_var + _parent.cond_var
-        _cond_var = sorted(set(_cond_var), key=_cond_var.index)
-
-        # Delete inh_var in conditional variables.
-        _cond_var = [var for var in _cond_var if var not in _inh_var]
-
-        super().__init__(cond_var=_cond_var, var=_var)
-
-        self._parent = _parent
-        self._child = _child
-
-        # Set input_var (it might be different from cond_var if either a and b contain data distributions.)
-        _input_var = [var for var in self._child.input_var if var not in _inh_var]
-        _input_var += self._parent.input_var
-        self._input_var = sorted(set(_input_var), key=_input_var.index)
-
-    @property
-    def input_var(self):
-        return self._input_var
-
-    @property
-    def prob_factorized_text(self):
-        return self._child.prob_factorized_text + self._parent.prob_factorized_text
-
-    @property
-    def has_reparam(self):
-        return self._parent.has_reparam and self._child.has_reparam
-
-    def sample(self, x_dict={}, batch_n=None, return_all=True, reparam=False, **kwargs):
-        # sample from the parent distribution
-        parents_x_dict = x_dict
-        child_x_dict = self._parent.sample(x_dict=parents_x_dict, batch_n=batch_n,
-                                           return_all=True, reparam=reparam)
-        # sample from the child distribution
-        output_dict = self._child.sample(x_dict=child_x_dict, batch_n=batch_n,
-                                         return_all=True, reparam=reparam)
-
-        if not return_all:
-            output_dict = get_dict_values(output_dict, self._var, return_dict=True)
-            return output_dict
-
-        return output_dict
-
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
-        parent_log_prob = self._parent.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
-        child_log_prob = self._child.get_log_prob(x_dict, sum_features=sum_features, feature_dims=feature_dims)
-
-        if sum_features:
-            return parent_log_prob + child_log_prob
-
-        if parent_log_prob.size() == child_log_prob.size():
-            return parent_log_prob + child_log_prob
-
-        raise ValueError("Two PDFs, {} and {}, have different sizes,"
-                         " so you must modify these tensor sizes.".format(self._parent.prob_text,
-                                                                          self._child.prob_text))
+        super().__init__(var=[], graph=a.graph.united(b.graph))
 
     def __repr__(self):
-        return self._parent.__repr__() + "\n" + self._child.__repr__()
+        return repr(self.graph)
 
 
 class ReplaceVarDistribution(Distribution):
@@ -1035,6 +1154,8 @@ class ReplaceVarDistribution(Distribution):
             Dictionary.
 
         """
+        raise NotImplementedError()
+
         if not isinstance(p, Distribution):
             raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(p)))
 
@@ -1166,7 +1287,7 @@ class MarginalizeVarDistribution(Distribution):
 
     """
 
-    def __init__(self, p, marginalize_list):
+    def __init__(self, p: Distribution, marginalize_list):
         """
         Parameters
         ----------
@@ -1179,42 +1300,15 @@ class MarginalizeVarDistribution(Distribution):
         """
         marginalize_list = tolist(marginalize_list)
 
-        if not isinstance(p, Distribution):
-            raise ValueError("Given input must be `pixyz.distributions.Distribution`, got {}.".format(type(p)))
-
-        if isinstance(p, DistributionBase):
-            raise ValueError("`pixyz.distributions.DistributionBase` cannot be marginalized its variables.")
-
-        _var = deepcopy(p.var)
-        _cond_var = deepcopy(p.cond_var)
-
-        if not ((set(marginalize_list)) < set(_var)):
-            raise ValueError("marginalize_list has unknown variables or it has all of variables of `p`.")
-
-        if not ((set(marginalize_list)).isdisjoint(set(_cond_var))):
-            raise ValueError("Conditional variables can not be marginalized.")
-
-        if len(marginalize_list) == 0:
-            raise ValueError("Length of `marginalize_list` must be at least 1, got 0.")
-
-        _var = [var for var in _var if var not in marginalize_list]
-
-        super().__init__(cond_var=_cond_var, var=_var, name=p.name, features_shape=p.features_shape)
+        super().__init__(cond_var=[], var=[], name=p.name, features_shape=p.features_shape,
+                         graph=p.graph.marginalized(marginalize_list))
         self.p = p
-        self._marginalize_list = marginalize_list
 
     def forward(self, *args, **kwargs):
         return self.p.forward(*args, **kwargs)
 
-    def get_params(self, params_dict={}):
-        return self.p.get_params(params_dict)
-
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
-        output_dict = self.p.sample(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=return_all,
-                                    reparam=reparam, **kwargs)
-        output_dict = delete_dict_values(output_dict, self._marginalize_list)
-
-        return output_dict
+        return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, **kwargs)
 
     def sample_mean(self, x_dict={}):
         return self.p.sample_mean(x_dict)
@@ -1224,7 +1318,7 @@ class MarginalizeVarDistribution(Distribution):
 
     @property
     def input_var(self):
-        return self.p.input_var
+        return self.graph.input_var
 
     @property
     def distribution_name(self):
@@ -1232,18 +1326,14 @@ class MarginalizeVarDistribution(Distribution):
 
     @property
     def has_reparam(self):
-        return self.p.has_reparam
+        return self.graph.has_reparam
 
     @property
     def prob_factorized_text(self):
-        integral_symbol = len(self._marginalize_list) * "\\int "
-        integral_variables = ["d" + str(var) for var in self._marginalize_list]
-        integral_variables = "".join(integral_variables)
-
-        return "{}{}{}".format(integral_symbol, self.p.prob_factorized_text, integral_variables)
+        return self.graph.prob_factorized_text
 
     def __repr__(self):
-        return self.p.__repr__()
+        return repr(self.graph)
 
     def __getattr__(self, item):
         try:

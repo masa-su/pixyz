@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from .distributions import Distribution
+from .distributions import Distribution, DistGraph
 
 
 class Deterministic(Distribution):
@@ -33,8 +33,9 @@ class Deterministic(Distribution):
     NotImplementedError
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, name='p', **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.graph = DistGraph().appended(self, name=name)
 
     @property
     def distribution_name(self):
@@ -57,9 +58,17 @@ class Deterministic(Distribution):
     def sample_mean(self, x_dict):
         return self.sample(x_dict, return_all=False)[self._var[0]]
 
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+        raise NotImplementedError()
+
     @property
     def has_reparam(self):
         return True
+
+    @property
+    def prob_factorized_text(self):
+        """str: Return a formula of the factorized probability distribution."""
+        return self.prob_text
 
 
 class DataDistribution(Distribution):
@@ -85,6 +94,7 @@ class DataDistribution(Distribution):
 
     def __init__(self, var, name="p_{data}"):
         super().__init__(var=var, cond_var=[], name=name)
+        self.graph = DistGraph().appended(self, name=name)
 
     @property
     def distribution_name(self):
@@ -108,3 +118,8 @@ class DataDistribution(Distribution):
     @property
     def has_reparam(self):
         return True
+
+    @property
+    def prob_factorized_text(self):
+        """str: Return a formula of the factorized probability distribution."""
+        return self.prob_text
