@@ -3,9 +3,8 @@ import torch
 import re
 import networkx as nx
 from torch import nn
-from copy import deepcopy
 
-from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
+from ..utils import get_dict_values, replace_dict_keys_split, delete_dict_values,\
     tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict
 from ..losses import LogProb, Prob
 
@@ -21,13 +20,14 @@ class DistGraph:
             self.global_option.update(original.global_option)
             self.marginalize_list.update(original.marginalize_list)
 
-    def appended(self, atom_dist, name='p'):
+    def appended(self, atom_dist, name=''):
+        if not name:
+            name = self.name
         scg = DistGraph(self, name=name)
         var = atom_dist.var[0]
         if var in scg.graph:
             raise ValueError()
-        scg.graph.add_node(var, atom=atom_dist)
-        # self.atom_distributions[var] = atom_dist
+        scg.graph.add_node(var, atom=atom_dist, name_dict={})
         for cond in atom_dist.cond_var:
             scg.graph.add_edge(cond, var)
         return scg
@@ -39,10 +39,11 @@ class DistGraph:
             self.graph.add_node(var, option=option_dict)
 
     def united(self, other):
-        if any(node in self.var + list(self.marginalize_list) for node in other.var + list(other.marginalize_list)):
+        if not set(self.var + list(self.marginalize_list)).isdisjoint(set(other.var + list(other.marginalize_list))):
             raise ValueError()
         scg = DistGraph(self)
         scg.graph.update(other.graph)
+        scg.marginalize_list.update(other.marginalize_list)
         return scg
 
     def marginalized(self, marginalize_list):
@@ -57,6 +58,37 @@ class DistGraph:
         new_graph.marginalize_list.update(marginalize_list)
         return new_graph
 
+    def _replace_atom_name_dict(self, var, replace_dict):
+        name_dict = self.graph.nodes(data='name_dict')[var]
+        atom_var = list(self.graph.pred[var]) + [var]
+        for avar in atom_var:
+            if avar not in replace_dict:
+                continue
+            new_global_var = replace_dict[avar]
+            if avar in name_dict:
+                local_var = name_dict[avar]
+                del name_dict[avar]
+                name_dict[new_global_var] = local_var
+            else:
+                name_dict[new_global_var] = avar
+
+    def var_replaced(self, replace_dict, name=''):
+        if not (set(replace_dict.keys()) <= set(self.graph)):
+            unknown_var = [var_name for var_name in replace_dict.keys() if var_name not in self.graph]
+            raise ValueError("replace_dict has unknown variables: {}".format(unknown_var))
+        if not set(replace_dict.values()).isdisjoint(set(self.graph)):
+            used_var = [var_name for var_name in replace_dict.values() if var_name in self.graph]
+            raise ValueError("{} is already used in this distribution.".format(used_var))
+        if not name:
+            name = self.name
+        result = DistGraph(name=name)
+        result.graph = nx.relabel_nodes(self.graph, replace_dict)
+        result.marginalize_list = {replace_dict[var] for var in self.marginalize_list}
+        result.global_option = dict(self.global_option)
+        for var, dist in self.node_distributions():
+            self._replace_atom_name_dict(var, replace_dict)
+        return result
+
     def node_distribution(self, var):
         return self.graph.nodes(data='atom')[var]
 
@@ -64,8 +96,9 @@ class DistGraph:
         option = self.graph.nodes(data='option')[var]
         return option if option else {}
 
-    def topological_sorted_distribution(self):
-        for var in nx.topological_sort(self.graph):
+    def node_distributions(self, sorted=False):
+        vars = nx.topological_sort(self.graph) if sorted else self.graph
+        for var in vars:
             dist = self.node_distribution(var)
             if dist:
                 yield var, dist
@@ -85,6 +118,18 @@ class DistGraph:
         return [var for var in self.graph
                 if self.node_distribution(var) is not None and var not in self.marginalize_list]
 
+    def _get_local_name(self, global_name, location):
+        name_dict = self.graph.nodes(data='name_dict')[location]
+        return global_name if global_name not in name_dict else name_dict[global_name]
+
+    def _get_local_input_dict(self, values, var, atom_var):
+        lvar = [self._get_local_name(var_name, atom_var) for var_name in var]
+        return get_dict_values(values, lvar, return_dict=True)
+
+    def _get_local_output_value(self, atom_var, output_dict):
+        lvar = self._get_local_name(atom_var, atom_var)
+        return output_dict[lvar]
+
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         sample_option = dict(self.global_option)
         sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape,
@@ -95,13 +140,13 @@ class DistGraph:
                                                                                         set(x_dict.keys())))
 
         values = get_dict_values(x_dict, self.input_var, return_dict=True)
-        for var, dist in self.topological_sorted_distribution():
+        for var, dist in self.node_distributions(sorted=True):
             if any(cond not in values for cond in self.graph.pred[var]):
                 raise ValueError("lack of some condition variable")
-            input_dict = get_dict_values(values, self.graph.pred[var], return_dict=True)
+            input_dict = self._get_local_input_dict(values, self.graph.pred[var], var)
             option = sample_option
             option.update(self.node_option(var))
-            values[var] = dist.sample(input_dict, **option)[var]
+            values[var] = self._get_local_output_value(var, dist.sample(input_dict, **option))
         result_dict = delete_dict_values(values, self.marginalize_list)
         if return_all:
             output_dict = dict(delete_dict_values(x_dict, self.input_var))
@@ -126,8 +171,8 @@ class DistGraph:
         values = get_dict_values(x_dict, list(self.graph), return_dict=True)
         log_prob = None
         prev_dist = None
-        for var, dist in self.topological_sorted_distribution():
-            input_dict = get_dict_values(values, list(self.graph.pred[var]) + [var], return_dict=True)
+        for var, dist in self.node_distributions(sorted=True):
+            input_dict = self._get_local_input_dict(values, list(self.graph.pred[var]) + [var], var)
             option = log_prob_option
             option.update(self.node_option(var))
             new_log_prob = dist.get_log_prob(input_dict, **option)
@@ -147,17 +192,18 @@ class DistGraph:
 
     @property
     def has_reparam(self):
-        return all(self.node_distribution(var) is None or self.node_distribution(var).has_reparam for var in self.graph)
+        return all(dist.has_reparam for _, dist in self.node_distributions())
 
     def __repr__(self):
-        text = "\n".join(repr(dist) for _, dist in self.topological_sorted_distribution())
+        text = "\n".join(repr(dist) for _, dist in self.node_distributions(sorted=True))
         return text
 
     @property
     def prob_factorized_text(self):
         text = ""
-        for var, dist in self.topological_sorted_distribution():
-            factor_text = dist.prob_factorized_text
+        for var, dist in self.node_distributions(sorted=True):
+            # factor_text = dist.prob_factorized_text
+            factor_text = self.prob_atom_factorized_text(var, dist)
             text = factor_text + text
         if self.marginalize_list:
             integral_symbol = len(self.marginalize_list) * "\\int "
@@ -183,6 +229,11 @@ class DistGraph:
         return "{}({}{})".format(self.name, ','.join(convert_latex_name(var_name) for var_name in self.var),
                                  '' if len(self.cond_var) == 0 else
                                  '|' + ','.join(convert_latex_name(var_name) for var_name in self.cond_var))
+
+    def prob_atom_factorized_text(self, var, dist):
+        return "{}({}{})".format(dist.name, ','.join(convert_latex_name(var_name) for var_name in [var]),
+                                 '' if len(self.graph.pred[var]) == 0 else
+                                 '|' + ','.join(convert_latex_name(var_name) for var_name in self.graph.pred[var]))
 
     @property
     def prob_joint_factorized_and_text(self):
@@ -1030,7 +1081,7 @@ class DistributionBase(Distribution):
     @property
     def prob_factorized_text(self):
         """str: Return a formula of the factorized probability distribution."""
-        return self.prob_text
+        return self.graph.prob_text
 
 
 class MultiplyDistribution(Distribution):
@@ -1154,98 +1205,8 @@ class ReplaceVarDistribution(Distribution):
             Dictionary.
 
         """
-        raise NotImplementedError()
-
-        if not isinstance(p, Distribution):
-            raise ValueError("Given input should be `pixyz.Distribution`, got {}.".format(type(p)))
-
-        if isinstance(p, MultiplyDistribution):
-            raise ValueError("`pixyz.MultiplyDistribution` is not supported for now.")
-
-        if isinstance(p, MarginalizeVarDistribution):
-            raise ValueError("`pixyz.MarginalizeVarDistribution` is not supported for now.")
-
-        _cond_var = deepcopy(p.cond_var)
-        _var = deepcopy(p.var)
-        all_vars = _cond_var + _var
-
-        if not (set(replace_dict.keys()) <= set(all_vars)):
-            raise ValueError("replace_dict has unknown variables.")
-
-        _replace_inv_cond_var_dict = {replace_dict[var]: var for var in _cond_var if var in replace_dict.keys()}
-        _replace_inv_dict = {value: key for key, value in replace_dict.items()}
-
-        self._replace_inv_cond_var_dict = _replace_inv_cond_var_dict
-        self._replace_inv_dict = _replace_inv_dict
-        self._replace_dict = replace_dict
-
-        _cond_var = [replace_dict[var] if var in replace_dict.keys() else var for var in _cond_var]
-        _var = [replace_dict[var] if var in replace_dict.keys() else var for var in _var]
-        super().__init__(cond_var=_cond_var, var=_var, name=p.name, features_shape=p.features_shape)
-
-        self.p = p
-        _input_var = [replace_dict[var] if var in replace_dict.keys() else var for var in p.input_var]
-        self._input_var = _input_var
-
-    def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
-
-    def get_params(self, params_dict={}):
-        params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
-        return self.p.get_params(params_dict)
-
-    def set_dist(self, x_dict={}, batch_n=None, **kwargs):
-        x_dict = replace_dict_keys(x_dict, self._replace_inv_cond_var_dict)
-        return self.p.set_dist(x_dict=x_dict, batch_n=batch_n, **kwargs)
-
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
-        # check whether the input is valid or convert it to valid dictionary.
-        input_dict = self._get_input_dict(x_dict)
-        replaced_input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
-
-        output_dict = self.p.sample(replaced_input_dict, batch_n=batch_n, sample_shape=sample_shape,
-                                    return_all=False, reparam=reparam, **kwargs)
-        output_dict = replace_dict_keys(output_dict, self._replace_dict)
-
-        if return_all:
-            x_dict = x_dict.copy()
-            x_dict.update(output_dict)
-            return x_dict
-
-        return output_dict
-
-    def get_log_prob(self, x_dict, **kwargs):
-        input_dict = get_dict_values(x_dict, self.cond_var + self.var, return_dict=True)
-        input_dict = replace_dict_keys(input_dict, self._replace_inv_dict)
-        return self.p.get_log_prob(input_dict, **kwargs)
-
-    def sample_mean(self, x_dict={}):
-        input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
-        input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
-        return self.p.sample_mean(input_dict)
-
-    def sample_variance(self, x_dict={}):
-        input_dict = get_dict_values(x_dict, self.cond_var, return_dict=True)
-        input_dict = replace_dict_keys(input_dict, self._replace_inv_cond_var_dict)
-        return self.p.sample_variance(input_dict)
-
-    @property
-    def input_var(self):
-        return self._input_var
-
-    @property
-    def distribution_name(self):
-        return self.p.distribution_name
-
-    @property
-    def has_reparam(self):
-        return self.p.has_reparam
-
-    def __getattr__(self, item):
-        try:
-            return super().__getattr__(item)
-        except AttributeError:
-            return self.p.__getattribute__(item)
+        super().__init__(cond_var=[], var=[], name=p.name, features_shape=p.features_shape,
+                         graph=p.graph.var_replaced(replace_dict))
 
 
 class MarginalizeVarDistribution(Distribution):
@@ -1307,9 +1268,6 @@ class MarginalizeVarDistribution(Distribution):
     def forward(self, *args, **kwargs):
         return self.p.forward(*args, **kwargs)
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
-        return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, **kwargs)
-
     def sample_mean(self, x_dict={}):
         return self.p.sample_mean(x_dict)
 
@@ -1317,16 +1275,8 @@ class MarginalizeVarDistribution(Distribution):
         return self.p.sample_variance(x_dict)
 
     @property
-    def input_var(self):
-        return self.graph.input_var
-
-    @property
     def distribution_name(self):
         return self.p.distribution_name
-
-    @property
-    def has_reparam(self):
-        return self.graph.has_reparam
 
     @property
     def prob_factorized_text(self):
