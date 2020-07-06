@@ -28,34 +28,35 @@ class MixtureModel(Distribution):
     >>> p = MixtureModel(distributions=distributions, prior=prior)
     >>> print(p)
     Distribution:
-      p(x) = p_{0}(x|z=0)prior(z=0) + p_{1}(x|z=1)prior(z=1) + p_{2}(x|z=2)prior(z=2)
+      p(x)
     Network architecture:
+      p(x) -> p_{0}(x|z=0)prior(z=0) + p_{1}(x|z=1)prior(z=1) + p_{2}(x|z=2)prior(z=2) =
       MixtureModel(
         name=p, distribution_name=Mixture Model,
-        var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([])
+        features_shape=torch.Size([])
         (distributions): ModuleList(
           (0): Normal(
             name=p_{0}, distribution_name=Normal,
-            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
+            features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
           )
           (1): Normal(
             name=p_{1}, distribution_name=Normal,
-            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
+            features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
           )
           (2): Normal(
             name=p_{2}, distribution_name=Normal,
-            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
+            features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
           )
         )
         (prior): Categorical(
           name=prior, distribution_name=Categorical,
-          var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([3])
+          features_shape=torch.Size([3])
           (probs): torch.Size([1, 3])
         )
       )
@@ -110,14 +111,6 @@ class MixtureModel(Distribution):
     def hidden_var(self):
         """list: Hidden variables of this distribution."""
         return self._hidden_var
-
-    @property
-    def prob_text(self):
-        _prob_text = "{}({})".format(
-            self._name, ','.join(([convert_latex_name(var_name) for var_name in self._var]))
-        )
-
-        return _prob_text
 
     @property
     def prob_factorized_text(self):

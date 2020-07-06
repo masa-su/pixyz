@@ -152,15 +152,17 @@ class AdversarialJensenShannon(AdversarialLoss):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z) =
       Normal(
         name=p_{prior}, distribution_name=Normal,
-        var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
+        features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -169,9 +171,10 @@ class AdversarialJensenShannon(AdversarialLoss):
     Distribution:
       p_{data}(x)
     Network architecture:
+      p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -185,9 +188,10 @@ class AdversarialJensenShannon(AdversarialLoss):
     Distribution:
       d(t|x)
     Network architecture:
+      d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -317,15 +321,17 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z) =
       Normal(
         name=p_{prior}, distribution_name=Normal,
-        var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
+        features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -334,9 +340,10 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Distribution:
       p_{data}(x)
     Network architecture:
+      p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -350,9 +357,10 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Distribution:
       d(t|x)
     Network architecture:
+      d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -473,15 +481,17 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z) =
       Normal(
         name=p_{prior}, distribution_name=Normal,
-        var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
+        features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -490,9 +500,10 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Distribution:
       p_{data}(x)
     Network architecture:
+      p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -506,9 +517,10 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Distribution:
       d(t|x)
     Network architecture:
+      d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
-        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>

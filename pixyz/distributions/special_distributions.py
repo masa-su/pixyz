@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from .distributions import Distribution, DistGraph
+from .distributions import Distribution
 
 
 class Deterministic(Distribution):
@@ -21,9 +21,10 @@ class Deterministic(Distribution):
     Distribution:
       p(x|z)
     Network architecture:
+      p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
-        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
         (model): Linear(in_features=64, out_features=512, bias=True)
       )
     >>> sample = p.sample({"z": torch.randn(1, 64)})
@@ -33,9 +34,8 @@ class Deterministic(Distribution):
     NotImplementedError
     """
 
-    def __init__(self, name='p', **kwargs):
-        super().__init__(name=name, **kwargs)
-        self.graph = DistGraph().appended(self, name=name)
+    def __init__(self, var, cond_var=(), name='p', **kwargs):
+        super().__init__(var=var, cond_var=cond_var, name=name, **kwargs)
 
     @property
     def distribution_name(self):
@@ -85,16 +85,16 @@ class DataDistribution(Distribution):
     Distribution:
       p_{data}(x)
     Network architecture:
+      p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
+        features_shape=torch.Size([])
       )
     >>> sample = p.sample({"x": torch.randn(1, 64)})
     """
 
     def __init__(self, var, name="p_{data}"):
         super().__init__(var=var, cond_var=[], name=name)
-        self.graph = DistGraph().appended(self, name=name)
 
     @property
     def distribution_name(self):
@@ -106,6 +106,9 @@ class DataDistribution(Distribution):
 
     def sample_mean(self, x_dict):
         return self.sample(x_dict, return_all=False)[self._var[0]]
+
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+        raise NotImplementedError()
 
     @property
     def input_var(self):

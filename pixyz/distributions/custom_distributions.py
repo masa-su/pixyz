@@ -40,7 +40,7 @@ class CustomProb(Distribution):
         self._log_prob_function = log_prob_function
         self._distribution_name = distribution_name
 
-        super().__init__(var=var, cond_var=[], **kwargs)
+        super().__init__(var=var, **kwargs)
 
     @property
     def log_prob_function(self):
@@ -62,6 +62,9 @@ class CustomProb(Distribution):
             log_prob = sum_samples(log_prob)
 
         return log_prob
+
+    def sample(self, x_dict={}, return_all=True, **kwargs):
+        raise NotImplementedError()
 
     @property
     def has_reparam(self):
