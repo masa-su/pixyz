@@ -23,14 +23,14 @@ class DistGraph:
     def appended(self, atom_dist, var, cond_var=(), name=''):
         if not name:
             name = self.name
-        scg = DistGraph(self, name=name)
+        new_instance = DistGraph(self, name=name)
         var = var[0]
-        if var in scg.graph:
-            raise ValueError()
-        scg.graph.add_node(var, atom=atom_dist, name_dict={})
+        if var in new_instance.graph:
+            raise ValueError(f"A new variable name '{var}' is already used in this graph.")
+        new_instance.graph.add_node(var, atom=atom_dist, name_dict={})
         for cond in cond_var:
-            scg.graph.add_edge(cond, var)
-        return scg
+            new_instance.graph.add_edge(cond, var)
+        return new_instance
 
     def set_option(self, option_dict, var=[]):
         if not var:
@@ -40,7 +40,7 @@ class DistGraph:
 
     def united(self, other):
         if not set(self.var + list(self.marginalize_list)).isdisjoint(set(other.var + list(other.marginalize_list))):
-            raise ValueError()
+            raise ValueError("There is var-name conflicts between two graphs.")
         scg = DistGraph(self)
         scg.graph.update(other.graph)
         scg.marginalize_list.update(other.marginalize_list)
@@ -75,10 +75,10 @@ class DistGraph:
     def var_replaced(self, replace_dict, name=''):
         if not (set(replace_dict.keys()) <= set(self.graph)):
             unknown_var = [var_name for var_name in replace_dict.keys() if var_name not in self.graph]
-            raise ValueError("replace_dict has unknown variables: {}".format(unknown_var))
+            raise ValueError(f"replace_dict has unknown variables: {unknown_var}")
         if not set(replace_dict.values()).isdisjoint(set(self.graph)):
             used_var = [var_name for var_name in replace_dict.values() if var_name in self.graph]
-            raise ValueError("{} is already used in this distribution.".format(used_var))
+            raise ValueError(f"{used_var} is already used in this distribution.")
         if not name:
             name = self.name
         result = DistGraph(name=name)
@@ -106,8 +106,7 @@ class DistGraph:
     @property
     def input_var(self):
         return [var for var in self.graph
-                if self.node_distribution(var) is None or isinstance(
-                    self.node_distribution(var), type('DataDistribution'))]
+                if self.node_distribution(var) is None or var in self.node_distribution(var).input_var]
 
     @property
     def cond_var(self):
@@ -136,8 +135,7 @@ class DistGraph:
                                   return_all=False, reparam=reparam))
         # ignore return_all because overriding is now under control.
         if not(set(x_dict.keys()) >= set(self.input_var)):
-            raise ValueError("Input keys are not valid, expected {} but got {}.".format(set(self.input_var),
-                                                                                        set(x_dict.keys())))
+            raise ValueError(f"Input keys are not valid, expected {set(self.input_var)} but got {set(x_dict.keys())}.")
 
         values = get_dict_values(x_dict, self.input_var, return_dict=True)
         for var, dist in self.node_distributions(sorted=True):
@@ -155,9 +153,6 @@ class DistGraph:
         else:
             return delete_dict_values(result_dict, self.input_var)
 
-    # def sample_scgraph(self):
-    #     pass
-
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         if len(self.marginalize_list) > 0:
             # TODO: Deterministic分布のmarginalizeの場合はその変数が辞書に含まれない限りは対数尤度を定義してよい
@@ -165,8 +160,7 @@ class DistGraph:
         log_prob_option = dict(self.global_option)
         log_prob_option.update(dict(sum_features=sum_features, feature_dims=feature_dims))
         if not(set(x_dict.keys()) >= set(self.graph)):
-            raise ValueError("Input keys are not valid, expected {} but got {}.".format(set(self.graph),
-                                                                                        set(x_dict.keys())))
+            raise ValueError(f"Input keys are not valid, expected {set(self.graph)} but got {set(x_dict.keys())}.")
 
         values = get_dict_values(x_dict, list(self.graph), return_dict=True)
         log_prob = None
@@ -180,10 +174,8 @@ class DistGraph:
                 log_prob = new_log_prob
             else:
                 if log_prob.size() != new_log_prob.size():
-                    raise ValueError("Two PDFs, {} and {}, have different sizes,"
-                                     " so you must modify these tensor sizes."
-                                     .format(prev_dist.prob_text,
-                                             dist.prob_text))
+                    raise ValueError(f"Two PDFs, {prev_dist.prob_text} and {dist.prob_text}, have different sizes,"
+                                     " so you must modify these tensor sizes.")
                 log_prob += new_log_prob
             prev_dist = dist
         if log_prob is None:
@@ -198,7 +190,6 @@ class DistGraph:
     def prob_factorized_text(self):
         text = ""
         for var, dist in self.node_distributions(sorted=True):
-            # factor_text = dist.prob_factorized_text
             factor_text = self.prob_node_text(var, dist)
             text = factor_text + text
         if self.marginalize_list:
@@ -207,7 +198,7 @@ class DistGraph:
             integral_variables = ["d" + var for var in self.marginalize_list]
             integral_variables = "".join(integral_variables)
 
-            return "{}{}{}".format(integral_symbol, text, integral_variables)
+            return f"{integral_symbol}{text}{integral_variables}"
         return text
 
     def _repr_atom(self, var, dist):
@@ -219,31 +210,33 @@ class DistGraph:
 
     def __str__(self):
         # Distribution
-        text = "Distribution:\n  {}\n".format(self.prob_joint_factorized_and_text)
+        text = f"Distribution:\n  {self.prob_joint_factorized_and_text}\n"
 
         # Network architecture (`repr`)
         network_text = "\n".join(self._repr_atom(var, dist) for var, dist in self.node_distributions(sorted=True))
         network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
-        text += "Network architecture:\n{}".format(network_text)
+        text += f"Network architecture:\n{network_text}"
         return text
 
     @property
     def prob_text(self):
-        return "{}({}{})".format(self.name, ','.join(convert_latex_name(var_name) for var_name in self.var),
-                                 '' if len(self.cond_var) == 0 else
-                                 '|' + ','.join(convert_latex_name(var_name) for var_name in self.cond_var))
+        var_text = ','.join(convert_latex_name(var_name) for var_name in self.var)
+        cond_text = '' if len(self.cond_var) == 0 else \
+            '|' + ','.join(convert_latex_name(var_name) for var_name in self.cond_var)
+        return f"{self.name}({var_text}{cond_text})"
 
     def prob_node_text(self, var, dist):
-        return "{}({}{})".format(dist.name, ','.join(convert_latex_name(var_name) for var_name in [var]),
-                                 '' if len(self.graph.pred[var]) == 0 else
-                                 '|' + ','.join(convert_latex_name(var_name) for var_name in self.graph.pred[var]))
+        var_text = ','.join(convert_latex_name(var_name) for var_name in [var])
+        cond_text = '' if len(self.graph.pred[var]) == 0 else \
+            '|' + ','.join(convert_latex_name(var_name) for var_name in self.graph.pred[var])
+        return f"{dist.name}({var_text}{cond_text})"
 
     @property
     def prob_joint_factorized_and_text(self):
         if self.prob_factorized_text == self.prob_text:
             return self.prob_text
         else:
-            return "{} = {}".format(self.prob_text, self.prob_factorized_text)
+            return f"{self.prob_text} = {self.prob_factorized_text}"
 
 
 class Distribution(nn.Module):
@@ -265,7 +258,7 @@ class Distribution(nn.Module):
       p_{1}(x) =
       Normal(
         name=p_{1}, distribution_name=Normal,
-        features_shape=torch.Size([64])
+        var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([64])
         (loc): torch.Size([1, 64])
         (scale): torch.Size([1, 64])
       )
@@ -280,7 +273,7 @@ class Distribution(nn.Module):
       p_{2}(x|y) =
       Normal(
         name=p_{2}, distribution_name=Normal,
-        features_shape=torch.Size([64])
+        var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([64])
         (scale): torch.Size([1, 64])
       )
 
@@ -300,7 +293,7 @@ class Distribution(nn.Module):
       p_{3}(x|y) =
       P(
         name=p_{3}, distribution_name=Normal,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([])
         (model_loc): Linear(in_features=128, out_features=64, bias=True)
         (model_scale): Linear(in_features=128, out_features=64, bias=True)
       )
@@ -388,10 +381,7 @@ class Distribution(nn.Module):
         if len(self.cond_var) != 0:
             _var_text += [','.join([convert_latex_name(var_name) for var_name in self.cond_var])]
 
-        _prob_text = "{}({})".format(
-            self._name,
-            "|".join(_var_text)
-        )
+        _prob_text = f"{self._name}({'|'.join(_var_text)})"
 
         return _prob_text
 
@@ -411,7 +401,7 @@ class Distribution(nn.Module):
         if self.prob_factorized_text == self.prob_text:
             prob_text = self.prob_text
         else:
-            prob_text = "{} = {}".format(self.prob_text, self.prob_factorized_text)
+            prob_text = f"{self.prob_text} = {self.prob_factorized_text}"
         return prob_text
 
     @property
@@ -499,7 +489,7 @@ class Distribution(nn.Module):
           p(x) =
           Normal(
             name=p, distribution_name=Normal,
-            features_shape=torch.Size([10, 2])
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([10, 2])
             (loc): torch.Size([1, 10, 2])
             (scale): torch.Size([1, 10, 2])
           )
@@ -520,7 +510,7 @@ class Distribution(nn.Module):
           p(x|y) =
           Normal(
             name=p, distribution_name=Normal,
-            features_shape=torch.Size([10])
+            var=['x'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([10])
             (scale): torch.Size([1, 10])
           )
         >>> sample_y = torch.randn(1, 10) # Psuedo data
@@ -817,24 +807,23 @@ class Distribution(nn.Module):
         if self.graph:
             return str(self.graph)
         # Distribution
-        text = "Distribution:\n  {}\n".format(self.prob_joint_factorized_and_text)
+        text = f"Distribution:\n  {self.prob_joint_factorized_and_text}\n"
 
         # Network architecture (`repr`)
         network_text = self.__repr__()
         network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
-        text += "Network architecture:\n{}".format(network_text)
+        text += f"Network architecture:\n{network_text}"
         return text
 
     def extra_repr(self):
         # parameters
-        parameters_text = 'name={}, distribution_name={},\n' \
-                          'features_shape={}'.format(self.name, self.distribution_name,
-                                                     self.features_shape
-                                                     )
+        parameters_text = f'name={self.name}, distribution_name={self.distribution_name},\n' \
+                          f'var={self.var}, cond_var={self.cond_var}, input_var={self.input_var}, ' \
+                          f'features_shape={self.features_shape}'
 
         if len(self._buffers) != 0:
             # add buffers to repr
-            buffers = ["({}): {}".format(key, value.shape) for key, value in self._buffers.items()]
+            buffers = [f"({key}): {value.shape}" for key, value in self._buffers.items()]
             return parameters_text + "\n" + "\n".join(buffers)
 
         return parameters_text
@@ -868,8 +857,8 @@ class DistributionBase(Distribution):
                 if params_dict[key] in self._cond_var:
                     self.replace_params_dict[params_dict[key]] = key
                 else:
-                    raise ValueError("parameter setting {}:{} is not valid because cond_var does not contains {}."
-                                     .format(key, params_dict[key], params_dict[key]))
+                    raise ValueError(f"parameter setting {key}:{params_dict[key]} is not valid"
+                                     f" because cond_var does not contains {params_dict[key]}.")
             elif isinstance(params_dict[key], torch.Tensor):
                 features = params_dict[key]
                 features_checked = self._check_features_shape(features)
@@ -890,8 +879,8 @@ class DistributionBase(Distribution):
             batches = features.unsqueeze(0)
             return batches
 
-        raise ValueError("the shape of a given parameter {} and features_shape {} "
-                         "do not match.".format(features.size(), self.features_shape))
+        raise ValueError(f"the shape of a given parameter {features.size()}"
+                         f" and features_shape {self.features_shape} do not match.")
 
     @property
     def params_keys(self):
@@ -928,8 +917,8 @@ class DistributionBase(Distribution):
         """
         params = self.get_params(x_dict, **kwargs)
         if set(self.params_keys) != set(params.keys()):
-            raise ValueError("{} class requires following parameters: {}\n"
-                             "but got {}".format(type(self), set(self.params_keys), set(params.keys())))
+            raise ValueError(f"{type(self)} class requires following parameters: {set(self.params_keys)}\n"
+                             f"but got {set(params.keys())}")
 
         self._dist = self.distribution_torch_class(**params)
 
@@ -1010,7 +999,7 @@ class DistributionBase(Distribution):
           p(x) =
           Normal(
             name=p, distribution_name=Normal,
-            features_shape=torch.Size([1])
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([1])
             (loc): torch.Size([1, 1])
             (scale): torch.Size([1, 1])
           )
@@ -1025,7 +1014,7 @@ class DistributionBase(Distribution):
           p(x|z) =
           Normal(
             name=p, distribution_name=Normal,
-            features_shape=torch.Size([])
+            var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
             (loc): torch.Size([1])
           )
         >>> dist_2.get_params({"z": torch.tensor(1.)})
@@ -1111,12 +1100,12 @@ class MultiplyDistribution(Distribution):
       p(z|y) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['z'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([])
       )
       p(x|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
     >>> b = DistributionBase(var=["y"], cond_var=["z"])
     >>> p_multi = MultiplyDistribution(a, b)
@@ -1127,12 +1116,12 @@ class MultiplyDistribution(Distribution):
       p(y|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
       p(x|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
     >>> b = DistributionBase(var=["y"], cond_var=["a"])
     >>> p_multi = MultiplyDistribution(a, b)
@@ -1143,12 +1132,12 @@ class MultiplyDistribution(Distribution):
       p(y|a) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['y'], cond_var=['a'], input_var=['a'], features_shape=torch.Size([])
       )
       p(x|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
 
     """
@@ -1184,7 +1173,7 @@ class ReplaceVarDistribution(Distribution):
       p(x|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
     >>> replace_dict = {'x': 'y'}
     >>> p_repl = ReplaceVarDistribution(p, replace_dict)
@@ -1195,7 +1184,7 @@ class ReplaceVarDistribution(Distribution):
       p(y|z) -> p(x|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
 
     """
@@ -1259,12 +1248,12 @@ class MarginalizeVarDistribution(Distribution):
       p(y|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
       p(x|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
     >>> p_marg = MarginalizeVarDistribution(p_multi, ["y"])
     >>> print(p_marg)
@@ -1274,12 +1263,12 @@ class MarginalizeVarDistribution(Distribution):
       p(y|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
       p(x|z) =
       DistributionBase(
         name=p, distribution_name=,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
 
     """

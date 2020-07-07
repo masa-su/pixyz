@@ -33,30 +33,30 @@ class MixtureModel(Distribution):
       p(x) -> p_{0}(x|z=0)prior(z=0) + p_{1}(x|z=1)prior(z=1) + p_{2}(x|z=2)prior(z=2) =
       MixtureModel(
         name=p, distribution_name=Mixture Model,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([])
         (distributions): ModuleList(
           (0): Normal(
             name=p_{0}, distribution_name=Normal,
-            features_shape=torch.Size([2])
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
           )
           (1): Normal(
             name=p_{1}, distribution_name=Normal,
-            features_shape=torch.Size([2])
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
           )
           (2): Normal(
             name=p_{2}, distribution_name=Normal,
-            features_shape=torch.Size([2])
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([2])
             (loc): torch.Size([1, 2])
             (scale): torch.Size([1, 2])
           )
         )
         (prior): Categorical(
           name=prior, distribution_name=Categorical,
-          features_shape=torch.Size([3])
+          var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([3])
           (probs): torch.Size([1, 3])
         )
       )

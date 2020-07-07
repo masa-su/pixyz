@@ -155,14 +155,14 @@ class AdversarialJensenShannon(AdversarialLoss):
       p_{prior}(z) =
       Normal(
         name=p_{prior}, distribution_name=Normal,
-        features_shape=torch.Size([32])
+        var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
       p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -174,7 +174,7 @@ class AdversarialJensenShannon(AdversarialLoss):
       p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -191,7 +191,7 @@ class AdversarialJensenShannon(AdversarialLoss):
       d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
-        features_shape=torch.Size([])
+        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -324,14 +324,14 @@ class AdversarialKullbackLeibler(AdversarialLoss):
       p_{prior}(z) =
       Normal(
         name=p_{prior}, distribution_name=Normal,
-        features_shape=torch.Size([32])
+        var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
       p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -343,7 +343,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
       p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -360,7 +360,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
       d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
-        features_shape=torch.Size([])
+        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>
@@ -484,14 +484,14 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
       p_{prior}(z) =
       Normal(
         name=p_{prior}, distribution_name=Normal,
-        features_shape=torch.Size([32])
+        var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
       p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
@@ -503,7 +503,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
       p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
@@ -520,7 +520,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
       d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
-        features_shape=torch.Size([])
+        var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
         (model): Linear(in_features=64, out_features=1, bias=True)
       )
     >>>

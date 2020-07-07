@@ -24,7 +24,7 @@ class Deterministic(Distribution):
       p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
         (model): Linear(in_features=64, out_features=512, bias=True)
       )
     >>> sample = p.sample({"z": torch.randn(1, 64)})
@@ -88,7 +88,7 @@ class DataDistribution(Distribution):
       p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
-        features_shape=torch.Size([])
+        var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
     >>> sample = p.sample({"x": torch.randn(1, 64)})
     """
