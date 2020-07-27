@@ -171,7 +171,6 @@ class AdversarialJensenShannon(AdversarialLoss):
     Distribution:
       p_{data}(x)
     Network architecture:
-      p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
@@ -188,7 +187,6 @@ class AdversarialJensenShannon(AdversarialLoss):
     Distribution:
       d(t|x)
     Network architecture:
-      d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
         var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
@@ -340,7 +338,6 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Distribution:
       p_{data}(x)
     Network architecture:
-      p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
@@ -357,7 +354,6 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Distribution:
       d(t|x)
     Network architecture:
-      d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
         var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])
@@ -500,7 +496,6 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Distribution:
       p_{data}(x)
     Network architecture:
-      p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
@@ -517,7 +512,6 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Distribution:
       d(t|x)
     Network architecture:
-      d(t|x) =
       Discriminator(
         name=d, distribution_name=Deterministic,
         var=['t'], cond_var=['x'], input_var=['x'], features_shape=torch.Size([])

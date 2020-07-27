@@ -45,7 +45,6 @@ setup(
         "tensorboardX",
         "networkx",
     ],
-    # TODO: license of networkx
     license='MIT',
     classifiers=[
         'Programming Language :: Python :: 3.5',

@@ -21,7 +21,6 @@ class Deterministic(Distribution):
     Distribution:
       p(x|z)
     Network architecture:
-      p(x|z) =
       Generator(
         name=p, distribution_name=Deterministic,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
@@ -34,7 +33,7 @@ class Deterministic(Distribution):
     NotImplementedError
     """
 
-    def __init__(self, var, cond_var=(), name='p', **kwargs):
+    def __init__(self, var, cond_var=[], name='p', **kwargs):
         super().__init__(var=var, cond_var=cond_var, name=name, **kwargs)
 
     @property
@@ -59,16 +58,11 @@ class Deterministic(Distribution):
         return self.sample(x_dict, return_all=False)[self._var[0]]
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
-        raise NotImplementedError()
+        raise NotImplementedError("Log probability of deterministic distribution is not defined.")
 
     @property
     def has_reparam(self):
         return True
-
-    @property
-    def prob_factorized_text(self):
-        """str: Return a formula of the factorized probability distribution."""
-        return self.prob_text
 
 
 class DataDistribution(Distribution):
@@ -85,7 +79,6 @@ class DataDistribution(Distribution):
     Distribution:
       p_{data}(x)
     Network architecture:
-      p_{data}(x) =
       DataDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
@@ -121,8 +114,3 @@ class DataDistribution(Distribution):
     @property
     def has_reparam(self):
         return True
-
-    @property
-    def prob_factorized_text(self):
-        """str: Return a formula of the factorized probability distribution."""
-        return self.prob_text
