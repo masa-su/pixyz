@@ -30,7 +30,7 @@ class Deterministic(Distribution):
     >>> p.log_prob().eval(sample) # log_prob is not defined.
     Traceback (most recent call last):
      ...
-    NotImplementedError
+    NotImplementedError: Log probability of deterministic distribution is not defined.
     """
 
     def __init__(self, var, cond_var=[], name='p', **kwargs):

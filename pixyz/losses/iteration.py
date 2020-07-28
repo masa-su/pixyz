@@ -61,11 +61,11 @@ class IterativeLoss(Loss):
     >>> # Set the loss class
     >>> step_loss_cls = p.log_prob().expectation(q * f).mean()
     >>> print(step_loss_cls)
-    mean \left(\mathbb{E}_{p(z,h|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
+    mean \left(\mathbb{E}_{q(z,h|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
     >>> loss_cls = IterativeLoss(step_loss=step_loss_cls,
     ...                          series_var=["x"], update_value={"h": "h_prev"})
     >>> print(loss_cls)
-    \sum_{t=1}^{t_{max}} mean \left(\mathbb{E}_{p(z,h|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
+    \sum_{t=1}^{t_{max}} mean \left(\mathbb{E}_{q(z,h|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
     >>>
     >>> # Evaluate
     >>> x_sample = torch.randn(30, 2, 128) # (timestep_size, batch_size, feature_size)

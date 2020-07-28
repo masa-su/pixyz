@@ -9,8 +9,12 @@ from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split,
 from ..losses import LogProb, Prob
 
 
-# atom_distがグラフ間で共有される場合に対応して，別のハッシュ値を割り当てるためのクラス
 class Factor:
+    """
+    This class wraps an atomic distribution as a factor node of a DistGraph.
+    It allocates new instance even if the same atomic distribution is specified.
+    This class assumes the lifespan of it is covered by the lifespan of the DistGraph.
+    """
     def __init__(self, atom_dist):
         self.dist = atom_dist
         self.name_dict = {}
@@ -53,48 +57,44 @@ class Factor:
 
 
 class DistGraph:
-    """Graphical model class. This manages the graph of Graphical Model of distribution.
-     It is called from Distribution class.
-
-    Examples
-    --------
     """
-    def __init__(self, original=None, name='p'):
+     Graphical model class. This manages the graph of Graphical Model of distribution.
+     It is called from Distribution class.
+    """
+    def __init__(self, original=None):
         self.graph = nx.DiGraph()
         self.global_option = {}
         self.marginalize_list = set()
-        self.name = convert_latex_name(name)
+        self.name = ''
         if original:
             self.graph = nx.relabel_nodes(original.graph,
                                           {factor: factor.copy() for factor in self.factors()})
             self.global_option.update(original.global_option)
             self.marginalize_list.update(original.marginalize_list)
+            self.name = original.name
 
-    def appended(self, atom_dist, var, cond_var=[], name=''):
+    def appended(self, atom_dist):
         """ Return new graph appended one node.
         Parameters
         ----------
         atom_dist : Distribution
-        var : list of str
-        cond_var : list of str
-        name : str
 
         Returns
         -------
         DistGraph
 
         """
-        if not name:
-            name = self.name
-        new_instance = DistGraph(self, name=name)
+        new_instance = DistGraph(self)
+        if not new_instance.name:
+            new_instance.name = atom_dist.name
         # factor node of an atomic distribution
         factor = Factor(atom_dist)
         new_instance.graph.add_node(factor)
-        for var_name in var:
+        for var_name in atom_dist.var:
             if var_name in new_instance.graph:
                 raise ValueError(f"A new variable name '{var_name}' is already used in this graph.")
             new_instance.graph.add_edge(factor, var_name)
-        for cond in cond_var:
+        for cond in atom_dist.cond_var:
             new_instance.graph.add_edge(cond, factor)
         return new_instance
 
@@ -131,6 +131,7 @@ class DistGraph:
         Returns
         -------
         DistGraph
+
         Examples
         --------
         >>> import pixyz.distributions as pd
@@ -157,12 +158,11 @@ class DistGraph:
         new_graph.marginalize_list.update(marginalize_list)
         return new_graph
 
-    def var_replaced(self, replace_dict, name=''):
+    def var_replaced(self, replace_dict):
         """ Returns new graph whose variables are replaced.
         Parameters
         ----------
         replace_dict: dict of str and str
-        name: str
 
         Returns
         -------
@@ -198,9 +198,7 @@ class DistGraph:
                                                       if var_name in replace_dict else var_name) > 1]
             raise ValueError(f"{duplicated_vars} are conflicted after replaced.")
 
-        if not name:
-            name = self.name
-        result = DistGraph(original=self, name=name)
+        result = DistGraph(original=self)
         result.graph = nx.relabel_nodes(result.graph, replace_dict, copy=False)
         result.marginalize_list = {replace_dict[var] if var in replace_dict else var for var in self.marginalize_list}
         result.global_option = dict(self.global_option)
@@ -215,12 +213,32 @@ class DistGraph:
         return list(self.graph.pred[var_name])
 
     def factors(self, sorted=False):
+        """ get factors of the DistGraph.
+        Parameters
+        ----------
+        sorted: bool
+            the order of factors is topological sorted or not.
+
+        Returns
+        -------
+        iter of Factor
+
+        """
         nodes = nx.topological_sort(self.graph) if sorted else self.graph
         for node in nodes:
             if isinstance(node, Factor):
                 yield node
 
     def distribution(self, var_name):
+        """ An atomic distribution of the specified variable.
+        Parameters
+        ----------
+        var_name: str
+
+        Returns
+        -------
+        Distribution
+        """
         factors = self._factors_from_variable(var_name)
         if len(factors) == 0:
             raise ValueError(f"There is no distirbution about {var_name}.")
@@ -230,10 +248,20 @@ class DistGraph:
 
     @property
     def all_var(self):
+        """ All variables in the DistGraph.
+        Returns
+        -------
+        list of str
+        """
         return [var_name for var_name in self.graph if isinstance(var_name, str)]
 
     @property
     def input_var(self):
+        """ conditional variables and observation variables in the DistGraph.
+        Returns
+        -------
+        list of str
+        """
         def is_input_var_node(var_name):
             if not isinstance(var_name, str):
                 return False
@@ -247,10 +275,20 @@ class DistGraph:
 
     @property
     def cond_var(self):
+        """ conditional variables in the DistGraph.
+        Returns
+        -------
+        list of str
+        """
         return [var_name for var_name in self.graph if isinstance(var_name, str) and not self.graph.pred[var_name]]
 
     @property
     def var(self):
+        """ hidden variables in the DistGraph.
+        Returns
+        -------
+        list of str
+        """
         def is_var_node(var_name):
             if not isinstance(var_name, str):
                 return False
@@ -277,16 +315,26 @@ class DistGraph:
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         """
+        Sample variables of this distribution.
+        If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
+
         Parameters
         ----------
-        x_dict
-        batch_n
-        sample_shape
-        return_all
-        reparam
+        x_dict : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`, defaults to {}
+            Input variables.
+        batch_n : :obj:`int`, defaults to None.
+            Set batch size of parameters.
+        sample_shape : :obj:`list` or :obj:`NoneType`, defaults to torch.Size()
+            Shape of generating samples.
+        return_all : :obj:`bool`, defaults to True
+            Choose whether the output contains input variables.
+        reparam : :obj:`bool`, defaults to False.
+            Choose whether we sample variables with re-parameterized trick.
 
         Returns
         -------
+        output : dict
+            Samples of this distribution.
 
         Examples
         --------
@@ -377,15 +425,22 @@ class DistGraph:
         return log_prob
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
-        """ Get log probability of distribution with values of stochastic variables.
+        """ Giving variables, this method returns values of log-pdf.
+
         Parameters
         ----------
-        x_dict: dict of stochastic variables.
-        sum_features: bool
-        feature_dims
+        x_dict : dict
+            Input variables.
+        sum_features : :obj:`bool`, defaults to True
+            Whether the output is summed across some dimensions which are specified by `feature_dims`.
+        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
+            Set dimensions to sum across the output.
 
         Returns
         -------
+        log_prob : torch.Tensor
+            Values of log-probability density/mass function.
+
         Examples
         --------
         >>> from pixyz.distributions.distributions import DistGraph
@@ -615,15 +670,15 @@ class Distribution(nn.Module):
         self._cond_var = cond_var
         self._var = var
         self._atomic = atomic
+        self._name = convert_latex_name(name)
         if atomic:
             if len(var) != 1:
                 raise ValueError("An atomic distribution must have only one variable.")
-            self.graph = DistGraph().appended(atom_dist=self, var=var, cond_var=cond_var, name=name)
+            self.graph = DistGraph().appended(atom_dist=self)
         else:
             self.graph = None
 
         self._features_shape = torch.Size(features_shape)
-        self._name = convert_latex_name(name)
 
     @property
     def distribution_name(self):
@@ -639,7 +694,8 @@ class Distribution(nn.Module):
     def name(self, name):
         if type(name) is str:
             self._name = name
-            self.graph.name = name
+            if self._atomic:
+                self.graph.name = name
             return
 
         raise ValueError("Name of the distribution class must be a string type.")
@@ -1154,7 +1210,7 @@ class DistributionBase(Distribution):
                 # clone features to make it contiguous & to make it independent.
                 self.register_buffer(key, features_checked.clone())
             else:
-                # TODO: int型やdouble型やLongTensor型に対応する必要は無いのだろうか
+                # TODO: int, double, LongTensor are not supported.
                 raise ValueError(f"The types that can be specified as parameters of distribution"
                                  f" are limited to str & torch.Tensor. Got: {type(params_dict[key])}")
 
@@ -1339,7 +1395,6 @@ class DistributionBase(Distribution):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 
-        # TODO: get_sampleでsample_shapeを入れずにset_distでsample_shapeを入れるべき
         self.set_dist(input_dict, batch_n=batch_n)
         output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
@@ -1516,24 +1571,11 @@ class ReplaceVarDistribution(Distribution):
         return self.p.distribution_name
 
     def __getattr__(self, item):
-        """
-        Parameters
-        ----------
-        item
-
-        Returns
-        -------
-        Examples
-        --------
-        >>> import pixyz.distributions as pd
-        >>> r = pd.ReplaceVarDistribution(pd.Normal(), {'x': 'y'})
-        >>> # r.graph.distribution('y').flow_input_var()
-
-        """
         try:
             return super().__getattr__(item)
         except AttributeError:
-            # TODO: 非推奨表示したいが標準ライブラリには無い？
+            import warnings
+            warnings.warn("this magic method will be deprecated.")
             return self.p.__getattribute__(item)
 
 
@@ -1620,4 +1662,6 @@ class MarginalizeVarDistribution(Distribution):
         try:
             return super().__getattr__(item)
         except AttributeError:
+            import warnings
+            warnings.warn("this magic method will be deprecated.")
             return self.p.__getattribute__(item)
