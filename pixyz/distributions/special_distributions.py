@@ -93,8 +93,13 @@ class DataDistribution(Distribution):
     def distribution_name(self):
         return "Data distribution"
 
-    def sample(self, x_dict={}, **kwargs):
+    def sample(self, x_dict={}, return_all=True, **kwargs):
         output_dict = self._get_input_dict(x_dict)
+
+        if return_all:
+            x_dict = x_dict.copy()
+            x_dict.update(output_dict)
+            return x_dict
         return output_dict
 
     def sample_mean(self, x_dict):

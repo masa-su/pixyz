@@ -41,19 +41,49 @@ class Factor:
     def _reversed_name_dict(self):
         return {value: key for key, value in self.name_dict.items()}
 
-    def sample(self, cond_dict, sample_option):
-        input_dict = replace_dict_keys(cond_dict, self.name_dict)
+    @staticmethod
+    def __apply_dict(dict, var):
+        return [dict[var_name] if var_name in dict else var_name for var_name in var]
+
+    def sample(self, values, sample_option):
+        global_input_var = self.__apply_dict(self._reversed_name_dict, self.dist.input_var)
+
+        if any(var_name not in values for var_name in global_input_var):
+            raise ValueError("lack of some condition variables")
+        input_dict = get_dict_values(values, global_input_var, return_dict=True)
+
+        local_input_dict = replace_dict_keys(input_dict, self.name_dict)
+
         option = dict(self.option)
         option.update(sample_option)
-        local_output_dict = self.dist.sample(input_dict, **option)
-        return replace_dict_keys(local_output_dict, self._reversed_name_dict)
+        local_output_dict = self.dist.sample(local_input_dict, **option)
 
-    def get_log_prob(self, var_cond_dict, log_prob_option):
-        input_dict = replace_dict_keys(var_cond_dict, self.name_dict)
+        # TODO: It shows return_hidden option change graphical model. This is bad operation.
+        ignore_hidden = ('return_hidden' in sample_option and sample_option['return_hidden'])
+        ignore_hidden |= ('return_hidden' in self.option and self.option['return_hidden'])
+        if not ignore_hidden and set(local_output_dict) != set(self.dist.var):
+            raise Exception(f"The sample method of {self.dist.distribution_name} returns different variables."
+                            f" Expected:{list(self.dist.var)}, Got:{list(local_output_dict)}")
+
+        sample = replace_dict_keys(local_output_dict, self._reversed_name_dict)
+        return sample
+
+    def get_log_prob(self, values, log_prob_option):
+        global_input_var = self.__apply_dict(self._reversed_name_dict, list(self.dist.var) + list(self.dist.cond_var))
+
+        if any(var_name not in values for var_name in global_input_var):
+            raise ValueError("lack of some variables")
+        input_dict = get_dict_values(values, global_input_var, return_dict=True)
+        local_input_dict = replace_dict_keys(input_dict, self.name_dict)
+
         option = dict(self.option)
         option.update(log_prob_option)
-        log_prob = self.dist.get_log_prob(input_dict, **option)
+        log_prob = self.dist.get_log_prob(local_input_dict, **option)
         return log_prob
+
+    @property
+    def input_var(self):
+        return self.__apply_dict(self._reversed_name_dict, self.dist.input_var)
 
 
 class DistGraph(nn.Module):
@@ -68,7 +98,6 @@ class DistGraph(nn.Module):
         self.marginalize_list = set()
         self.name = ''
         if original:
-            # TODO: originalから引き継ぐべきmoduleのメンバはあるか？
             self._copy_module(original)
             self.graph = nx.relabel_nodes(original.graph,
                                           {factor: factor.copy() for factor in self.factors()})
@@ -97,7 +126,6 @@ class DistGraph(nn.Module):
         # factor node of an atomic distribution
         factor = Factor(atom_dist)
         new_instance.graph.add_node(factor)
-        # TODO: atom_distのmoduleへの登録
         new_instance.add_module(str(len(list(new_instance.factors()))), atom_dist)
         for var_name in atom_dist.var:
             if var_name in new_instance.graph:
@@ -276,7 +304,7 @@ class DistGraph(nn.Module):
                 return False
             if not self.graph.pred[var_name]:
                 return True
-            if var_name in self._factors_from_variable(var_name)[0].dist.input_var:
+            if var_name in self._factors_from_variable(var_name)[0].input_var:
                 return True
             else:
                 return False
@@ -314,21 +342,6 @@ class DistGraph(nn.Module):
             return self._get_log_prob(**kwargs)
         else:
             raise ValueError()
-
-    def _wrapped_sample(self, factor, values, sample_option):
-        if any(cond not in values for cond in self.graph.pred[factor]):
-            raise ValueError("lack of some condition variables")
-
-        cond_dict = get_dict_values(values, self.graph.pred[factor], return_dict=True)
-        sample = factor.sample(cond_dict, sample_option)
-
-        # TODO: It shows return_hidden option change graphical model. This is bad operation.
-        ignore_hidden = ('return_hidden' in sample_option and sample_option['return_hidden'])
-        ignore_hidden |= ('return_hidden' in factor.option and factor.option['return_hidden'])
-        if not ignore_hidden and set(sample) != set(self.graph.succ[factor]):
-            raise Exception(f"The sample method of {factor.dist.distribution_name} returns different variables."
-                            f" Expected:{list(self.graph.succ[factor])}, Got:{list(sample)}")
-        return sample
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         return self('sample', kwargs={'x_dict': x_dict, 'batch_n': batch_n, 'sample_shape': sample_shape,
@@ -415,7 +428,6 @@ class DistGraph(nn.Module):
 
         """
 
-        # TODO: forwardの経由 (DataParallelで高速化できているか検証が必要）
         sample_option = dict(self.global_option)
         sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape,
                                   return_all=False, reparam=reparam))
@@ -425,7 +437,7 @@ class DistGraph(nn.Module):
 
         values = get_dict_values(x_dict, self.input_var, return_dict=True)
         for factor in self.factors(sorted=True):
-            sample = self._wrapped_sample(factor, values, sample_option)
+            sample = factor.sample(values, sample_option)
             values.update(sample)
 
         result_dict = delete_dict_values(values, self.marginalize_list)
@@ -435,17 +447,6 @@ class DistGraph(nn.Module):
             return output_dict
         else:
             return delete_dict_values(result_dict, self.input_var)
-
-    def _wrapped_get_log_prob(self, factor, values, log_prob_option):
-        if any(var_name not in values for var_name in self.graph.succ[factor]):
-            raise ValueError("lack of some variables")
-        if any(cond not in values for cond in self.graph.pred[factor]):
-            raise ValueError("lack of some condition variables")
-
-        var_cond_dict = get_dict_values(values, list(self.graph.succ[factor]) + list(self.graph.pred[factor]),
-                                        return_dict=True)
-        log_prob = factor.get_log_prob(var_cond_dict, log_prob_option)
-        return log_prob
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         return self(mode='get_log_prob', kwargs={'x_dict': x_dict, 'sum_features': sum_features,
@@ -511,7 +512,6 @@ class DistGraph(nn.Module):
         # tensor([-0.9189])
         # """
 
-        # TODO: forwardの経由
         sample_option = dict(self.global_option)
         # sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape, return_all=False))
 
@@ -543,11 +543,11 @@ class DistGraph(nn.Module):
                 if set(local_var) != set(local_marginalized_var):
                     raise ValueError("Some deterministic variables are not marginalized.")
                 # batch_nに関しては後続の変数に与えられた値で判断できる，sample_shapeはnamed_shapeなら解決できそう
-                sample = self._wrapped_sample(factor, values, sample_option)
+                sample = factor.sample(values, sample_option)
                 values.update(sample)
                 continue
 
-            new_log_prob = self._wrapped_get_log_prob(factor, values, log_prob_option)
+            new_log_prob = factor.get_log_prob(values, log_prob_option)
 
             if log_prob is None:
                 log_prob = new_log_prob
