@@ -56,22 +56,29 @@ class Factor:
         return log_prob
 
 
-class DistGraph:
+class DistGraph(nn.Module):
     """
      Graphical model class. This manages the graph of Graphical Model of distribution.
      It is called from Distribution class.
     """
     def __init__(self, original=None):
+        super().__init__()
         self.graph = nx.DiGraph()
         self.global_option = {}
         self.marginalize_list = set()
         self.name = ''
         if original:
+            # TODO: originalから引き継ぐべきmoduleのメンバはあるか？
+            self._copy_module(original)
             self.graph = nx.relabel_nodes(original.graph,
                                           {factor: factor.copy() for factor in self.factors()})
             self.global_option.update(original.global_option)
             self.marginalize_list.update(original.marginalize_list)
             self.name = original.name
+
+    def _copy_module(self, original: nn.Module):
+        for name, module in original.named_children():
+            self.add_module(name, module)
 
     def appended(self, atom_dist):
         """ Return new graph appended one node.
@@ -90,6 +97,8 @@ class DistGraph:
         # factor node of an atomic distribution
         factor = Factor(atom_dist)
         new_instance.graph.add_node(factor)
+        # TODO: atom_distのmoduleへの登録
+        new_instance.add_module(str(len(list(new_instance.factors()))), atom_dist)
         for var_name in atom_dist.var:
             if var_name in new_instance.graph:
                 raise ValueError(f"A new variable name '{var_name}' is already used in this graph.")
@@ -298,6 +307,14 @@ class DistGraph:
                 return False
         return [var_name for var_name in self.graph if is_var_node(var_name)]
 
+    def forward(self, mode, kwargs):
+        if mode == 'sample':
+            return self._sample(**kwargs)
+        elif mode == 'get_log_prob':
+            return self._get_log_prob(**kwargs)
+        else:
+            raise ValueError()
+
     def _wrapped_sample(self, factor, values, sample_option):
         if any(cond not in values for cond in self.graph.pred[factor]):
             raise ValueError("lack of some condition variables")
@@ -314,6 +331,10 @@ class DistGraph:
         return sample
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+        return self('sample', kwargs={'x_dict': x_dict, 'batch_n': batch_n, 'sample_shape': sample_shape,
+                                      'return_all': return_all, 'reparam': reparam})
+
+    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         """
         Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
@@ -393,6 +414,8 @@ class DistGraph:
         ['y', 'z', 'x']
 
         """
+
+        # TODO: forwardの経由 (DataParallelで高速化できているか検証が必要）
         sample_option = dict(self.global_option)
         sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape,
                                   return_all=False, reparam=reparam))
@@ -425,6 +448,10 @@ class DistGraph:
         return log_prob
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+        return self(mode='get_log_prob', kwargs={'x_dict': x_dict, 'sum_features': sum_features,
+                                                 'feature_dims': feature_dims})
+
+    def _get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         """ Giving variables, this method returns values of log-pdf.
 
         Parameters
@@ -483,6 +510,8 @@ class DistGraph:
         # >>> m_dist.get_log_prob({'y': torch.zeros(1, 1)})
         # tensor([-0.9189])
         # """
+
+        # TODO: forwardの経由
         sample_option = dict(self.global_option)
         # sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape, return_all=False))
 
@@ -669,16 +698,21 @@ class Distribution(nn.Module):
 
         self._cond_var = cond_var
         self._var = var
-        self._atomic = atomic
         self._name = convert_latex_name(name)
-        if atomic:
-            if len(var) != 1:
-                raise ValueError("An atomic distribution must have only one variable.")
-            self.graph = DistGraph().appended(atom_dist=self)
-        else:
-            self.graph = None
+
+        self._atomic = atomic
+        if atomic and len(var) == 0:
+            raise ValueError("At least one variable is required for an atomic distribution.")
+        self._graph = None
 
         self._features_shape = torch.Size(features_shape)
+
+    @property
+    def graph(self):
+        if self._atomic:
+            return DistGraph().appended(atom_dist=self)
+        else:
+            return self._graph
 
     @property
     def distribution_name(self):
@@ -1502,7 +1536,7 @@ class MultiplyDistribution(Distribution):
 
         """
         super().__init__(var=[], atomic=False)
-        self.graph = a.graph.united(b.graph)
+        self._graph = a.graph.united(b.graph)
 
     def __repr__(self):
         return repr(self.graph)
@@ -1548,7 +1582,7 @@ class ReplaceVarDistribution(Distribution):
 
         """
         super().__init__(cond_var=[], var=[], name=p.name, features_shape=p.features_shape, atomic=False)
-        self.graph = p.graph.var_replaced(replace_dict)
+        self._graph = p.graph.var_replaced(replace_dict)
         self.p = p
 
     def __repr__(self):
@@ -1636,7 +1670,7 @@ class MarginalizeVarDistribution(Distribution):
         marginalize_list = tolist(marginalize_list)
 
         super().__init__(cond_var=[], var=[], name=p.name, features_shape=p.features_shape, atomic=False)
-        self.graph = p.graph.marginalized(marginalize_list)
+        self._graph = p.graph.marginalized(marginalize_list)
         self.p = p
 
     def __repr__(self):
