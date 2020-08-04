@@ -9,6 +9,30 @@ from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split,
 from ..losses import LogProb, Prob
 
 
+def _make_prob_text(dist_name, var, cond_var):
+    var_text = ','.join(convert_latex_name(var_name) for var_name in var)
+    cond_text = '' if len(cond_var) == 0 else \
+        '|' + ','.join(convert_latex_name(var_name) for var_name in cond_var)
+    return f"{dist_name}({var_text}{cond_text})"
+
+
+def _make_prob_equality_text(prob_text, prob_factorized_text):
+    if prob_factorized_text == prob_text:
+        return prob_text
+    else:
+        return f"{prob_text} = {prob_factorized_text}"
+
+
+def _make_distribution_text(prob_joint_factorized_and_text, network_text):
+    # Distribution
+    text = f"Distribution:\n  {prob_joint_factorized_and_text}\n"
+
+    # Network architecture (`repr`)
+    network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
+    text += f"Network architecture:\n{network_text}"
+    return text
+
+
 class Factor:
     """
     This class wraps an atomic distribution as a factor node of a DistGraph.
@@ -84,6 +108,27 @@ class Factor:
     @property
     def input_var(self):
         return self.__apply_dict(self._reversed_name_dict, self.dist.input_var)
+
+    @property
+    def var(self):
+        return self.__apply_dict(self._reversed_name_dict, self.dist.var)
+
+    @property
+    def cond_var(self):
+        return self.__apply_dict(self._reversed_name_dict, self.dist.cond_var)
+
+    @property
+    def prob_text(self):
+        return _make_prob_text(self.dist.name, self.var, self.cond_var)
+
+    def __str__(self):
+        prob_node_text = self.prob_text
+        factorized_text = self.dist.prob_factorized_text
+        if prob_node_text == factorized_text:
+            header_text = f"{prob_node_text} =\n"
+        else:
+            header_text = f"{prob_node_text} -> {self.dist.prob_joint_factorized_and_text} =\n"
+        return header_text + repr(self.dist)
 
 
 class DistGraph(nn.Module):
@@ -565,12 +610,19 @@ class DistGraph(nn.Module):
     def has_reparam(self):
         return all(factor.dist.has_reparam for factor in self.factors())
 
+    def __str__(self):
+        network_text = "\n".join(str(factor) for factor in self.factors(sorted=True))
+        return _make_distribution_text(self.prob_joint_factorized_and_text, network_text)
+
+    @property
+    def prob_text(self):
+        return _make_prob_text(self.name, self.var, self.cond_var)
+
     @property
     def prob_factorized_text(self):
         text = ""
         for factor in self.factors(sorted=True):
-            factor_text = self._prob_node_text(factor)
-            text = factor_text + text
+            text = factor.prob_text + text
         if self.marginalize_list:
             integral_symbol = len(self.marginalize_list) * "\\int "
             integral_variables = ["d" + convert_latex_name(var) for var in self.marginalize_list]
@@ -579,42 +631,9 @@ class DistGraph(nn.Module):
             return f"{integral_symbol}{text}{integral_variables}"
         return text
 
-    def _repr_factor(self, factor):
-        prob_node_text = self._prob_node_text(factor)
-        factorized_text = factor.dist.prob_factorized_text
-        header_text = f'{prob_node_text} =\n' if prob_node_text == factorized_text \
-            else f'{prob_node_text} -> {factorized_text} =\n'
-        return header_text + repr(factor.dist)
-
-    def __str__(self):
-        # Distribution
-        text = f"Distribution:\n  {self.prob_joint_factorized_and_text}\n"
-
-        # Network architecture (`repr`)
-        network_text = "\n".join(self._repr_factor(factor) for factor in self.factors(sorted=True))
-        network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
-        text += f"Network architecture:\n{network_text}"
-        return text
-
-    @property
-    def prob_text(self):
-        var_text = ','.join(convert_latex_name(var_name) for var_name in self.var)
-        cond_text = '' if len(self.cond_var) == 0 else \
-            '|' + ','.join(convert_latex_name(var_name) for var_name in self.cond_var)
-        return f"{self.name}({var_text}{cond_text})"
-
-    def _prob_node_text(self, factor):
-        var_text = ','.join(convert_latex_name(var_name) for var_name in self.graph.succ[factor])
-        cond_text = '' if len(self.graph.pred[factor]) == 0 else \
-            '|' + ','.join(convert_latex_name(var_name) for var_name in self.graph.pred[factor])
-        return f"{factor.dist.name}({var_text}{cond_text})"
-
     @property
     def prob_joint_factorized_and_text(self):
-        if self.prob_factorized_text == self.prob_text:
-            return self.prob_text
-        else:
-            return f"{self.prob_text} = {self.prob_factorized_text}"
+        return _make_prob_equality_text(self.prob_text, self.prob_factorized_text)
 
 
 class Distribution(nn.Module):
@@ -758,13 +777,7 @@ class Distribution(nn.Module):
         if not self._atomic:
             return self.graph.prob_text
 
-        _var_text = [','.join([convert_latex_name(var_name) for var_name in self.var])]
-        if len(self.cond_var) != 0:
-            _var_text += [','.join([convert_latex_name(var_name) for var_name in self.cond_var])]
-
-        _prob_text = f"{self._name}({'|'.join(_var_text)})"
-
-        return _prob_text
+        return _make_prob_text(self._name, self.var, self.cond_var)
 
     @property
     def prob_factorized_text(self):
@@ -779,11 +792,7 @@ class Distribution(nn.Module):
         if not self._atomic:
             return self.graph.prob_joint_factorized_and_text
 
-        if self.prob_factorized_text == self.prob_text:
-            prob_text = self.prob_text
-        else:
-            prob_text = f"{self.prob_text} = {self.prob_factorized_text}"
-        return prob_text
+        return _make_prob_equality_text(self.prob_text, self.prob_factorized_text)
 
     @property
     def features_shape(self):
@@ -1185,14 +1194,9 @@ class Distribution(nn.Module):
     def __str__(self):
         if not self._atomic:
             return str(self.graph)
-        # Distribution
-        text = f"Distribution:\n  {self.prob_joint_factorized_and_text}\n"
 
-        # Network architecture (`repr`)
         network_text = self.__repr__()
-        network_text = re.sub('^', ' ' * 2, str(network_text), flags=re.MULTILINE)
-        text += f"Network architecture:\n{network_text}"
-        return text
+        return _make_distribution_text(self.prob_joint_factorized_and_text, network_text)
 
     def extra_repr(self):
         # parameters
