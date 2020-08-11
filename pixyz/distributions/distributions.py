@@ -519,7 +519,7 @@ class Distribution(nn.Module):
         return LogProb(self, sum_features=sum_features, feature_dims=feature_dims)
 
     def prob(self, sum_features=True, feature_dims=None):
-        """Return an instance of :class:`pixyz.losses.LogProb`.
+        """Return an instance of :class:`pixyz.losses.Prob`.
 
         Parameters
         ----------
