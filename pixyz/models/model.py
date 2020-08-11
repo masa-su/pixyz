@@ -109,13 +109,13 @@ class Model(object):
             else:
                 func_text.append(prob.__str__())
 
-        text = "Distributions (for training): \n  {} \n".format(", ".join(prob_text))
+        text = "Distributions (for training):\n  {}\n".format(", ".join(prob_text))
         if len(func_text) > 0:
-            text += "Deterministic functions (for training): \n  {} \n".format(", ".join(func_text))
+            text += "Deterministic functions (for training):\n  {}\n".format(", ".join(func_text))
 
-        text += "Loss function: \n  {} \n".format(str(self.loss_cls))
+        text += "Loss function:\n  {}\n".format(str(self.loss_cls))
         optimizer_text = re.sub('^', ' ' * 2, str(self.optimizer), flags=re.MULTILINE)
-        text += "Optimizer: \n{}".format(optimizer_text)
+        text += "Optimizer:\n{}".format(optimizer_text)
         return text
 
     def set_loss(self, loss, test_loss=None):
