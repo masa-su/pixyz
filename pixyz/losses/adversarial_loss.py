@@ -28,7 +28,7 @@ class AdversarialLoss(Divergence):
         self.d_optimizer = optimizer(params, **optimizer_params)
 
     def _get_batch_n(self, x_dict):
-        return get_dict_values(x_dict, self.input_dist.input_var[0])[0].shape[0]
+        return get_dict_values(x_dict, self.input_dist.input_var)[0].shape[0]
 
     def d_loss(self, y_p, y_q, batch_n):
         """Evaluate a discriminator loss given outputs of the discriminator.
