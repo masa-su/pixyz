@@ -125,9 +125,9 @@ class Factor:
         prob_node_text = self.prob_text
         factorized_text = self.dist.prob_factorized_text
         if prob_node_text == factorized_text:
-            header_text = f"{prob_node_text} =\n"
+            header_text = f"{prob_node_text}:\n"
         else:
-            header_text = f"{prob_node_text} -> {self.dist.prob_joint_factorized_and_text} =\n"
+            header_text = f"{prob_node_text} -> {self.dist.prob_joint_factorized_and_text}:\n"
         return header_text + repr(self.dist)
 
 
@@ -143,16 +143,17 @@ class DistGraph(nn.Module):
         self.marginalize_list = set()
         self.name = ''
         if original:
-            self._copy_module(original)
+            self._override_module(original)
             self.graph = nx.relabel_nodes(original.graph,
-                                          {factor: factor.copy() for factor in self.factors()})
+                                          {factor: factor.copy() for factor in original.factors()})
             self.global_option.update(original.global_option)
             self.marginalize_list.update(original.marginalize_list)
             self.name = original.name
 
-    def _copy_module(self, original: nn.Module):
-        for name, module in original.named_children():
-            self.add_module(name, module)
+    def _override_module(self, original: nn.Module):
+        name_offset = len(list(self.named_children()))
+        for i, (_, module) in enumerate(original.named_children()):
+            self.add_module(str(name_offset + i), module)
 
     def appended(self, atom_dist):
         """ Return new graph appended one node.
@@ -170,8 +171,8 @@ class DistGraph(nn.Module):
             new_instance.name = atom_dist.name
         # factor node of an atomic distribution
         factor = Factor(atom_dist)
-        new_instance.graph.add_node(factor)
         new_instance.add_module(str(len(list(new_instance.factors()))), atom_dist)
+        new_instance.graph.add_node(factor)
         for var_name in atom_dist.var:
             if var_name in new_instance.graph:
                 raise ValueError(f"A new variable name '{var_name}' is already used in this graph.")
@@ -200,7 +201,9 @@ class DistGraph(nn.Module):
         if not set(self.factors()).isdisjoint(set(other.factors())):
             raise ValueError("The same instances of a distribution are used between two graphs.")
         scg = DistGraph(self)
+        scg._override_module(other)
         scg.graph.update(other.graph)
+        scg.global_option.update(other.global_option)
         scg.marginalize_list.update(other.marginalize_list)
         return scg
 
@@ -241,7 +244,7 @@ class DistGraph(nn.Module):
         return new_graph
 
     def var_replaced(self, replace_dict):
-        """ Returns new graph whose variables are replaced.
+        r""" Returns new graph whose variables are replaced.
         Parameters
         ----------
         replace_dict: dict of str and str
@@ -268,6 +271,51 @@ class DistGraph(nn.Module):
         >>> sample = dist3.sample()
         >>> sample # doctest: +SKIP
         {'w': tensor([[2.3206]]), 'z': tensor([[-0.5381]])}
+        >>> dist4 = multi_dist2.marginalize_var(['y']).replace_var(z='w', x='z').replace_var(z='a')
+        >>> print(dist4)
+        Distribution:
+          p(w,a) = \int p(a)p(w|y)p(y)dy
+        Network architecture:
+          p(y):
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['y'], cond_var=[], input_var=[], features_shape=torch.Size([1])
+            (loc): torch.Size([1, 1])
+            (scale): torch.Size([1, 1])
+          )
+          p(w|y) -> p(z|y):
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['z'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([1])
+            (scale): torch.Size([1, 1])
+          )
+          p(a) -> p(x):
+          Normal(
+            name=p, distribution_name=Normal,
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([1])
+            (loc): torch.Size([1, 1])
+            (scale): torch.Size([1, 1])
+          )
+        >>> print(repr(dist4))
+        DistGraph(
+          (0): Normal(
+            name=p, distribution_name=Normal,
+            var=['x'], cond_var=[], input_var=[], features_shape=torch.Size([1])
+            (loc): torch.Size([1, 1])
+            (scale): torch.Size([1, 1])
+          )
+          (1): Normal(
+            name=p, distribution_name=Normal,
+            var=['y'], cond_var=[], input_var=[], features_shape=torch.Size([1])
+            (loc): torch.Size([1, 1])
+            (scale): torch.Size([1, 1])
+          )
+          (2): Normal(
+            name=p, distribution_name=Normal,
+            var=['z'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([1])
+            (scale): torch.Size([1, 1])
+          )
+        )
         """
         # check replace_dict
         if not (set(replace_dict) <= set(self.all_var)):
@@ -1483,12 +1531,12 @@ class MultiplyDistribution(Distribution):
     Distribution:
       p(x,z|y) = p(x|z)p(z|y)
     Network architecture:
-      p(z|y) =
+      p(z|y):
       DistributionBase(
         name=p, distribution_name=,
         var=['z'], cond_var=['y'], input_var=['y'], features_shape=torch.Size([])
       )
-      p(x|z) =
+      p(x|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
@@ -1499,12 +1547,12 @@ class MultiplyDistribution(Distribution):
     Distribution:
       p(x,y|z) = p(x|z)p(y|z)
     Network architecture:
-      p(y|z) =
+      p(y|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
-      p(x|z) =
+      p(x|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
@@ -1515,12 +1563,12 @@ class MultiplyDistribution(Distribution):
     Distribution:
       p(x,y|z,a) = p(x|z)p(y|a)
     Network architecture:
-      p(y|a) =
+      p(y|a):
       DistributionBase(
         name=p, distribution_name=,
         var=['y'], cond_var=['a'], input_var=['a'], features_shape=torch.Size([])
       )
-      p(x|z) =
+      p(x|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
@@ -1566,7 +1614,7 @@ class ReplaceVarDistribution(Distribution):
     Distribution:
       p(y|z)
     Network architecture:
-      p(y|z) -> p(x|z) =
+      p(y|z) -> p(x|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
@@ -1632,12 +1680,12 @@ class MarginalizeVarDistribution(Distribution):
     Distribution:
       p(x,y|z) = p(x|z)p(y|z)
     Network architecture:
-      p(y|z) =
+      p(y|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
-      p(x|z) =
+      p(x|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
@@ -1647,12 +1695,12 @@ class MarginalizeVarDistribution(Distribution):
     Distribution:
       p(x|z) = \int p(x|z)p(y|z)dy
     Network architecture:
-      p(y|z) =
+      p(y|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['y'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
-      p(x|z) =
+      p(x|z):
       DistributionBase(
         name=p, distribution_name=,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
