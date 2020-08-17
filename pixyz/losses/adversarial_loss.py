@@ -152,12 +152,14 @@ class AdversarialJensenShannon(AdversarialLoss):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z):
       Generator(
         name=p, distribution_name=Deterministic,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
@@ -317,12 +319,14 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z):
       Generator(
         name=p, distribution_name=Deterministic,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
@@ -473,12 +477,14 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z):
       Generator(
         name=p, distribution_name=Deterministic,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])

@@ -112,14 +112,6 @@ class MixtureModel(Distribution):
         return self._hidden_var
 
     @property
-    def prob_text(self):
-        _prob_text = "{}({})".format(
-            self._name, ','.join(([convert_latex_name(var_name) for var_name in self._var]))
-        )
-
-        return _prob_text
-
-    @property
     def prob_factorized_text(self):
         _mixture_prob_text = []
         for i, d in enumerate(self.distributions):

@@ -357,6 +357,8 @@ def print_latex(obj):
 
     if isinstance(obj, pixyz.distributions.distributions.Distribution):
         latex_text = obj.prob_joint_factorized_and_text
+    elif isinstance(obj, pixyz.distributions.distributions.DistGraph):
+        latex_text = obj.prob_joint_factorized_and_text
     elif isinstance(obj, pixyz.losses.losses.Loss):
         latex_text = obj.loss_text
     elif isinstance(obj, pixyz.models.model.Model):
