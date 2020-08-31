@@ -380,48 +380,17 @@ def convert_latex_name(name):
     return sympy.latex(sympy.Symbol(name))
 
 
-# def print_pgm(dist, filename, enc_dist=None):
-#     """
-#     plot graph of probablistic graphical model of Distribution.
-# 
-#     Parameters
-#     ----------
-#     dist: Distribution
-#     filename: str
-#     enc_dists: list of Distribution
-# 
-#     Examples
-#     --------
-#     >>> dist = _prepare_dist()
-#     >>> print_pgm(dist, "tmp_daft.png")
-#     """
-#     default_node_size = 1
-#     default_margin = 1
-# 
-#     # TODO: 描画用のグラフに整形する
-#     glgraph, var_dict = _dist2graph(dist, default_node_size, forward=True)
-#     # エンコーダ用の追加ノード追加エッジは後回し
-#     # if enc_dist is not None:
-#     #     _dist2graph(enc_dist, default_node_size, forward=False, glgraph=glgraph, var_dict=var_dict)
-# 
-#     # TODO: GPLでないアルゴリズムでグラフを配置する
-#     # layout = _GeneralSugiyamaLayout(glgraph, default_node_size, default_margin)
-#     # layout.draw()
-#     pos = layout(dag)
-# 
-#     # TODO: 描画データを元に描画する
-#     _draw_graph(glgraph, filename, default_node_size)
-
-
-def layout(directed_acyclic_graph: nx.DiGraph):
+def layered_graph_layout(directed_acyclic_graph: nx.DiGraph):
     """
-    
+    It layouts directed acyclic graph as layered graph.
     Parameters
     ----------
-    directed_acyclic_graph
-
+    directed_acyclic_graph: nx.DiGraph
+        graph of Distribution
     Returns
     -------
+    dict of tuple
+        a location of nodes
 
     Examples
     --------
@@ -431,7 +400,7 @@ def layout(directed_acyclic_graph: nx.DiGraph):
     >>> dag.add_edge(2, 3)
     >>> dag.add_edge(2, 4)
     >>> dag.add_edge(3, 4)
-    >>> layout(dag)
+    >>> layered_graph_layout(dag)
     """
     dag = directed_acyclic_graph
     if not nx.is_directed_acyclic_graph(dag):
@@ -476,7 +445,7 @@ def layout(directed_acyclic_graph: nx.DiGraph):
         causal_blocks = sorted(itertools.chain(*causal_block_dict.values()), key=lambda item: (item[2], -len(item[1])))
 
         # 同じ高さのまとまりが大きいものから，1次元配列として隣接するようにソートしてブロックとして保持する
-        layered_orders = [Block() for _ in range(max_height + 1)]
+        layered_orders = [NodeBlock() for _ in range(max_height + 1)]
         for node, h in height.items():
             layered_orders[h].append(node)
         for h, block, delta in causal_blocks:
@@ -490,10 +459,6 @@ def layout(directed_acyclic_graph: nx.DiGraph):
         for i, node in enumerate(layered_orders[h_wide_layer].nodes):
             pos[node] = (i, h_wide_layer)
         # もっとも幅の広い層の周りを順に配置する
-        # def roundrobin(*iterables):
-        #     return list(it.next() for it in itertools.cycle(map(iter, iterables)))
-        # booked_layers = [(h, layered_orders[h]) for h in
-        #                  roundrobin(range(h_wide_layer), range(max_height, h_wide_layer, -1))]
         booked_layers = ((h, layered_orders[h]) for h in
                          itertools.chain(range(h_wide_layer - 1, -1, -1), range(h_wide_layer + 1, max_height + 1)))
         for h, layer in booked_layers:
@@ -540,7 +505,7 @@ def _locate_node(i: int, layer, height: dict, pos: dict, causal_block_dict: dict
         right_node = None
     primary_groups = filter(lambda tup: tup[2] == 1 and tup[1][0] in pos, connected_node_group)
     def nodes(block):
-        if isinstance(block, Block):
+        if isinstance(block, NodeBlock):
             return block.nodes
         else:
             return block
@@ -550,9 +515,10 @@ def _locate_node(i: int, layer, height: dict, pos: dict, causal_block_dict: dict
     return clipped_x, height[target_node]
 
 
-class Block:
+class NodeBlock:
     def __init__(self):
         # ブロック内にもブロックがある
+        # TODO: 長さ1のブロック間の連結リストのほうが単純だったのでは?
         self.items = []
         self.left_lock = False
         self.right_lock = False
@@ -564,14 +530,14 @@ class Block:
         for item in self.items:
             if item == node:
                 return True
-            if isinstance(item, Block) and item.contains(node):
+            if isinstance(item, NodeBlock) and item.contains(node):
                 return True
         return False
 
     @property
     def nodes(self):
         for item in self.items:
-            if isinstance(item, Block):
+            if isinstance(item, NodeBlock):
                 for node in item.nodes:
                     yield node
             else:
@@ -590,7 +556,7 @@ class Block:
         for item in self.items:
             if item == node:
                 return item
-            if isinstance(item, Block) and item.contains(node):
+            if isinstance(item, NodeBlock) and item.contains(node):
                 return item
         return None
 
@@ -598,7 +564,7 @@ class Block:
         for item in self.items:
             if item == node:
                 return True
-            if isinstance(item, Block):
+            if isinstance(item, NodeBlock):
                 if len(item.items) != 1:
                     return False
                 if item.left_lock or item.right_lock:
@@ -610,7 +576,7 @@ class Block:
         for item in self.items:
             if item == node:
                 return True
-            if isinstance(item, Block) and item.contains(node):
+            if isinstance(item, NodeBlock) and item.contains(node):
                 if item.left_lock and item.right_lock:
                     return False
                 return item.is_side_node(node)
@@ -628,6 +594,7 @@ class Block:
                 side_nodes.append(node)
                 if len(side_nodes) > 2:
                     return
+        # TODO: 2node blockの再指定で両端がロックされてしまう
         # ブロック単位でソート
         left_i = -1
         if len(side_nodes) > 0:
@@ -639,7 +606,7 @@ class Block:
             left_block.right_lock = True
 
         if len(block) - len(side_nodes) > 0:
-            center_block = Block()
+            center_block = NodeBlock()
             for node in block:
                 if node not in side_nodes:
                     center_block.append(node)
@@ -664,12 +631,12 @@ class Block:
         i_start, i_end = i_block, i_block + 1
         while True:
             block = self.items[i_start]
-            if not isinstance(block, Block) or not block.left_lock:
+            if not isinstance(block, NodeBlock) or not block.left_lock:
                 break
             i_start = i_start - 1
         while True:
             block = self.items[i_end - 1]
-            if not isinstance(block, Block) or not block.right_lock:
+            if not isinstance(block, NodeBlock) or not block.right_lock:
                 break
             i_end = i_end - 1
         return i_start, i_end
@@ -691,7 +658,7 @@ class Block:
             raise ValueError()
 
     def _flip(self, block):
-        if not isinstance(block, Block):
+        if not isinstance(block, NodeBlock):
             return
         i = self.items.index(block)
         left_block = self.items[i - 1] if block.left_lock else None
@@ -713,7 +680,7 @@ class Block:
         self.right_lock = tmp
         self.items.reverse()
         for item in self.items:
-            if isinstance(item, Block):
+            if isinstance(item, NodeBlock):
                 item.reverse()
 
     def _move(self, block, dest):
@@ -723,235 +690,6 @@ class Block:
             self.items.pop(i_start)
         for block in moving_blocks:
             self.items.insert(dest, block)
-
-
-# def _dist2graph(dist, node_size, forward=True):#, glgraph: glg.Graph = None, var_dict=None):
-#     var_dict = {}
-#     glgraph = glg.Graph()
-#     # if var_dict is None:
-#     #     var_dict = {}
-#     # if glgraph is None:
-#     #     glgraph = glg.Graph()
-#     if isinstance(dist, pixyz.distributions.distributions.MultiplyDistribution):
-#         _dist2graph(dist._parent, node_size, forward, glgraph, var_dict)
-#         _dist2graph(dist._child, node_size, forward, glgraph, var_dict)
-#     elif isinstance(dist, pixyz.distributions.distributions.MarginalizeVarDistribution):
-#         # marginalized var is not observed.
-#         _dist2graph(dist.p, node_size, forward, glgraph, var_dict)
-#         for var_name in dist._marginalize_list:
-#             var_dict[var_name].data = _PGMNode(var_name, node_size, observed=False)
-#     elif isinstance(dist, pixyz.distributions.distributions.ReplaceVarDistribution):
-#         _dist2graph(dist.p, node_size, forward, glgraph, var_dict)
-#         _replace_var_name(glgraph, var_dict, dist._replace_dict, forward)
-#     else:
-#         var = dist.var
-#         for var_name in var:
-#             if var_name not in var_dict:
-#                 var_dict[var_name] = glg.Vertex(_PGMNode(var_name, node_size))
-#             glgraph.add_vertex(var_dict[var_name])
-#             for cond_var_name in dist.cond_var:
-#                 if cond_var_name not in var_dict:
-#                     var_dict[cond_var_name] = glg.Vertex(_PGMNode(cond_var_name, node_size))
-#                 # the direction of the edge is inversed because root nodes are aligned with the baseline.
-#                 to_node = var_dict[cond_var_name]
-#                 from_node = var_dict[var_name]
-#                 if not forward:
-#                     from_node, to_node = (to_node, from_node)
-#                 glgraph.add_edge(glg.Edge(from_node, to_node, data=_PGMEdge(dotted=not forward)))
-#     return glgraph, var_dict
-# 
-# 
-# def _replace_var_name(glgraph, var_dict, replace_pair_dict, forward=True):
-#     for key, replaced_key in replace_pair_dict.items():
-#         if key not in var_dict:
-#             raise ValueError(f"replaced_pair_dict has a unknown source key {key}.")
-#         if replaced_key in var_dict:
-#             raise ValueError(f"replaced_pair_dict has a existing destination key {replaced_key}.")
-# 
-#         value = var_dict[key]
-#         renamed_value = glg.Vertex(_PGMNode(replaced_key, value.data.node_size, observed=value.data.observed))
-#         # replace edges
-#         renamed_edges_in = [glg.Edge(edge.v[0] if forward else renamed_value,
-#                                      renamed_value if forward else edge.v[0],
-#                                      data=_PGMEdge(dotted=not forward)) for edge in value.e_in()]
-#         renamed_edges_out = [glg.Edge(renamed_value if forward else edge.v[1],
-#                                       edge.v[1] if forward else renamed_value,
-#                                       data=_PGMEdge(dotted=not forward)) for edge in value.e_out()]
-# 
-#         var_dict[replaced_key] = renamed_value
-#         glgraph.add_vertex(renamed_value)
-#         for edge in renamed_edges_in + renamed_edges_out:
-#             glgraph.add_edge(edge)
-#         _glf_remove_vertex(glgraph, value)
-#         del var_dict[key]
-# 
-# 
-# # patch of bug? of grandalf
-# def _glf_remove_vertex(graph: glg.Graph, vertex: glg.Vertex):
-#     if len(vertex.c.sV) == 1:
-#         graph.C.remove(vertex.c)
-#     else:
-#         graph.remove_vertex(vertex)
-# 
-# 
-# # generalization of sugiyama layout for multiple components of DAG
-# class _GeneralSugiyamaLayout:
-#     def __init__(self, graph: glg.Graph, node_size, margin):
-#         self.node_size = node_size
-#         self.margin = margin
-# 
-#         class defaultview(object):
-#             w, h = (self.node_size, self.node_size)
-# 
-#         for v in graph.V():
-#             v.view = defaultview()
-#         self.component_layouts = [gly.SugiyamaLayout(comp) for comp in graph.C]
-#         for c_layout in self.component_layouts:
-#             c_layout.dw, c_layout.dh = (self.node_size, self.node_size)
-#             c_layout.xspace, c_layout.yspace = (self.margin, self.margin)
-# 
-#     def draw(self):
-#         top_left = [0, 0]
-#         for c_layout in self.component_layouts:
-#             c_layout.init_all()
-#             c_layout.draw()
-# 
-#             # arrange components so that they do not overlap
-#             xyrange = _get_vertex_range(c_layout.g.sV)
-#             for v in c_layout.g.sV:
-#                 v.view.xy = (v.view.xy[0] + top_left[0] - xyrange[0], v.view.xy[1] + top_left[1] - xyrange[2])
-#             top_left = [top_left[0] + xyrange[1] - xyrange[0] + self.margin, top_left[1]]
-# 
-# 
-# def _glf_edge_count(graph):
-#     from_to_dict = {}
-#     for e in graph.E():
-#         if e.v in from_to_dict:
-#             from_to_dict[e.v].append(e)
-#         elif (e.v[1], e.v[0]) in from_to_dict:
-#             from_to_dict[(e.v[1], e.v[0])].append(e)
-#         else:
-#             from_to_dict[e.v] = [e]
-#     result = {}
-#     for e in graph.E():
-#         if e.v in from_to_dict:
-#             result[e] = len(from_to_dict[e.v])
-#         elif (e.v[1], e.v[0]) in from_to_dict:
-#             result[e] = len(from_to_dict[(e.v[1], e.v[0])])
-#         else:
-#             raise ValueError()
-#     return result
-# 
-# 
-# def _draw_graph(graph, filename, node_size, transparent=False):
-#     fig = plt.figure(frameon=not transparent)
-#     xyrange = _get_vertex_range(graph.V())
-#     ax = fig.add_axes([0, 0, 1, 1], aspect=1.)
-#     linewidth = node_size * 4
-#     pyplot_margin = linewidth / 40
-#     ax.set_xlim(xyrange[0] - pyplot_margin, xyrange[1] + pyplot_margin)
-#     ax.set_ylim(xyrange[2] - pyplot_margin, xyrange[3] + pyplot_margin)
-#     # ax.axis('off')
-# 
-#     ec = _glf_edge_count(graph)
-# 
-#     for v in graph.V():
-#         v.data.draw(v, ax, fig)
-# 
-#     for e in graph.E():
-#         e.data.straight = (ec[e] == 1)
-#         e.data.draw(e, ax, fig, node_size)
-# 
-#     ax.set_facecolor('w')
-#     with open(filename, 'wb') as f:
-#         fig.canvas.print_png(f)
-# 
-# 
-# def _convert_data2point_scale(ax, fig, target):
-#     # constant value of matplotlib
-#     ppi = 72
-#     # ax_length = ax.bbox.get_points()[1][0] -ax.bbox.get_points()[0][0]
-#     # ax_point = ax_length*ppi/fig.dpi
-#     # result = ax_point/x_size
-#     # TODO: スケールが謎
-#     tf = ax.transData.transform([1, 0]) * (ppi / fig.dpi)
-#     return target * (tf[0] - tf[1])
-# 
-# 
-# def _convert_point2data_scale(ax, fig, target):
-#     # constant value of matplotlib
-#     ppi = 72
-#     # ax_length = ax.bbox.get_points()[1][0] -ax.bbox.get_points()[0][0]
-#     # ax_point = ax_length*ppi/fig.dpi
-#     # result = ax_point/x_size
-#     return ax.transData.invereted().transform(target) / (ppi / fig.dpi)
-# 
-# 
-# class _PGMNode:
-#     def __init__(self, var_name, node_size, observed=True):
-#         self.var_name = var_name
-#         self.observed = observed
-#         self.node_size = node_size
-#         # magic scaling number for matplotlib.patches
-#         self.radius = node_size / 2
-#         self.linewidth = node_size * 2
-#         self.fontsize = node_size * 30
-# 
-#     def draw(self, g_vertex, ax, fig):
-#         fc = 'gray' if self.observed else 'w'
-#         circle = patches.Circle(xy=g_vertex.view.xy, radius=self.radius, fc=fc, ec='k', linewidth=self.linewidth)
-#         ax.add_patch(circle)
-#         ax.text(g_vertex.view.xy[0], g_vertex.view.xy[1], rf"${self.var_name}$", fontsize=self.fontsize,
-#                 verticalalignment='center', horizontalalignment='center')
-# 
-# 
-# class _PGMEdge:
-#     def __init__(self, straight=False, dotted=True):
-#         self.linestyle = '-' if not dotted else '--'
-#         self.straight = straight
-#         self.forward = not dotted
-# 
-#     def draw(self, glf_edge, ax, fig, node_size):
-#         # magic scaling number for matplotlib.patches
-#         linewidth = node_size * 2
-#         # path = patches.Path([e.v[0].view.xy, e.v[1].view.xy])
-#         node0, node1 = glf_edge.v
-#         if not self.forward:
-#             node0, node1 = (node1, node0)
-#         self.add_arrow(ax, node0.view.xy, node1.view.xy, _convert_data2point_scale(ax, fig, node_size/2),
-#                        linewidth, self.linestyle,
-#                        node_size * 0.3, node_size * 1.3, 0 if self.straight else 0.3)
-# 
-#     @staticmethod
-#     def add_arrow(ax, v1, v2, shrink, linewidth, linestyle, head_width, head_length, rad, path=None):
-#         # ax.add_patch(patches.FancyArrowPatch(v1, v2,
-#         #                                      arrowstyle=patches.ArrowStyle("-|>", head_length=head_length,
-#         #                                                                    head_width=head_width),
-#         #                                      arrow_transmuter=None,
-#         #                                      connectionstyle=patches.ConnectionStyle("arc3", rad=rad), connector=None,
-#         #                                      patchA=None, patchB=None, shrinkA=shrink, shrinkB=shrink,
-#         #                                      mutation_scale=1, mutation_aspect=None, dpi_cor=1,
-#         #                                      color='k', path=path, capstyle='butt',
-#         #                                      linewidth=linewidth, linestyle=linestyle,
-#         #                                      ))
-#         ax.annotate('', xy=v1, xycoords='data', xytext=v2, textcoords='data',
-#                     arrowprops=dict(arrowstyle=
-#                                     patches.ArrowStyle("-|>", head_length=head_length, head_width=head_width),
-#                                     color='k', path=path,
-#                                     shrinkA=shrink, shrinkB=shrink,
-#                                     linewidth=linewidth, linestyle=linestyle,
-#                                     capstyle='butt',
-#                                     connectionstyle=patches.ConnectionStyle("arc3", rad=rad)))
-# 
-# 
-# def _get_vertex_range(vertices):
-#     xyrange = [np.inf, -np.inf, np.inf, -np.inf]
-#     for v in vertices:
-#         xyrange[0] = min(xyrange[0], v.view.xy[0] - v.view.w / 2)
-#         xyrange[1] = max(xyrange[1], v.view.xy[0] + v.view.w / 2)
-#         xyrange[2] = min(xyrange[2], v.view.xy[1] - v.view.h / 2)
-#         xyrange[3] = max(xyrange[3], v.view.xy[1] + v.view.h / 2)
-#     return xyrange
 
 
 def _prepare_dist():
@@ -1040,21 +778,3 @@ def _prepare_dist():
     p_marg2 = MarginalizeVarDistribution(p_all2, ['z'])
     q1 = Q1()
     return p_marg, q1, p_marg2
-
-
-# def _test_print_pgm():
-#     dist, enc_dist, dist2 = _prepare_dist()
-#     print_pgm(dist, "tmp_daft.png", enc_dist=enc_dist)
-#     print_pgm(dist2, "tmp_daft2.png", enc_dist=enc_dist)
-
-
-if __name__ == "__main__":
-    # _test_print_pgm()
-    dag = nx.DiGraph()
-    dag.add_edge(1, 2)
-    dag.add_edge(1, 3)
-    dag.add_edge(2, 3)
-    dag.add_edge(2, 4)
-    dag.add_edge(3, 4)
-    # layout(dag)
-    nx.draw_networkx(dag)
