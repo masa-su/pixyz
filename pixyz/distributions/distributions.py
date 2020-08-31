@@ -5,7 +5,7 @@ import networkx as nx
 from torch import nn
 
 from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
-    tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict
+    tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict, layout
 from ..losses import LogProb, Prob
 
 
@@ -684,46 +684,19 @@ class DistGraph(nn.Module):
         return _make_prob_equality_text(self.prob_text, self.prob_factorized_text)
 
     def draw(self, usetex=False):
-        visible_graph = nx.DiGraph()
-
-        def dont_esc(name: str):
-            # return name.replace('\\', '\\\\')
-            # return name
-            return f"${name}$"
-        for factor in self.factors():
-            for var_name in factor.var:
-                for cond_var_name in factor.cond_var:
-                    visible_graph.add_edge(dont_esc(cond_var_name), dont_esc(var_name))
-                    # visible_graph.add_edge(cond_var_name, var_name)
-        for var_name in visible_graph:
-            visible_graph.add_node(var_name, texlbl=var_name)
-            # visible_graph.add_node(var_name, texlbl=dont_esc(var_name))
-        # $$で包めば，draw_networkxでもtex表示できることを確認．レイアウトを気にしないならこれ
-        from matplotlib import rc
-        rc("font", family="serif", size=12)
-        rc("text", usetex=usetex)
-        nx.draw_networkx(visible_graph)
-        # TODO: graphvizはインストール時にパスを通す必要があり，めんどい
-        # import os
-        # os.environ['PATH'] = os.environ['PATH'] + ':/usr/local/Cellar/graphviz/2.44.0/bin'
+        if usetex:
+            self._draw_by_tex()
+        else:
+            self._draw_by_plt()
         # import matplotlib.pyplot as plt
-        from networkx.drawing.nx_pydot import write_dot, to_pydot
         # from networkx.drawing.nx_agraph import to_agraph
         # from networkx.drawing.nx_pydot import graphviz_layout
-        write_dot(visible_graph, 'test.dot')
         # to_pydot(visible_graph)
         # from network2tikz import plot
         # plot(visible_graph)
         # ag = to_agraph(visible_graph)
         # ag.layout(prog='dot')
         # ag.write('test.dot')
-        import dot2tex as d2t
-        with open('test.dot', 'r') as f:
-            tex = d2t.dot2tex(f.read(), prog='dot', crop=True, autosize=True, texmode='math')#, usepdflatex=True)
-        with open('test.tex', 'w') as f:
-            f.write(tex)
-        import subprocess
-        subprocess.run(['pdflatex', 'test.tex'])
         # ag.draw(path='nx_test2.png')
         # from IPython.display import Image
         # return Image("nx_test2.png")
@@ -733,6 +706,52 @@ class DistGraph(nn.Module):
         # pos = graphviz_layout(visible_graph, prog='dot')
         # nx.draw(visible_graph, pos, with_labels=False, arrows=False)
         # plt.savefig('nx_test.png')
+
+    def _prepare_visible_graph(self, dotmode=False):
+        visible_graph = nx.DiGraph()
+
+        def dont_esc(name: str):
+            return f"${name}$"
+        for factor in self.factors():
+            for var_name in factor.var:
+                for cond_var_name in factor.cond_var:
+                    if dotmode:
+                        visible_graph.add_edge(cond_var_name, var_name)
+                    else:
+                        visible_graph.add_edge(dont_esc(cond_var_name), dont_esc(var_name))
+        if dotmode:
+            for var_name in visible_graph:
+                visible_graph.add_node(var_name, texlbl=dont_esc(var_name))
+        return visible_graph
+
+    def _draw_by_plt(self):
+        # $$で包めば，draw_networkxでもtex表示できることを確認．レイアウトを気にしないならこれ
+        from matplotlib import rc
+        from networkx.drawing.nx_pydot import graphviz_layout
+        rc("font", family="serif", size=12)
+        rc("text", usetex=True)
+        visible_graph = self._prepare_visible_graph()
+        # pos = graphviz_layout(visible_graph, prog='dot')
+        # TODO: デバッグ
+        pos = layout(visible_graph)
+        nx.draw_networkx(visible_graph, pos=pos)
+
+    def _draw_by_tex(self):
+        # TODO: graphvizはインストール時にパスを通す必要があり，めんどい
+        # import os
+        # os.environ['PATH'] = os.environ['PATH'] + ':/usr/local/Cellar/graphviz/2.44.0/bin'
+        from networkx.drawing.nx_pydot import write_dot
+        visible_graph = self._prepare_visible_graph(dotmode=True)
+        write_dot(visible_graph, 'test.dot')
+        import dot2tex as d2t
+        with open('test.dot', 'r') as f:
+            tex = d2t.dot2tex(f.read(), prog='dot', crop=True, autosize=True, texmode='math')#, usepdflatex=True)
+        with open('test.tex', 'w') as f:
+            f.write(tex)
+        import subprocess
+        # TODO: pdflatexとの抽象的な結合だと主張するには，ユーザーのカスタマイズやpdflatexと同等のライブラリの存在がないと難しい
+        subprocess.run(['pdflatex', 'test.tex'])
+        # TODO: pdfをimageに戻して表示する？
 
 
 class Distribution(nn.Module):

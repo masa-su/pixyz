@@ -1,4 +1,5 @@
 import functools
+import itertools
 import numpy as np
 import torch
 import networkx as nx
@@ -379,37 +380,37 @@ def convert_latex_name(name):
     return sympy.latex(sympy.Symbol(name))
 
 
-def print_pgm(dist, filename, enc_dist=None):
-    """
-    plot graph of probablistic graphical model of Distribution.
-
-    Parameters
-    ----------
-    dist: Distribution
-    filename: str
-    enc_dists: list of Distribution
-
-    Examples
-    --------
-    >>> dist = _prepare_dist()
-    >>> print_pgm(dist, "tmp_daft.png")
-    """
-    default_node_size = 1
-    default_margin = 1
-
-    # TODO: 描画用のグラフに整形する
-    glgraph, var_dict = _dist2graph(dist, default_node_size, forward=True)
-    # エンコーダ用の追加ノード追加エッジは後回し
-    # if enc_dist is not None:
-    #     _dist2graph(enc_dist, default_node_size, forward=False, glgraph=glgraph, var_dict=var_dict)
-
-    # TODO: GPLでないアルゴリズムでグラフを配置する
-    # layout = _GeneralSugiyamaLayout(glgraph, default_node_size, default_margin)
-    # layout.draw()
-    layout(dag)
-
-    # TODO: 描画データを元に描画する
-    _draw_graph(glgraph, filename, default_node_size)
+# def print_pgm(dist, filename, enc_dist=None):
+#     """
+#     plot graph of probablistic graphical model of Distribution.
+# 
+#     Parameters
+#     ----------
+#     dist: Distribution
+#     filename: str
+#     enc_dists: list of Distribution
+# 
+#     Examples
+#     --------
+#     >>> dist = _prepare_dist()
+#     >>> print_pgm(dist, "tmp_daft.png")
+#     """
+#     default_node_size = 1
+#     default_margin = 1
+# 
+#     # TODO: 描画用のグラフに整形する
+#     glgraph, var_dict = _dist2graph(dist, default_node_size, forward=True)
+#     # エンコーダ用の追加ノード追加エッジは後回し
+#     # if enc_dist is not None:
+#     #     _dist2graph(enc_dist, default_node_size, forward=False, glgraph=glgraph, var_dict=var_dict)
+# 
+#     # TODO: GPLでないアルゴリズムでグラフを配置する
+#     # layout = _GeneralSugiyamaLayout(glgraph, default_node_size, default_margin)
+#     # layout.draw()
+#     pos = layout(dag)
+# 
+#     # TODO: 描画データを元に描画する
+#     _draw_graph(glgraph, filename, default_node_size)
 
 
 def layout(directed_acyclic_graph: nx.DiGraph):
@@ -435,7 +436,9 @@ def layout(directed_acyclic_graph: nx.DiGraph):
     dag = directed_acyclic_graph
     if not nx.is_directed_acyclic_graph(dag):
         raise ValueError("only directed acyclic graph is supported.")
+    margin = 1
     # 連結成分に分ける
+    poss = []
     comps = nx.weakly_connected_components(dag)
     for comp in comps:
         # in edgeのみの「ground node」を見つける
@@ -459,27 +462,92 @@ def layout(directed_acyclic_graph: nx.DiGraph):
                         tracking_nodes.add(pn)
                         max_height = max(height[pn], max_height)
         # ノードごとにin edge, out edgeの集合内に同じ高さのものを見つけ，その数を記録する
-        causal_blocks = []
+        causal_block_dict = {}
         for node in comp:
-            pred_block = dag.pred[node]
-            succ_block = dag.succ[node]
-            if pred_block:
-                # TODO: 違う高さのものが一緒くたになっている
-                causal_blocks.append((height[node] + 1, list(pred_block)))
-            if succ_block:
-                causal_blocks.append((height[node] - 1, list(succ_block)))
-        causal_blocks = sorted(causal_blocks, key=lambda item: -len(item[1]))
+            base_height = height[node]
+            blocks = {}
+            causal_block_dict[node] = []
+            for pred in itertools.chain(dag.pred[node], dag.succ[node]):
+                h = height[pred]
+                if h not in blocks:
+                    blocks[h] = []
+                blocks[h].append(pred)
+            causal_block_dict[node].extend((h, block, abs(h - base_height)) for h, block in blocks.items())
+        causal_blocks = sorted(itertools.chain(*causal_block_dict.values()), key=lambda item: (item[2], -len(item[1])))
 
         # 同じ高さのまとまりが大きいものから，1次元配列として隣接するようにソートしてブロックとして保持する
         layered_orders = [Block() for _ in range(max_height + 1)]
         for node, h in height.items():
             layered_orders[h].append(node)
-        for h, block in causal_blocks:
+        for h, block, delta in causal_blocks:
             layered_orders[h].concat(block)
+
         # （オプション）out edgeが2つまでで，対象のノードが隣接している場合，その間にノードを挿入する
-        # 下から順にノードの座標を決定する
-        # 	skipしていないconnectionの中心にノードを配置する
+        # ノードを実際に配置する
+        pos = {}
+        h_wide_layer = np.argmax([len(layer) for layer in layered_orders]).item()
+        # もっとも幅の広い層を等間隔に配置する
+        for i, node in enumerate(layered_orders[h_wide_layer].nodes):
+            pos[node] = (i, h_wide_layer)
+        # もっとも幅の広い層の周りを順に配置する
+        # def roundrobin(*iterables):
+        #     return list(it.next() for it in itertools.cycle(map(iter, iterables)))
+        # booked_layers = [(h, layered_orders[h]) for h in
+        #                  roundrobin(range(h_wide_layer), range(max_height, h_wide_layer, -1))]
+        booked_layers = ((h, layered_orders[h]) for h in
+                         itertools.chain(range(h_wide_layer - 1, -1, -1), range(h_wide_layer + 1, max_height + 1)))
+        for h, layer in booked_layers:
+            # 最も一次接続の多いノードから配置する
+            edge_counts = []
+            for node in layer.nodes:
+                count = 0
+                for _, block, delta in causal_block_dict[node]:
+                    if delta == 1:
+                        count += len(block)
+                edge_counts.append(count)
+            i_dense_node = np.argmax(edge_counts).item()
+            booked_node_indexes = itertools.chain(range(i_dense_node - 1, -1, -1), range(i_dense_node + 1, len(layer)))
+            # 一次接続するノードの重心と最小間隔の兼ね合いで各層のノードを配置する
+            pos[layer[i_dense_node]] = _locate_node(i_dense_node, layer, height, pos, causal_block_dict, margin=margin)
+            for i in booked_node_indexes:
+                pos[layer[i]] = _locate_node(i, layer, height, pos, causal_block_dict, margin=margin)
         # （オプション）skip connectionのエッジ曲線を生成する
+        poss.append(pos)
+    # 連結木を配置する
+    global_pos = {}
+    tree_center = np.array([0, 0])
+    for pos in poss:
+        tree_rect = [0, 0, 1, 1]
+        for node, point in pos.items():
+            tree_rect[0] = min(tree_rect[0], point[0] - margin)
+            tree_rect[1] = min(tree_rect[1], point[1] - margin)
+            tree_rect[2] = max(tree_rect[2], point[0] + margin)
+            tree_rect[3] = max(tree_rect[3], point[1] + margin)
+        for node, point in pos.items():
+            global_pos[node] = np.array(pos[node]) + tree_center - np.array(tree_rect[:2])
+        tree_center += np.array([tree_rect[2] - tree_rect[0], 0])
+    return global_pos
+
+
+def _locate_node(i: int, layer, height: dict, pos: dict, causal_block_dict: dict, margin=1):
+    target_node = layer[i]
+    connected_node_group = causal_block_dict[target_node]
+    left_node = layer[i - 1] if i != 0 else None
+    right_node = layer[i + 1] if i != len(layer) - 1 else None
+    if left_node not in pos:
+        left_node = None
+    if right_node not in pos:
+        right_node = None
+    primary_groups = filter(lambda tup: tup[2] == 1 and tup[1][0] in pos, connected_node_group)
+    def nodes(block):
+        if isinstance(block, Block):
+            return block.nodes
+        else:
+            return block
+    mean_x = np.mean([np.mean([pos[node][0] for node in nodes(block)]) for h, block, delta in primary_groups])
+    clipped_x = np.clip(mean_x, pos[left_node] + margin if left_node else -np.inf,
+                        pos[right_node] - margin if right_node else np.inf)
+    return clipped_x, height[target_node]
 
 
 class Block:
@@ -499,6 +567,24 @@ class Block:
             if isinstance(item, Block) and item.contains(node):
                 return True
         return False
+
+    @property
+    def nodes(self):
+        for item in self.items:
+            if isinstance(item, Block):
+                for node in item.nodes:
+                    yield node
+            else:
+                yield item
+
+    def __len__(self):
+        return sum(1 for _ in self.nodes)
+
+    def __getitem__(self, item):
+        for i, node in enumerate(self.nodes):
+            if item == i:
+                return node
+        raise IndexError()
 
     def _get_block(self, node):
         for item in self.items:
@@ -550,6 +636,7 @@ class Block:
             if not left_block.right_lock:
                 self._flip(left_block)
             left_i = self.items.index(left_block)
+            left_block.right_lock = True
 
         if len(block) - len(side_nodes) > 0:
             center_block = Block()
@@ -559,6 +646,10 @@ class Block:
                     old_block = self._get_block(node)
                     self.items.remove(old_block)
             self.items.insert(left_i + 1, center_block)
+            if len(side_nodes) > 0:
+                center_block.left_lock = True
+            if len(side_nodes) > 1:
+                center_block.right_lock = True
 
         if len(side_nodes) > 1:
             right_block = self._get_block(side_nodes[1])
@@ -566,16 +657,72 @@ class Block:
             if not right_block.left_lock:
                 self._flip(right_block)
             self._move(right_block, left_i + 2)
+            right_block.left_lock = True
+
+    def _get_locked_range(self, block):
+        i_block = self.items.index(block)
+        i_start, i_end = i_block, i_block + 1
+        while True:
+            block = self.items[i_start]
+            if not isinstance(block, Block) or not block.left_lock:
+                break
+            i_start = i_start - 1
+        while True:
+            block = self.items[i_end - 1]
+            if not isinstance(block, Block) or not block.right_lock:
+                break
+            i_end = i_end - 1
+        return i_start, i_end
 
     def move_side(self, node):
-        
-        NotImplemented
+        target_block = self._get_block(node)
+        target_block.move_side(node)
+        left_side = (target_block[0] == node)
+
+        if not self.left_lock:
+            if not left_side:
+                self._flip(target_block)
+            self._move(target_block, 0)
+        elif not self.right_lock:
+            if left_side:
+                self._flip(target_block)
+            self._move(target_block, -1)
+        else:
+            raise ValueError()
 
     def _flip(self, block):
-        NotImplemented
+        if not isinstance(block, Block):
+            return
+        i = self.items.index(block)
+        left_block = self.items[i - 1] if block.left_lock else None
+        right_block = self.items[i + 1] if block.right_lock else None
+        block.reverse()
+        if left_block and right_block:
+            self.items[i - 1] = right_block
+            self.items[i + 1] = left_block
+        elif left_block:
+            self.items.pop(i - 1)
+            self.items.append(left_block)
+        elif right_block:
+            self.items.pop(i + 1)
+            self.items.insert(i, right_block)
+
+    def reverse(self):
+        tmp = self.left_lock
+        self.left_lock = self.right_lock
+        self.right_lock = tmp
+        self.items.reverse()
+        for item in self.items:
+            if isinstance(item, Block):
+                item.reverse()
 
     def _move(self, block, dest):
-        NotImplemented
+        i_start, i_end = self._get_locked_range(block)
+        moving_blocks = self.items[i_start:i_end]
+        for _ in range(i_end - i_start):
+            self.items.pop(i_start)
+        for block in moving_blocks:
+            self.items.insert(dest, block)
 
 
 # def _dist2graph(dist, node_size, forward=True):#, glgraph: glg.Graph = None, var_dict=None):
@@ -895,10 +1042,10 @@ def _prepare_dist():
     return p_marg, q1, p_marg2
 
 
-def _test_print_pgm():
-    dist, enc_dist, dist2 = _prepare_dist()
-    print_pgm(dist, "tmp_daft.png", enc_dist=enc_dist)
-    print_pgm(dist2, "tmp_daft2.png", enc_dist=enc_dist)
+# def _test_print_pgm():
+#     dist, enc_dist, dist2 = _prepare_dist()
+#     print_pgm(dist, "tmp_daft.png", enc_dist=enc_dist)
+#     print_pgm(dist2, "tmp_daft2.png", enc_dist=enc_dist)
 
 
 if __name__ == "__main__":
