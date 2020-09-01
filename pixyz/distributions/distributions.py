@@ -683,13 +683,15 @@ class DistGraph(nn.Module):
     def prob_joint_factorized_and_text(self):
         return _make_prob_equality_text(self.prob_text, self.prob_factorized_text)
 
-    def draw(self):
+    def draw(self, path=None):
         # $$で包めば，draw_networkxでもtex表示できることを確認．レイアウトを気にしないならこれ
         from matplotlib import rc
         from networkx.drawing.nx_pydot import graphviz_layout
         rc("font", family="serif", size=12)
         rc("text", usetex=True)
         visible_graph = self._prepare_visible_graph()
+        if path:
+            nx.write_graphml(visible_graph, path)
         # pos = graphviz_layout(visible_graph, prog='dot')
         pos = layered_graph_layout(visible_graph)
         nx.draw_networkx(visible_graph, pos=pos)
@@ -700,6 +702,7 @@ class DistGraph(nn.Module):
         # ag.draw(path='nx_test2.png')
         # from IPython.display import Image
         # return Image("nx_test2.png")
+        return visible_graph
 
     def _prepare_visible_graph(self, dotmode=False):
         visible_graph = nx.DiGraph()

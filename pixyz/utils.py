@@ -516,9 +516,11 @@ def _locate_node(i: int, layer, height: dict, pos: dict, causal_block_dict: dict
 
 
 class NodeBlock:
+    """
+    It represents adjacency constraints without intersection.
+    """
     def __init__(self):
-        # ブロック内にもブロックがある
-        # TODO: 長さ1のブロック間の連結リストのほうが単純だったのでは?
+        # 0,(1,(2,3),4,5),6 のようなまとまりの制約を表現するため，ブロック内にもブロックがある
         self.items = []
         self.left_lock = False
         self.right_lock = False
@@ -585,11 +587,25 @@ class NodeBlock:
     def concat(self, block):
         if len(block) < 2:
             return
-        # ソート可能かチェック
+        # ソート可能かチェック, single_node, full_blocks, 2つまでのside_nodesならソート可能
         side_nodes = []
+        maybe_full_blocks = set()
         for node in block:
             if self.is_single_node(node):
                 continue
+            else:
+                maybe_full_blocks.add(self._get_block(node))
+        for mb_full_block in maybe_full_blocks:
+            i_start, i_end = self._get_locked_range(mb_full_block)
+            if all(locked_block.full(block) for locked_block in self.items[i_start:i_end]):
+                continue
+            else:
+                if mb_full_block.left_lock and mb_full_block.right_lock:
+                    return
+                else:
+                    side_blocks.append(mb_full_block)
+                    if len(side_blocks) > 2:
+                        return
             if self.is_side_node(node):
                 side_nodes.append(node)
                 if len(side_nodes) > 2:
