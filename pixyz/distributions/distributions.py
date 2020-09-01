@@ -5,7 +5,7 @@ import networkx as nx
 from torch import nn
 
 from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
-    tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict, layered_graph_layout
+    tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict
 from ..losses import LogProb, Prob
 
 
@@ -683,28 +683,7 @@ class DistGraph(nn.Module):
     def prob_joint_factorized_and_text(self):
         return _make_prob_equality_text(self.prob_text, self.prob_factorized_text)
 
-    def draw(self, path=None):
-        # $$で包めば，draw_networkxでもtex表示できることを確認．レイアウトを気にしないならこれ
-        from matplotlib import rc
-        from networkx.drawing.nx_pydot import graphviz_layout
-        rc("font", family="serif", size=12)
-        rc("text", usetex=True)
-        visible_graph = self._prepare_visible_graph()
-        if path:
-            nx.write_graphml(visible_graph, path)
-        # pos = graphviz_layout(visible_graph, prog='dot')
-        pos = layered_graph_layout(visible_graph)
-        nx.draw_networkx(visible_graph, pos=pos)
-        # from networkx.drawing.nx_agraph import to_agraph
-        # ag = to_agraph(visible_graph)
-        # ag.layout(prog='dot')
-        # ag.write('test.dot')
-        # ag.draw(path='nx_test2.png')
-        # from IPython.display import Image
-        # return Image("nx_test2.png")
-        return visible_graph
-
-    def _prepare_visible_graph(self, dotmode=False):
+    def visible_graph(self, dotmode=False):
         visible_graph = nx.DiGraph()
 
         def dont_esc(name: str):
