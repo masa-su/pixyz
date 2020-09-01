@@ -1,20 +1,11 @@
 import functools
-import itertools
-import numpy as np
 import torch
-import networkx as nx
-from matplotlib import rc
-# import matplotlib.pyplot as plt
-# import matplotlib.patches as patches
 import sympy
 from IPython.display import Math
 import pixyz
 
 _EPSILON = 1e-07
 CACHE_SIZE = 0
-
-rc("font", family="serif", size=12)
-rc("text", usetex=True)
 
 
 def set_epsilon(eps):
