@@ -68,8 +68,6 @@ class TransformedDistribution(Distribution):
         _x = get_dict_values(sample_dict, self.flow_input_var)[0]
         z = self.forward(_x, compute_jacobian=compute_jacobian)
 
-        self.stored_x[hash(z)] = _x
-
         output_dict = {self.var[0]: z}
 
         output_dict.update(sample_dict)
@@ -87,7 +85,7 @@ class TransformedDistribution(Distribution):
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, compute_jacobian=False):
         """
-        It calculates the log-likelihood for a given z. 
+        It calculates the log-likelihood for a given z.
         If a flow module has no inverse method, it only supports the previously sampled z-values.
         """
         inf_dict = self._inference(x_dict, compute_jacobian=compute_jacobian)
@@ -104,7 +102,11 @@ class TransformedDistribution(Distribution):
         try:
             x = self.inverse(_z[0])
         except NotImplementedError:
-            x = self.stored_x[hash(_z[0])]
+            hash_z = hash(_z[0])
+            if hash_z not in self.stored_x:
+                raise Exception("Cannot calculate x because it is not z used in the previous sample.")
+            x = self.stored_x[hash_z]
+            self.stored_x.pop(hash_z)
 
         output_dict = {self._flow_input_var[0]: x,
                        self.var[0]: _z}
@@ -138,7 +140,11 @@ class TransformedDistribution(Distribution):
         z : torch.Tensor
 
         """
-        return self.flow.forward(x=x, y=y, compute_jacobian=compute_jacobian)
+        z = self.flow.forward(x=x, y=y, compute_jacobian=compute_jacobian)
+
+        self.stored_x.clear()
+        self.stored_x[hash(z)] = x
+        return z
 
     def inverse(self, z, y=None):
         """
