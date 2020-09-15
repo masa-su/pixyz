@@ -1,0 +1,484 @@
+[NbConvertApp] Converting notebook hierarchical_variational_inference.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 51735 bytes to hierarchical_variational_inference.ipynb
+[NbConvertApp] Converting notebook real_nvp.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 14322 bytes to real_nvp.ipynb
+[NbConvertApp] Converting notebook mmd_vae.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] ERROR | Error while converting 'mmd_vae.ipynb'
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/nbconvertapp.py", line 410, in export_single_notebook
+    output, resources = self.exporter.from_filename(notebook_filename, resources=resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 179, in from_filename
+    return self.from_file(f, resources=resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 197, in from_file
+    return self.from_notebook_node(nbformat.read(file_stream, as_version=4), resources=resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/notebook.py", line 32, in from_notebook_node
+    nb_copy, resources = super(NotebookExporter, self).from_notebook_node(nb, resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 139, in from_notebook_node
+    nb_copy, resources = self._preprocess(nb_copy, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 316, in _preprocess
+    nbc, resc = preprocessor(nbc, resc)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/base.py", line 47, in __call__
+    return self.preprocess(nb, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/execute.py", line 405, in preprocess
+    nb, resources = super(ExecutePreprocessor, self).preprocess(nb, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/base.py", line 69, in preprocess
+    nb.cells[index], resources = self.preprocess_cell(cell, resources, index)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/execute.py", line 448, in preprocess_cell
+    raise CellExecutionError.from_cell_and_msg(cell, out)
+nbconvert.preprocessors.execute.CellExecutionError: An error occurred while executing the following cell:
+------------------
+import pixyz
+v = pixyz.__version__
+writer = SummaryWriter("runs/" + v + ".mmd_vae" + exp_time)
+
+z_sample = 0.5 * torch.randn(64, z_dim).to(device)
+_x, _ = iter(test_loader).next()
+_x = _x.to(device)
+
+import time
+start = time.time
+for epoch in range(1, epochs + 1):
+    train_loss = train(epoch)
+    test_loss = test(epoch)
+    
+    recon = plot_reconstrunction(_x[:8])
+    sample = plot_image_from_latent(z_sample)
+
+    writer.add_scalar('train_loss', train_loss.item(), epoch)
+    writer.add_scalar('test_loss', test_loss.item(), epoch)      
+    
+    writer.add_images('Image_from_latent', sample, epoch)
+    writer.add_images('Image_reconstrunction', recon, epoch)
+elapsed_time = time.time() - start
+writer.add_scalar('Exp time second', elapsed_time)
+writer.close()
+------------------
+
+[0;31m---------------------------------------------------------------------------[0m
+[0;31mTypeError[0m                                 Traceback (most recent call last)
+[0;32m<ipython-input-13-83a10644781f>[0m in [0;36m<module>[0;34m[0m
+[1;32m     21[0m     [0mwriter[0m[0;34m.[0m[0madd_images[0m[0;34m([0m[0;34m'Image_from_latent'[0m[0;34m,[0m [0msample[0m[0;34m,[0m [0mepoch[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[1;32m     22[0m     [0mwriter[0m[0;34m.[0m[0madd_images[0m[0;34m([0m[0;34m'Image_reconstrunction'[0m[0;34m,[0m [0mrecon[0m[0;34m,[0m [0mepoch[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m---> 23[0;31m [0melapsed_time[0m [0;34m=[0m [0mtime[0m[0;34m.[0m[0mtime[0m[0;34m([0m[0;34m)[0m [0;34m-[0m [0mstart[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m     24[0m [0mwriter[0m[0;34m.[0m[0madd_scalar[0m[0;34m([0m[0;34m'Exp time second'[0m[0;34m,[0m [0melapsed_time[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[1;32m     25[0m [0mwriter[0m[0;34m.[0m[0mclose[0m[0;34m([0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+
+[0;31mTypeError[0m: unsupported operand type(s) for -: 'float' and 'builtin_function_or_method'
+TypeError: unsupported operand type(s) for -: 'float' and 'builtin_function_or_method'
+
+[NbConvertApp] Converting notebook normalizing_flow_toy.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] ERROR | Error while converting 'normalizing_flow_toy.ipynb'
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/nbconvertapp.py", line 410, in export_single_notebook
+    output, resources = self.exporter.from_filename(notebook_filename, resources=resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 179, in from_filename
+    return self.from_file(f, resources=resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 197, in from_file
+    return self.from_notebook_node(nbformat.read(file_stream, as_version=4), resources=resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/notebook.py", line 32, in from_notebook_node
+    nb_copy, resources = super(NotebookExporter, self).from_notebook_node(nb, resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 139, in from_notebook_node
+    nb_copy, resources = self._preprocess(nb_copy, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 316, in _preprocess
+    nbc, resc = preprocessor(nbc, resc)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/base.py", line 47, in __call__
+    return self.preprocess(nb, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/execute.py", line 405, in preprocess
+    nb, resources = super(ExecutePreprocessor, self).preprocess(nb, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/base.py", line 69, in preprocess
+    nb.cells[index], resources = self.preprocess_cell(cell, resources, index)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/execute.py", line 448, in preprocess_cell
+    raise CellExecutionError.from_cell_and_msg(cell, out)
+nbconvert.preprocessors.execute.CellExecutionError: An error occurred while executing the following cell:
+------------------
+# transformed distribution (x -> f -> z)
+q = TransformedDistribution(prior, f, var=["z"], name="q").to(device)
+print(q)
+print_latex(q)
+------------------
+
+[0;31m---------------------------------------------------------------------------[0m
+[0;31mTypeError[0m                                 Traceback (most recent call last)
+[0;32m<ipython-input-8-436c370389cb>[0m in [0;36m<module>[0;34m[0m
+[1;32m      1[0m [0;31m# transformed distribution (x -> f -> z)[0m[0;34m[0m[0;34m[0m[0;34m[0m[0m
+[0;32m----> 2[0;31m [0mq[0m [0;34m=[0m [0mTransformedDistribution[0m[0;34m([0m[0mprior[0m[0;34m,[0m [0mf[0m[0;34m,[0m [0mvar[0m[0;34m=[0m[0;34m[[0m[0;34m"z"[0m[0;34m][0m[0;34m,[0m [0mname[0m[0;34m=[0m[0;34m"q"[0m[0;34m)[0m[0;34m.[0m[0mto[0m[0;34m([0m[0mdevice[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m      3[0m [0mprint[0m[0;34m([0m[0mq[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[1;32m      4[0m [0mprint_latex[0m[0;34m([0m[0mq[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+
+[0;31mTypeError[0m: __init__() got an unexpected keyword argument 'var'
+TypeError: __init__() got an unexpected keyword argument 'var'
+
+[NbConvertApp] Converting notebook real_nvp_cond.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 15556 bytes to real_nvp_cond.ipynb
+[NbConvertApp] Converting notebook glow.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] ERROR | Error while converting 'glow.ipynb'
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/nbconvertapp.py", line 410, in export_single_notebook
+    output, resources = self.exporter.from_filename(notebook_filename, resources=resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 179, in from_filename
+    return self.from_file(f, resources=resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 197, in from_file
+    return self.from_notebook_node(nbformat.read(file_stream, as_version=4), resources=resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/notebook.py", line 32, in from_notebook_node
+    nb_copy, resources = super(NotebookExporter, self).from_notebook_node(nb, resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 139, in from_notebook_node
+    nb_copy, resources = self._preprocess(nb_copy, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 316, in _preprocess
+    nbc, resc = preprocessor(nbc, resc)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/base.py", line 47, in __call__
+    return self.preprocess(nb, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/execute.py", line 405, in preprocess
+    nb, resources = super(ExecutePreprocessor, self).preprocess(nb, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/base.py", line 69, in preprocess
+    nb.cells[index], resources = self.preprocess_cell(cell, resources, index)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/execute.py", line 448, in preprocess_cell
+    raise CellExecutionError.from_cell_and_msg(cell, out)
+nbconvert.preprocessors.execute.CellExecutionError: An error occurred while executing the following cell:
+------------------
+import pixyz
+v = pixyz.__version__
+writer = SummaryWriter("runs/" + v + ".glow" + exp_time)
+
+z_sample = torch.randn(64, 3, 32, 32).to(device)
+_x, _ = iter(test_loader).next()
+_x = _x.to(device)
+
+import time
+start = time.time()
+
+for epoch in range(1, epochs + 1):
+    train_loss = train(epoch)
+    test_loss = test(epoch)
+    
+    recon = plot_reconstrunction(_x[:8])
+    sample = plot_image_from_latent(z_sample)
+
+    writer.add_scalar('train_loss', train_loss.item(), epoch)
+    writer.add_scalar('test_loss', test_loss.item(), epoch)      
+    
+    writer.add_images('Image_from_latent', sample, epoch)
+    writer.add_images('Image_reconstrunction', recon, epoch)
+elapsed_time = time.time() - start
+writer.add_scalar('Exp time second', elapsed_time)
+writer.close()
+------------------
+
+[0;31m---------------------------------------------------------------------------[0m
+[0;31mRuntimeError[0m                              Traceback (most recent call last)
+[0;32m<ipython-input-14-1b6b6830a252>[0m in [0;36m<module>[0;34m[0m
+[1;32m     11[0m [0;34m[0m[0m
+[1;32m     12[0m [0;32mfor[0m [0mepoch[0m [0;32min[0m [0mrange[0m[0;34m([0m[0;36m1[0m[0;34m,[0m [0mepochs[0m [0;34m+[0m [0;36m1[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m---> 13[0;31m     [0mtrain_loss[0m [0;34m=[0m [0mtrain[0m[0;34m([0m[0mepoch[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m     14[0m     [0mtest_loss[0m [0;34m=[0m [0mtest[0m[0;34m([0m[0mepoch[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[1;32m     15[0m [0;34m[0m[0m
+
+[0;32m<ipython-input-10-e1aa10cfbaf1>[0m in [0;36mtrain[0;34m(epoch)[0m
+[1;32m      4[0m     [0;32mfor[0m [0mx[0m[0;34m,[0m [0m_[0m [0;32min[0m [0mtqdm[0m[0;34m([0m[0mtrain_loader[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[1;32m      5[0m         [0mx[0m [0;34m=[0m [0mx[0m[0;34m.[0m[0mto[0m[0;34m([0m[0mdevice[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m----> 6[0;31m         [0mloss[0m [0;34m=[0m [0mmodel[0m[0;34m.[0m[0mtrain[0m[0;34m([0m[0;34m{[0m[0;34m"x"[0m[0;34m:[0m [0mx[0m[0;34m}[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m      7[0m         [0mtrain_loss[0m [0;34m+=[0m [0mloss[0m[0;34m[0m[0;34m[0m[0m
+[1;32m      8[0m [0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/models/ml.py[0m in [0;36mtrain[0;34m(self, train_x_dict, **kwargs)[0m
+[1;32m     45[0m [0;34m[0m[0m
+[1;32m     46[0m     [0;32mdef[0m [0mtrain[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mtrain_x_dict[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m---> 47[0;31m         [0;32mreturn[0m [0msuper[0m[0;34m([0m[0;34m)[0m[0;34m.[0m[0mtrain[0m[0;34m([0m[0mtrain_x_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m     48[0m [0;34m[0m[0m
+[1;32m     49[0m     [0;32mdef[0m [0mtest[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mtest_x_dict[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/models/model.py[0m in [0;36mtrain[0;34m(self, train_x_dict, **kwargs)[0m
+[1;32m    144[0m [0;34m[0m[0m
+[1;32m    145[0m         [0mself[0m[0;34m.[0m[0moptimizer[0m[0;34m.[0m[0mzero_grad[0m[0;34m([0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 146[0;31m         [0mloss[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mloss_cls[0m[0;34m.[0m[0meval[0m[0;34m([0m[0mtrain_x_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    147[0m [0;34m[0m[0m
+[1;32m    148[0m         [0;31m# backprop[0m[0;34m[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36meval[0;34m(self, x_dict, return_dict, return_all, **kwargs)[0m
+[1;32m    209[0m [0;34m[0m[0m
+[1;32m    210[0m         [0minput_dict[0m [0;34m=[0m [0mget_dict_values[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mself[0m[0;34m.[0m[0minput_var[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 211[0;31m         [0mloss[0m[0;34m,[0m [0meval_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0minput_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    212[0m [0;34m[0m[0m
+[1;32m    213[0m         [0;32mif[0m [0mreturn_dict[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36mforward[0;34m(self, x_dict, **kwargs)[0m
+[1;32m    644[0m [0;34m[0m[0m
+[1;32m    645[0m     [0;32mdef[0m [0mforward[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mx_dict[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 646[0;31m         [0mloss[0m[0;34m,[0m [0mx_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mloss1[0m[0;34m.[0m[0meval[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m,[0m [0mreturn_all[0m[0;34m=[0m[0;32mFalse[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    647[0m         [0;32mreturn[0m [0mloss[0m[0;34m.[0m[0mmean[0m[0;34m([0m[0;34m)[0m[0;34m,[0m [0mx_dict[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    648[0m [0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36meval[0;34m(self, x_dict, return_dict, return_all, **kwargs)[0m
+[1;32m    209[0m [0;34m[0m[0m
+[1;32m    210[0m         [0minput_dict[0m [0;34m=[0m [0mget_dict_values[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mself[0m[0;34m.[0m[0minput_var[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 211[0;31m         [0mloss[0m[0;34m,[0m [0meval_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0minput_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    212[0m [0;34m[0m[0m
+[1;32m    213[0m         [0;32mif[0m [0mreturn_dict[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36mforward[0;34m(self, x_dict, **kwargs)[0m
+[1;32m    580[0m [0;34m[0m[0m
+[1;32m    581[0m     [0;32mdef[0m [0mforward[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mx_dict[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 582[0;31m         [0mloss[0m[0;34m,[0m [0mx_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mloss1[0m[0;34m.[0m[0meval[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m,[0m [0mreturn_all[0m[0;34m=[0m[0;32mFalse[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    583[0m         [0;32mreturn[0m [0;34m-[0m[0mloss[0m[0;34m,[0m [0mx_dict[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    584[0m [0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36meval[0;34m(self, x_dict, return_dict, return_all, **kwargs)[0m
+[1;32m    209[0m [0;34m[0m[0m
+[1;32m    210[0m         [0minput_dict[0m [0;34m=[0m [0mget_dict_values[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mself[0m[0;34m.[0m[0minput_var[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 211[0;31m         [0mloss[0m[0;34m,[0m [0meval_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0minput_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    212[0m [0;34m[0m[0m
+[1;32m    213[0m         [0;32mif[0m [0mreturn_dict[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/pdf.py[0m in [0;36mforward[0;34m(self, x, **kwargs)[0m
+[1;32m     40[0m [0;34m[0m[0m
+[1;32m     41[0m     [0;32mdef[0m [0mforward[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mx[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m---> 42[0;31m         [0mlog_prob[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mp[0m[0;34m.[0m[0mget_log_prob[0m[0;34m([0m[0mx[0m[0;34m,[0m [0msum_features[0m[0;34m=[0m[0mself[0m[0;34m.[0m[0msum_features[0m[0;34m,[0m [0mfeature_dims[0m[0;34m=[0m[0mself[0m[0;34m.[0m[0mfeature_dims[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m     43[0m         [0;32mreturn[0m [0mlog_prob[0m[0;34m,[0m [0;34m{[0m[0;34m}[0m[0;34m[0m[0;34m[0m[0m
+[1;32m     44[0m [0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/distributions/flow_distribution.py[0m in [0;36mget_log_prob[0;34m(self, x_dict, sum_features, feature_dims)[0m
+[1;32m    251[0m     [0;32mdef[0m [0mget_log_prob[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mx_dict[0m[0;34m,[0m [0msum_features[0m[0;34m=[0m[0;32mTrue[0m[0;34m,[0m [0mfeature_dims[0m[0;34m=[0m[0;32mNone[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    252[0m         [0;31m# flow[0m[0;34m[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 253[0;31m         [0moutput_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0minference[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mreturn_all[0m[0;34m=[0m[0;32mTrue[0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m=[0m[0;32mTrue[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    254[0m [0;34m[0m[0m
+[1;32m    255[0m         [0;31m# prior[0m[0;34m[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/distributions/flow_distribution.py[0m in [0;36minference[0;34m(self, x_dict, return_all, compute_jacobian)[0m
+[1;32m    238[0m [0;34m[0m[0m
+[1;32m    239[0m         [0;32mif[0m [0mlen[0m[0;34m([0m[0m_y[0m[0;34m)[0m [0;34m==[0m [0;36m0[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 240[0;31m             [0mz[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0m_x[0m[0;34m[[0m[0;36m0[0m[0;34m][0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m=[0m[0mcompute_jacobian[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    241[0m         [0;32melse[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    242[0m             [0mz[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0m_x[0m[0;34m[[0m[0;36m0[0m[0;34m][0m[0;34m,[0m [0my[0m[0;34m=[0m[0m_y[0m[0;34m[[0m[0;36m0[0m[0;34m][0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m=[0m[0mcompute_jacobian[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/distributions/flow_distribution.py[0m in [0;36mforward[0;34m(self, x, y, compute_jacobian)[0m
+[1;32m    277[0m [0;34m[0m[0m
+[1;32m    278[0m         """
+[0;32m--> 279[0;31m         [0;32mreturn[0m [0mself[0m[0;34m.[0m[0mflow[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0mx[0m[0;34m=[0m[0mx[0m[0;34m,[0m [0my[0m[0;34m=[0m[0my[0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m=[0m[0mcompute_jacobian[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    280[0m [0;34m[0m[0m
+[1;32m    281[0m     [0;32mdef[0m [0minverse[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mz[0m[0;34m,[0m [0my[0m[0;34m=[0m[0;32mNone[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/flows/flows.py[0m in [0;36mforward[0;34m(self, x, y, compute_jacobian)[0m
+[1;32m    100[0m [0;34m[0m[0m
+[1;32m    101[0m         [0;32mfor[0m [0mflow[0m [0;32min[0m [0mself[0m[0;34m.[0m[0mflow_list[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 102[0;31m             [0mx[0m [0;34m=[0m [0mflow[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0mx[0m[0;34m,[0m [0my[0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    103[0m             [0;32mif[0m [0mcompute_jacobian[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    104[0m                 [0mlogdet_jacobian[0m [0;34m=[0m [0mlogdet_jacobian[0m [0;34m+[0m [0mflow[0m[0;34m.[0m[0mlogdet_jacobian[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/flows/coupling.py[0m in [0;36mforward[0;34m(self, x, y, compute_jacobian)[0m
+[1;32m    153[0m [0;34m[0m[0m
+[1;32m    154[0m         [0;32mif[0m [0mcompute_jacobian[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 155[0;31m             [0mself[0m[0;34m.[0m[0m_logdet_jacobian[0m [0;34m=[0m [0mlog_s[0m[0;34m.[0m[0mview[0m[0;34m([0m[0mlog_s[0m[0;34m.[0m[0msize[0m[0;34m([0m[0;36m0[0m[0;34m)[0m[0;34m,[0m [0;34m-[0m[0;36m1[0m[0;34m)[0m[0;34m.[0m[0msum[0m[0;34m([0m[0;34m-[0m[0;36m1[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    156[0m [0;34m[0m[0m
+[1;32m    157[0m         [0;32mreturn[0m [0mx[0m[0;34m[0m[0;34m[0m[0m
+
+[0;31mRuntimeError[0m: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
+RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
+
+[NbConvertApp] Converting notebook maximum_likelihood.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 12560 bytes to maximum_likelihood.ipynb
+[NbConvertApp] Converting notebook jmvae_poe.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 21011 bytes to jmvae_poe.ipynb
+[NbConvertApp] Converting notebook vae.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 19800 bytes to vae.ipynb
+[NbConvertApp] Converting notebook jmvae.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 19492 bytes to jmvae.ipynb
+[NbConvertApp] Converting notebook distributions.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 28848 bytes to distributions.ipynb
+[NbConvertApp] Converting notebook vae_with_vae_class.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 19446 bytes to vae_with_vae_class.ipynb
+[NbConvertApp] Converting notebook real_nvp_toy.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 485546 bytes to real_nvp_toy.ipynb
+[NbConvertApp] Converting notebook real_nvp_cifar.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] ERROR | Error while converting 'real_nvp_cifar.ipynb'
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/nbconvertapp.py", line 410, in export_single_notebook
+    output, resources = self.exporter.from_filename(notebook_filename, resources=resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 179, in from_filename
+    return self.from_file(f, resources=resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 197, in from_file
+    return self.from_notebook_node(nbformat.read(file_stream, as_version=4), resources=resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/notebook.py", line 32, in from_notebook_node
+    nb_copy, resources = super(NotebookExporter, self).from_notebook_node(nb, resources, **kw)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 139, in from_notebook_node
+    nb_copy, resources = self._preprocess(nb_copy, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/exporters/exporter.py", line 316, in _preprocess
+    nbc, resc = preprocessor(nbc, resc)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/base.py", line 47, in __call__
+    return self.preprocess(nb, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/execute.py", line 405, in preprocess
+    nb, resources = super(ExecutePreprocessor, self).preprocess(nb, resources)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/base.py", line 69, in preprocess
+    nb.cells[index], resources = self.preprocess_cell(cell, resources, index)
+  File "/home/ubuntu/anaconda3/envs/pixyz_py38/lib/python3.8/site-packages/nbconvert/preprocessors/execute.py", line 448, in preprocess_cell
+    raise CellExecutionError.from_cell_and_msg(cell, out)
+nbconvert.preprocessors.execute.CellExecutionError: An error occurred while executing the following cell:
+------------------
+import pixyz
+v = pixyz.__version__
+writer = SummaryWriter("runs/" + v + ".real_nvp_cifar" + exp_time)
+
+
+z_sample = torch.randn(64, 3, 32, 32).to(device)
+_x, _ = iter(test_loader).next()
+_x = _x.to(device)
+
+import time
+start = time.time()
+for epoch in range(1, epochs + 1):
+    train_loss = train(epoch)
+    test_loss = test(epoch)
+    
+    recon = plot_reconstrunction(_x[:8])
+    sample = plot_image_from_latent(z_sample)
+
+    writer.add_scalar('train_loss', train_loss.item(), epoch)
+    writer.add_scalar('test_loss', test_loss.item(), epoch)      
+    
+    writer.add_images('Image_from_latent', sample, epoch)
+    writer.add_images('Image_reconstrunction', recon, epoch)
+elapsed_time = time.time() - start
+writer.add_scalar('Exp time second', elapsed_time)
+writer.close()
+------------------
+
+[0;31m---------------------------------------------------------------------------[0m
+[0;31mRuntimeError[0m                              Traceback (most recent call last)
+[0;32m<ipython-input-14-314c22ec80da>[0m in [0;36m<module>[0;34m[0m
+[1;32m     11[0m [0mstart[0m [0;34m=[0m [0mtime[0m[0;34m.[0m[0mtime[0m[0;34m([0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[1;32m     12[0m [0;32mfor[0m [0mepoch[0m [0;32min[0m [0mrange[0m[0;34m([0m[0;36m1[0m[0;34m,[0m [0mepochs[0m [0;34m+[0m [0;36m1[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m---> 13[0;31m     [0mtrain_loss[0m [0;34m=[0m [0mtrain[0m[0;34m([0m[0mepoch[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m     14[0m     [0mtest_loss[0m [0;34m=[0m [0mtest[0m[0;34m([0m[0mepoch[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[1;32m     15[0m [0;34m[0m[0m
+
+[0;32m<ipython-input-10-e1aa10cfbaf1>[0m in [0;36mtrain[0;34m(epoch)[0m
+[1;32m      4[0m     [0;32mfor[0m [0mx[0m[0;34m,[0m [0m_[0m [0;32min[0m [0mtqdm[0m[0;34m([0m[0mtrain_loader[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[1;32m      5[0m         [0mx[0m [0;34m=[0m [0mx[0m[0;34m.[0m[0mto[0m[0;34m([0m[0mdevice[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m----> 6[0;31m         [0mloss[0m [0;34m=[0m [0mmodel[0m[0;34m.[0m[0mtrain[0m[0;34m([0m[0;34m{[0m[0;34m"x"[0m[0;34m:[0m [0mx[0m[0;34m}[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m      7[0m         [0mtrain_loss[0m [0;34m+=[0m [0mloss[0m[0;34m[0m[0;34m[0m[0m
+[1;32m      8[0m [0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/models/ml.py[0m in [0;36mtrain[0;34m(self, train_x_dict, **kwargs)[0m
+[1;32m     45[0m [0;34m[0m[0m
+[1;32m     46[0m     [0;32mdef[0m [0mtrain[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mtrain_x_dict[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m---> 47[0;31m         [0;32mreturn[0m [0msuper[0m[0;34m([0m[0;34m)[0m[0;34m.[0m[0mtrain[0m[0;34m([0m[0mtrain_x_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m     48[0m [0;34m[0m[0m
+[1;32m     49[0m     [0;32mdef[0m [0mtest[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mtest_x_dict[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/models/model.py[0m in [0;36mtrain[0;34m(self, train_x_dict, **kwargs)[0m
+[1;32m    144[0m [0;34m[0m[0m
+[1;32m    145[0m         [0mself[0m[0;34m.[0m[0moptimizer[0m[0;34m.[0m[0mzero_grad[0m[0;34m([0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 146[0;31m         [0mloss[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mloss_cls[0m[0;34m.[0m[0meval[0m[0;34m([0m[0mtrain_x_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    147[0m [0;34m[0m[0m
+[1;32m    148[0m         [0;31m# backprop[0m[0;34m[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36meval[0;34m(self, x_dict, return_dict, return_all, **kwargs)[0m
+[1;32m    209[0m [0;34m[0m[0m
+[1;32m    210[0m         [0minput_dict[0m [0;34m=[0m [0mget_dict_values[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mself[0m[0;34m.[0m[0minput_var[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 211[0;31m         [0mloss[0m[0;34m,[0m [0meval_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0minput_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    212[0m [0;34m[0m[0m
+[1;32m    213[0m         [0;32mif[0m [0mreturn_dict[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36mforward[0;34m(self, x_dict, **kwargs)[0m
+[1;32m    644[0m [0;34m[0m[0m
+[1;32m    645[0m     [0;32mdef[0m [0mforward[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mx_dict[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 646[0;31m         [0mloss[0m[0;34m,[0m [0mx_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mloss1[0m[0;34m.[0m[0meval[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m,[0m [0mreturn_all[0m[0;34m=[0m[0;32mFalse[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    647[0m         [0;32mreturn[0m [0mloss[0m[0;34m.[0m[0mmean[0m[0;34m([0m[0;34m)[0m[0;34m,[0m [0mx_dict[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    648[0m [0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36meval[0;34m(self, x_dict, return_dict, return_all, **kwargs)[0m
+[1;32m    209[0m [0;34m[0m[0m
+[1;32m    210[0m         [0minput_dict[0m [0;34m=[0m [0mget_dict_values[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mself[0m[0;34m.[0m[0minput_var[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 211[0;31m         [0mloss[0m[0;34m,[0m [0meval_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0minput_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    212[0m [0;34m[0m[0m
+[1;32m    213[0m         [0;32mif[0m [0mreturn_dict[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36mforward[0;34m(self, x_dict, **kwargs)[0m
+[1;32m    580[0m [0;34m[0m[0m
+[1;32m    581[0m     [0;32mdef[0m [0mforward[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mx_dict[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 582[0;31m         [0mloss[0m[0;34m,[0m [0mx_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mloss1[0m[0;34m.[0m[0meval[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m,[0m [0mreturn_all[0m[0;34m=[0m[0;32mFalse[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    583[0m         [0;32mreturn[0m [0;34m-[0m[0mloss[0m[0;34m,[0m [0mx_dict[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    584[0m [0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/losses.py[0m in [0;36meval[0;34m(self, x_dict, return_dict, return_all, **kwargs)[0m
+[1;32m    209[0m [0;34m[0m[0m
+[1;32m    210[0m         [0minput_dict[0m [0;34m=[0m [0mget_dict_values[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mself[0m[0;34m.[0m[0minput_var[0m[0;34m,[0m [0mreturn_dict[0m[0;34m=[0m[0;32mTrue[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 211[0;31m         [0mloss[0m[0;34m,[0m [0meval_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0minput_dict[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    212[0m [0;34m[0m[0m
+[1;32m    213[0m         [0;32mif[0m [0mreturn_dict[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/losses/pdf.py[0m in [0;36mforward[0;34m(self, x, **kwargs)[0m
+[1;32m     40[0m [0;34m[0m[0m
+[1;32m     41[0m     [0;32mdef[0m [0mforward[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mx[0m[0;34m=[0m[0;34m{[0m[0;34m}[0m[0;34m,[0m [0;34m**[0m[0mkwargs[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m---> 42[0;31m         [0mlog_prob[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mp[0m[0;34m.[0m[0mget_log_prob[0m[0;34m([0m[0mx[0m[0;34m,[0m [0msum_features[0m[0;34m=[0m[0mself[0m[0;34m.[0m[0msum_features[0m[0;34m,[0m [0mfeature_dims[0m[0;34m=[0m[0mself[0m[0;34m.[0m[0mfeature_dims[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m     43[0m         [0;32mreturn[0m [0mlog_prob[0m[0;34m,[0m [0;34m{[0m[0;34m}[0m[0;34m[0m[0;34m[0m[0m
+[1;32m     44[0m [0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/distributions/flow_distribution.py[0m in [0;36mget_log_prob[0;34m(self, x_dict, sum_features, feature_dims)[0m
+[1;32m    251[0m     [0;32mdef[0m [0mget_log_prob[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mx_dict[0m[0;34m,[0m [0msum_features[0m[0;34m=[0m[0;32mTrue[0m[0;34m,[0m [0mfeature_dims[0m[0;34m=[0m[0;32mNone[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    252[0m         [0;31m# flow[0m[0;34m[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 253[0;31m         [0moutput_dict[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0minference[0m[0;34m([0m[0mx_dict[0m[0;34m,[0m [0mreturn_all[0m[0;34m=[0m[0;32mTrue[0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m=[0m[0;32mTrue[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    254[0m [0;34m[0m[0m
+[1;32m    255[0m         [0;31m# prior[0m[0;34m[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/distributions/flow_distribution.py[0m in [0;36minference[0;34m(self, x_dict, return_all, compute_jacobian)[0m
+[1;32m    238[0m [0;34m[0m[0m
+[1;32m    239[0m         [0;32mif[0m [0mlen[0m[0;34m([0m[0m_y[0m[0;34m)[0m [0;34m==[0m [0;36m0[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 240[0;31m             [0mz[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0m_x[0m[0;34m[[0m[0;36m0[0m[0;34m][0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m=[0m[0mcompute_jacobian[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    241[0m         [0;32melse[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    242[0m             [0mz[0m [0;34m=[0m [0mself[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0m_x[0m[0;34m[[0m[0;36m0[0m[0;34m][0m[0;34m,[0m [0my[0m[0;34m=[0m[0m_y[0m[0;34m[[0m[0;36m0[0m[0;34m][0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m=[0m[0mcompute_jacobian[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/distributions/flow_distribution.py[0m in [0;36mforward[0;34m(self, x, y, compute_jacobian)[0m
+[1;32m    277[0m [0;34m[0m[0m
+[1;32m    278[0m         """
+[0;32m--> 279[0;31m         [0;32mreturn[0m [0mself[0m[0;34m.[0m[0mflow[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0mx[0m[0;34m=[0m[0mx[0m[0;34m,[0m [0my[0m[0;34m=[0m[0my[0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m=[0m[0mcompute_jacobian[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    280[0m [0;34m[0m[0m
+[1;32m    281[0m     [0;32mdef[0m [0minverse[0m[0;34m([0m[0mself[0m[0;34m,[0m [0mz[0m[0;34m,[0m [0my[0m[0;34m=[0m[0;32mNone[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/flows/flows.py[0m in [0;36mforward[0;34m(self, x, y, compute_jacobian)[0m
+[1;32m    100[0m [0;34m[0m[0m
+[1;32m    101[0m         [0;32mfor[0m [0mflow[0m [0;32min[0m [0mself[0m[0;34m.[0m[0mflow_list[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 102[0;31m             [0mx[0m [0;34m=[0m [0mflow[0m[0;34m.[0m[0mforward[0m[0;34m([0m[0mx[0m[0;34m,[0m [0my[0m[0;34m,[0m [0mcompute_jacobian[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    103[0m             [0;32mif[0m [0mcompute_jacobian[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[1;32m    104[0m                 [0mlogdet_jacobian[0m [0;34m=[0m [0mlogdet_jacobian[0m [0;34m+[0m [0mflow[0m[0;34m.[0m[0mlogdet_jacobian[0m[0;34m[0m[0;34m[0m[0m
+
+[0;32m~/pixyz_check/pixyz/pixyz/flows/coupling.py[0m in [0;36mforward[0;34m(self, x, y, compute_jacobian)[0m
+[1;32m    153[0m [0;34m[0m[0m
+[1;32m    154[0m         [0;32mif[0m [0mcompute_jacobian[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0;32m--> 155[0;31m             [0mself[0m[0;34m.[0m[0m_logdet_jacobian[0m [0;34m=[0m [0mlog_s[0m[0;34m.[0m[0mview[0m[0;34m([0m[0mlog_s[0m[0;34m.[0m[0msize[0m[0;34m([0m[0;36m0[0m[0;34m)[0m[0;34m,[0m [0;34m-[0m[0;36m1[0m[0;34m)[0m[0;34m.[0m[0msum[0m[0;34m([0m[0;34m-[0m[0;36m1[0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m[1;32m    156[0m [0;34m[0m[0m
+[1;32m    157[0m         [0;32mreturn[0m [0mx[0m[0;34m[0m[0;34m[0m[0m
+
+[0;31mRuntimeError[0m: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
+RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.
+
+[NbConvertApp] Converting notebook vi.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 15986 bytes to vi.ipynb
+[NbConvertApp] Converting notebook gan.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 39787 bytes to gan.ipynb
+[NbConvertApp] Converting notebook cvae.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 18331 bytes to cvae.ipynb
+[NbConvertApp] Converting notebook gmm.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 639745 bytes to gmm.ipynb
+[NbConvertApp] Converting notebook m2.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 24447 bytes to m2.ipynb
+[NbConvertApp] Converting notebook mvae.ipynb to notebook
+[NbConvertApp] Executing notebook with kernel: pixyz_py38
+[NbConvertApp] Writing 73514 bytes to mvae.ipynb
