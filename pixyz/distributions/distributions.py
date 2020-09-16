@@ -683,6 +683,23 @@ class DistGraph(nn.Module):
     def prob_joint_factorized_and_text(self):
         return _make_prob_equality_text(self.prob_text, self.prob_factorized_text)
 
+    def visible_graph(self, dotmode=False):
+        visible_graph = nx.DiGraph()
+
+        def dont_esc(name: str):
+            return f"${name}$"
+        for factor in self.factors():
+            for var_name in factor.var:
+                for cond_var_name in factor.cond_var:
+                    if dotmode:
+                        visible_graph.add_edge(cond_var_name, var_name)
+                    else:
+                        visible_graph.add_edge(dont_esc(cond_var_name), dont_esc(var_name))
+        if dotmode:
+            for var_name in visible_graph:
+                visible_graph.add_node(var_name, texlbl=dont_esc(var_name))
+        return visible_graph
+
 
 class Distribution(nn.Module):
     """Distribution class. In Pixyz, all distributions are required to inherit this class.
