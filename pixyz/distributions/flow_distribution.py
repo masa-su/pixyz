@@ -140,7 +140,8 @@ class TransformedDistribution(Distribution):
         z : torch.Tensor
 
         """
-        z = self.flow.forward(x=x, y=y, compute_jacobian=compute_jacobian)
+        # hotfix: Suppress warnings from pytorch about mixed memory operations
+        z = self.flow.forward(x=x, y=y, compute_jacobian=compute_jacobian).contiguous()
 
         self.stored_x.clear()
         self.stored_x[hash(z)] = x
@@ -303,7 +304,8 @@ class InverseTransformedDistribution(Distribution):
         z : torch.Tensor
 
         """
-        return self.flow.forward(x=x, y=y, compute_jacobian=compute_jacobian)
+        # hotfix: Suppress warnings from pytorch about mixed memory operations
+        return self.flow.forward(x=x, y=y, compute_jacobian=compute_jacobian).contiguous()
 
     def inverse(self, z, y=None):
         """
