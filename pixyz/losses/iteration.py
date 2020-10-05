@@ -13,7 +13,7 @@ class IterativeLoss(Loss):
 
     .. math::
 
-        \mathcal{L} = \sum_{t=1}^{T}\mathcal{L}_{step}(x_t, h_t),
+        \mathcal{L} = \sum_{t=0}^{T-1}\mathcal{L}_{step}(x_t, h_t),
 
     where :math:`x_t = f_{slice\_step}(x, t)`.
 
@@ -65,7 +65,7 @@ class IterativeLoss(Loss):
     >>> loss_cls = IterativeLoss(step_loss=step_loss_cls,
     ...                          series_var=["x"], update_value={"h": "h_prev"})
     >>> print(loss_cls)
-    \sum_{t=1}^{t_{max}} mean \left(\mathbb{E}_{q(z,h|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
+    \sum_{t=0}^{t_{max} - 1} mean \left(\mathbb{E}_{q(z,h|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
     >>>
     >>> # Evaluate
     >>> x_sample = torch.randn(30, 2, 128) # (timestep_size, batch_size, feature_size)
@@ -76,15 +76,18 @@ class IterativeLoss(Loss):
     """
 
     def __init__(self, step_loss, max_iter=None,
-                 series_var=None, update_value={}, slice_step=None, timestep_var=["t"]):
+                 series_var=(), update_value={}, slice_step=None, timestep_var=()):
         super().__init__()
         self.step_loss = step_loss
         self.max_iter = max_iter
         self.update_value = update_value
         self.timestep_var = timestep_var
-        self.timpstep_symbol = sympy.Symbol(self.timestep_var[0])
+        if timestep_var:
+            self.timpstep_symbol = sympy.Symbol(self.timestep_var[0])
+        else:
+            self.timpstep_symbol = sympy.Symbol("t")
 
-        if (series_var is None) and (max_iter is None):
+        if not series_var and (max_iter is None):
             raise ValueError()
 
         self.slice_step = slice_step
@@ -98,7 +101,7 @@ class IterativeLoss(Loss):
 
         self._input_var = sorted(set(_input_var), key=_input_var.index)
 
-        if slice_step:
+        if timestep_var:
             self._input_var.remove(timestep_var[0])  # delete a time-step variable from input_var
 
         self.series_var = series_var
@@ -112,7 +115,7 @@ class IterativeLoss(Loss):
         else:
             max_iter = sympy.Symbol(sympy.latex(self.timpstep_symbol) + "_{max}")
 
-        _symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 1, max_iter))
+        _symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 0, max_iter - 1))
         _symbol = _symbol.subs({dummy_loss: self.step_loss._symbol})
         return _symbol
 
@@ -137,9 +140,9 @@ class IterativeLoss(Loss):
             mask = None
 
         for t in range(max_iter):
-            if self.slice_step:
+            if self.timestep_var:
                 x_dict.update({self.timestep_var[0]: t})
-            else:
+            if not self.slice_step:
                 # update series inputs & use slice_step_fn
                 x_dict.update(self.slice_step_fn(t, series_x_dict))
 
