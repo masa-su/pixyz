@@ -119,6 +119,13 @@ def test_save_dist(tmpdir, no_contiguous_tensor):
     assert torch.all(no_contiguous_tensor == q.loc).item()
 
 
+class TestNormal:
+    def test_init_with_same_param(self):
+        n = Normal(var=['x'], cond_var=['y'], loc='y', scale='y')
+        result = n.sample({'y': torch.ones(2, 3)})
+        assert result['x'].shape == (2, 3)
+
+
 class TestRelaxedBernoulli:
     def test_log_prob_of_hard_value(self):
         rb = RelaxedBernoulli(var=['x'], probs=torch.ones(2), temperature=torch.tensor(0.5))
