@@ -45,6 +45,14 @@ setup(
         "tensorboardX",
         "networkx",
     ],
+    extras_require={
+        'dev': ['pytest',
+                'pytest-cov',
+                'sphinx',
+                'sphinx_rtd_theme',
+                'numpy',
+                'sklearn'],
+    },
     license='MIT',
     classifiers=[
         'Programming Language :: Python :: 3.5',

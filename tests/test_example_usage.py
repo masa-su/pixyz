@@ -1,32 +1,24 @@
+# flake8: noqa: F841
 from __future__ import print_function
-import pytest
-from os.path import join as pjoin
-import torch
-from pixyz.utils import lru_cache_for_sample_dict
-from pixyz.distributions.exponential_distributions import RelaxedBernoulli, Normal
-from pixyz.losses import KullbackLeibler
-from pixyz.models import VAE
 
 import torch
 import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
-from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from tensorboardX import SummaryWriter
 import numpy as np
 
 from tqdm import tqdm
 
 from pixyz.distributions import Deterministic
 from pixyz.models import GAN
-from pixyz.distributions import Normal, InverseTransformedDistribution
+from pixyz.distributions import InverseTransformedDistribution
 from pixyz.flows import AffineCoupling, FlowList, Squeeze, Unsqueeze, Preprocess, ActNorm2d, ChannelConv
 from pixyz.layers import ResNet
 from pixyz.models import ML
 from pixyz.distributions.mixture_distributions import MixtureModel
 from pixyz.models import VI
-from pixyz.utils import get_dict_values, print_latex
+from pixyz.utils import get_dict_values
 from pixyz.distributions import Normal, Bernoulli, Categorical, ProductOfNormal
 from pixyz.losses import KullbackLeibler
 from pixyz.models import VAE
@@ -43,13 +35,13 @@ else:
 batch_size = 2
 epochs = 2
 
-
 # TODO: ファイル出力のコメントアウト
 # TODO: モックデータのインプット
 # TODO: 外部ライブラリ依存のコメントアウト
 
 
 mock_mnist = [(torch.zeros(28 * 28), 0), (torch.ones(28 * 28), 1)]
+mock_mnist_targets = torch.tensor([0, 1])
 mock_cifar10 = [(torch.ones(3, 32, 32), 3), (torch.ones(3, 32, 32), 1)]
 
 
@@ -61,7 +53,7 @@ def test_run_cvae():
     # transform = transforms.Compose([transforms.ToTensor(),
     #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
     # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-    # 
+    #
     # train_loader = torch.utils.data.DataLoader(
     #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
     #     shuffle=True, **kwargs)
@@ -75,11 +67,9 @@ def test_run_cvae():
     # In[3]:
     # In[4]:
 
-
     x_dim = 784
     y_dim = 10
     z_dim = 64
-
 
     # inference model q(z|x,y)
     class Inference(Normal):
@@ -96,7 +86,6 @@ def test_run_cvae():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z,y)
     class Generator(Bernoulli):
         def __init__(self):
@@ -111,7 +100,6 @@ def test_run_cvae():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     p = Generator().to(device)
     q = Inference().to(device)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
@@ -119,24 +107,20 @@ def test_run_cvae():
 
     # In[5]:
 
-
     print(prior)
     print_latex(prior)
 
     # In[6]:
-
 
     print(p)
     print_latex(p)
 
     # In[7]:
 
-
     print(q)
     print_latex(q)
 
     # In[8]:
-
 
     kl = KullbackLeibler(q, prior)
     print(kl)
@@ -144,14 +128,11 @@ def test_run_cvae():
 
     # In[9]:
 
-
     model = VAE(q, p, regularizer=kl, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -165,9 +146,7 @@ def test_run_cvae():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -181,9 +160,7 @@ def test_run_cvae():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[12]:
-
 
     def plot_reconstrunction(x, y):
         with torch.no_grad():
@@ -194,12 +171,10 @@ def test_run_cvae():
             recon = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return recon
 
-
     def plot_image_from_latent(z, y):
         with torch.no_grad():
             sample = p.sample_mean({"z": z, "y": y}).view(-1, 1, 28, 28).cpu()
             return sample
-
 
     def plot_reconstrunction_changing_y(x, y):
         y_change = torch.eye(10)[range(7)].to(device)
@@ -217,9 +192,7 @@ def test_run_cvae():
             recon_changing_y = torch.cat([x.view(-1, 1, 28, 28), recon_changing_y]).cpu()
             return recon_changing_y
 
-
     # In[13]:
-
 
     # writer = SummaryWriter()
 
@@ -258,13 +231,11 @@ def test_run_distributions():
     # In[2]:
     # In[3]:
 
-
     x_dim = 20
     y_dim = 30
     z_dim = 40
     a_dim = 50
     batch_n = 2
-
 
     class P1(Normal):
         def __init__(self):
@@ -281,7 +252,6 @@ def test_run_distributions():
             h12 = torch.cat([h1, h2], 1)
             return {"loc": self.fc21(h12), "scale": F.softplus(self.fc22(h12))}
 
-
     class P2(Normal):
         def __init__(self):
             super(P2, self).__init__(cond_var=["x", "y"], var=["z"], name="p_{2}")
@@ -296,7 +266,6 @@ def test_run_distributions():
             h4 = F.relu(self.fc4(torch.cat([h3, y], 1)))
             return {"loc": self.fc51(h4), "scale": F.softplus(self.fc52(h4))}
 
-
     p4 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["a"], features_shape=[a_dim], name="p_{4}")
     p6 = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["y"], features_shape=[y_dim], name="p_{6}")
 
@@ -305,7 +274,6 @@ def test_run_distributions():
     a = torch.from_numpy(np.random.random((batch_n, a_dim)).astype("float32"))
 
     # In[4]:
-
 
     p1 = P1()
     p2 = P2()
@@ -318,63 +286,52 @@ def test_run_distributions():
 
     # In[5]:
 
-
     print(p1)
     print_latex(p1)
 
     # In[6]:
-
 
     print(p2)
     print_latex(p2)
 
     # In[7]:
 
-
     print(p3)
     print_latex(p3)
 
     # In[8]:
-
 
     print(p4)
     print_latex(p4)
 
     # In[9]:
 
-
     print(p5)
     print_latex(p5)
 
     # In[10]:
-
 
     print(p_all)
     print_latex(p_all)
 
     # In[11]:
 
-
     for param in p3.parameters():
         print(type(param.data), param.size())
 
     # In[12]:
 
-
     p1.sample({"a": a, "y": y}, return_all=False)
 
     # In[13]:
-
 
     p1.sample({"a": a, "y": y}, sample_shape=[5], return_all=False)
 
     # In[14]:
 
-
     p1.sample({"a": a, "y": y}, return_all=True)
 
     # In[15]:
-
 
     p1_log_prob = p1.log_prob()
     print(p1_log_prob)
@@ -382,35 +339,29 @@ def test_run_distributions():
 
     # In[16]:
 
-
     outputs = p1.sample({"y": y, "a": a})
     print(p1_log_prob.eval(outputs))
 
     # In[17]:
-
 
     outputs = p2.sample({"x": x, "y": y})
     print(p2.log_prob().eval(outputs))
 
     # In[18]:
 
-
     outputs = p1.sample({"y": y, "a": a})
     print(outputs)
 
     # In[19]:
 
-
     p2.sample(outputs)
 
     # In[20]:
-
 
     outputs = p3.sample({"y": y, "a": a}, batch_n=batch_n)
     print(p3.log_prob().eval(outputs))
 
     # In[21]:
-
 
     outputs = p_all.sample(batch_n=batch_n)
     print(p_all.log_prob().eval(outputs))
@@ -422,7 +373,6 @@ def test_run_distributions():
 def test_run_gan():
     # In[1]:
     # In[2]:
-
 
     # root = '../data'
     # transform = transforms.Compose([transforms.ToTensor(),
@@ -469,7 +419,6 @@ def test_run_gan():
             x = self.model(z)
             return {"x": x}
 
-
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[z_dim], name="p_{prior}").to(device)
@@ -480,13 +429,10 @@ def test_run_gan():
 
     # In[5]:
 
-
     print(p)
     print_latex(p)
 
-
     # In[6]:
-
 
     # discriminator model p(t|x)
     class Discriminator(Deterministic):
@@ -506,17 +452,14 @@ def test_run_gan():
             t = self.model(x)
             return {"t": t}
 
-
     d = Discriminator().to(device)
 
     # In[7]:
-
 
     print(d)
     print_latex(d)
 
     # In[8]:
-
 
     model = GAN(p, d,
                 optimizer=optim.Adam, optimizer_params={"lr": 0.0002},
@@ -524,9 +467,7 @@ def test_run_gan():
     print(model)
     print_latex(model)
 
-
     # In[9]:
-
 
     def train(epoch):
         train_loss = 0
@@ -542,9 +483,7 @@ def test_run_gan():
         print('Epoch: {} Train loss: {:.4f}, {:.4f}'.format(epoch, train_loss.item(), train_d_loss.item()))
         return train_loss
 
-
     # In[10]:
-
 
     def test(epoch):
         test_loss = 0
@@ -561,18 +500,14 @@ def test_run_gan():
         print('Test loss: {:.4f}, {:.4f}'.format(test_loss, test_d_loss.item()))
         return test_loss
 
-
     # In[11]:
-
 
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = p_g.sample({"z": z_sample})["x"].view(-1, 1, 28, 28).cpu()
             return sample
 
-
     # In[12]:
-
 
     # writer = SummaryWriter()
 
@@ -619,7 +554,6 @@ def test_run_glow():
     # In[3]:
     # In[4]:
 
-
     in_channels = 3
     mid_channels = 64
     num_scales = 2
@@ -627,14 +561,11 @@ def test_run_glow():
 
     # In[5]:
 
-
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[in_channels, input_dim, input_dim], name="p_prior")
 
-
     # In[6]:
-
 
     class ScaleTranslateNet(nn.Module):
         def __init__(self, in_channels, mid_channels):
@@ -649,9 +580,7 @@ def test_run_glow():
             log_s = torch.tanh(log_s)
             return log_s, t
 
-
     # In[7]:
-
 
     flow_list = []
 
@@ -672,7 +601,6 @@ def test_run_glow():
 
     # In[9]:
 
-
     # inverse transformed distribution (z -> f^-1 -> x)
     p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"]).to(device)
     print(p)
@@ -680,14 +608,11 @@ def test_run_glow():
 
     # In[10]:
 
-
     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -701,9 +626,7 @@ def test_run_glow():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -716,15 +639,12 @@ def test_run_glow():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[12]:
-
 
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = p.inverse(z_sample).cpu()
             return sample
-
 
     def plot_reconstrunction(x):
         with torch.no_grad():
@@ -734,9 +654,7 @@ def test_run_glow():
             comparison = torch.cat([x.view(-1, 3, 32, 32), recon_batch]).cpu()
             return comparison
 
-
     # In[13]:
-
 
     # writer = SummaryWriter()
 
@@ -773,7 +691,6 @@ def test_run_gmm():
 
     # In[2]:
 
-
     # https://angusturner.github.io/generative_models/2017/11/03/pytorch-gaussian-mixture-model.html
     def sample(mu, var, nb_samples=500):
         """
@@ -788,7 +705,6 @@ def test_run_gmm():
                 torch.normal(mu, var.sqrt())
             ]
         return torch.stack(out, dim=0)
-
 
     # generate some clusters
     cluster1 = sample(
@@ -809,7 +725,6 @@ def test_run_gmm():
         nb_samples=100
     )
 
-
     def plot_2d_sample(sample_dict):
         x = sample_dict["x"][:, 0].data.numpy()
         y = sample_dict["x"][:, 1].data.numpy()
@@ -817,9 +732,7 @@ def test_run_gmm():
 
         # plt.show()
 
-
     # In[3]:
-
 
     # create the dummy dataset, by combining the clusters.
     samples = torch.cat([cluster1, cluster2, cluster3])
@@ -846,21 +759,17 @@ def test_run_gmm():
 
     # In[5]:
 
-
     p = MixtureModel(distributions=distributions, prior=prior)
     print(p)
     print_latex(p)
 
     # In[6]:
 
-
     post = p.posterior()
     print(post)
     print_latex(post)
 
-
     # In[7]:
-
 
     def get_density(N=200, x_range=(-5, 5), y_range=(-5, 5)):
         x = np.linspace(*x_range, N)
@@ -875,9 +784,7 @@ def test_run_gmm():
 
         return x, y, pdf
 
-
     # In[8]:
-
 
     # def plot_density_3d(x, y, loglike):
     #     fig = plt.figure(figsize=(10, 10))
@@ -892,9 +799,7 @@ def test_run_gmm():
     #     ax.view_init(27, -21)
     #     plt.show()
 
-
     # In[9]:
-
 
     def plot_density_2d(x, y, pdf):
         # fig = plt.figure(figsize=(5, 5))
@@ -908,9 +813,7 @@ def test_run_gmm():
         # plt.show()
         pass
 
-
     # In[10]:
-
 
     eps = 1e-6
     min_scale = 1e-6
@@ -948,7 +851,6 @@ def test_run_gmm():
 
     # In[11]:
 
-
     psudo_sample_dict = p.sample(batch_n=200)
     plot_2d_sample(samples_dict)
 
@@ -959,7 +861,6 @@ def test_run_gmm():
 def test_run_hvi():
     # In[1]:
     # In[2]:
-
 
     # root = '../data'
     # transform = transforms.Compose([transforms.ToTensor(),
@@ -980,11 +881,9 @@ def test_run_hvi():
 
     # In[4]:
 
-
     x_dim = 784
     a_dim = 64
     z_dim = 32
-
 
     # inference models
     class Q1(Normal):
@@ -1001,7 +900,6 @@ def test_run_hvi():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     class Q2(Normal):
         def __init__(self):
             super(Q2, self).__init__(cond_var=["x"], var=["z"], name="q")
@@ -1016,13 +914,11 @@ def test_run_hvi():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     q1 = Q1().to(device)
     q2 = Q2().to(device)
 
     q = q1 * q2
     q.name = "q"
-
 
     # generative models
     class P2(Normal):
@@ -1039,7 +935,6 @@ def test_run_hvi():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     class P3(Bernoulli):
         def __init__(self):
             super(P3, self).__init__(cond_var=["a"], var=["x"], name="p")
@@ -1053,7 +948,6 @@ def test_run_hvi():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     p2 = P2().to(device)
     p3 = P3().to(device)
 
@@ -1065,32 +959,26 @@ def test_run_hvi():
 
     # In[5]:
 
-
     print(p)
     print_latex(p)
 
     # In[6]:
-
 
     print(_p)
     print_latex(_p)
 
     # In[7]:
 
-
     print(q)
     print_latex(q)
 
     # In[8]:
 
-
     model = VI(p, q, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[9]:
-
 
     def train(epoch):
         train_loss = 0
@@ -1103,9 +991,7 @@ def test_run_hvi():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[10]:
-
 
     def test(epoch):
         test_loss = 0
@@ -1118,9 +1004,7 @@ def test_run_hvi():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[11]:
-
 
     def plot_reconstrunction(x):
         with torch.no_grad():
@@ -1131,15 +1015,12 @@ def test_run_hvi():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = _p.sample({"z": z_sample})["x"].view(-1, 1, 28, 28).cpu()  # TODO: it should be sample_mean
             return sample
 
-
     # In[12]:
-
 
     # writer = SummaryWriter()
 
@@ -1170,7 +1051,6 @@ def test_run_jmvae_poe():
     # In[1]:
     # In[2]:
 
-
     # root = '../data'
     # transform = transforms.Compose([transforms.ToTensor(),
     #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
@@ -1189,11 +1069,9 @@ def test_run_jmvae_poe():
     # In[3]:
     # In[4]:
 
-
     x_dim = 784
     y_dim = 10
     z_dim = 64
-
 
     # inference model q(z|x)
     class InferenceX(Normal):
@@ -1210,7 +1088,6 @@ def test_run_jmvae_poe():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # inference model q(z|y)
     class InferenceY(Normal):
         def __init__(self):
@@ -1226,7 +1103,6 @@ def test_run_jmvae_poe():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z)    
     class GeneratorX(Bernoulli):
         def __init__(self):
@@ -1241,7 +1117,6 @@ def test_run_jmvae_poe():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     # generative model p(y|z)    
     class GeneratorY(Categorical):
         def __init__(self):
@@ -1255,7 +1130,6 @@ def test_run_jmvae_poe():
             h = F.relu(self.fc1(z))
             h = F.relu(self.fc2(h))
             return {"probs": F.softmax(self.fc3(h), dim=1)}
-
 
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
@@ -1272,18 +1146,15 @@ def test_run_jmvae_poe():
 
     # In[5]:
 
-
     print(q)
     print_latex(q)
 
     # In[6]:
 
-
     print(p)
     print_latex(p)
 
     # In[7]:
-
 
     kl = KullbackLeibler(q, prior)
     kl_x = KullbackLeibler(q, q_x)
@@ -1295,15 +1166,12 @@ def test_run_jmvae_poe():
 
     # In[8]:
 
-
     model = VAE(q, p, other_distributions=[q_x, q_y],
                 regularizer=regularizer, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[9]:
-
 
     def train(epoch):
         train_loss = 0
@@ -1317,9 +1185,7 @@ def test_run_jmvae_poe():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[10]:
-
 
     def test(epoch):
         test_loss = 0
@@ -1333,9 +1199,7 @@ def test_run_jmvae_poe():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[11]:
-
 
     def plot_reconstrunction_missing(x):
         with torch.no_grad():
@@ -1344,7 +1208,6 @@ def test_run_jmvae_poe():
 
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
-
 
     def plot_image_from_label(x, y):
         with torch.no_grad():
@@ -1357,7 +1220,6 @@ def test_run_jmvae_poe():
             comparison = torch.cat(x_all).cpu()
             return comparison
 
-
     def plot_reconstrunction(x, y):
         with torch.no_grad():
             z = q.sample({"x": x, "y": y}, return_all=False)
@@ -1366,9 +1228,7 @@ def test_run_jmvae_poe():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     # In[12]:
-
 
     # writer = SummaryWriter()
 
@@ -1397,7 +1257,6 @@ def test_run_jmvae_poe():
 
     # In[ ]:
 
-
     # !/usr/bin/env python
     # coding: utf-8
 
@@ -1405,10 +1264,8 @@ def test_run_jmvae_poe():
 # # Joint multimodal variational autoencoder (JMVAE, using the VAE class)
 # Original paper: Joint Multimodal Learning with Deep Generative Models (https://arxiv.org/abs/1611.01891 )
 def test_run_jmvae():
-
     # In[1]:
     # In[2]:
-
 
     # root = '../data'
     # transform = transforms.Compose([transforms.ToTensor(),
@@ -1428,11 +1285,9 @@ def test_run_jmvae():
     # In[3]:
     # In[4]:
 
-
     x_dim = 784
     y_dim = 10
     z_dim = 64
-
 
     # inference model q(z|x,y)
     class Inference(Normal):
@@ -1449,7 +1304,6 @@ def test_run_jmvae():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # inference model q(z|x)
     class InferenceX(Normal):
         def __init__(self):
@@ -1464,7 +1318,6 @@ def test_run_jmvae():
             h = F.relu(self.fc1(x))
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
-
 
     # inference model q(z|y)
     class InferenceY(Normal):
@@ -1481,7 +1334,6 @@ def test_run_jmvae():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z)    
     class GeneratorX(Bernoulli):
         def __init__(self):
@@ -1496,7 +1348,6 @@ def test_run_jmvae():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     # generative model p(y|z)    
     class GeneratorY(Categorical):
         def __init__(self):
@@ -1510,7 +1361,6 @@ def test_run_jmvae():
             h = F.relu(self.fc1(z))
             h = F.relu(self.fc2(h))
             return {"probs": F.softmax(self.fc3(h), dim=1)}
-
 
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
@@ -1527,12 +1377,10 @@ def test_run_jmvae():
 
     # In[5]:
 
-
     print(p)
     print_latex(p)
 
     # In[6]:
-
 
     kl = KullbackLeibler(q, prior)
     kl_x = KullbackLeibler(q, q_x)
@@ -1544,15 +1392,12 @@ def test_run_jmvae():
 
     # In[7]:
 
-
     model = VAE(q, p, other_distributions=[q_x, q_y],
                 regularizer=regularizer, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[8]:
-
 
     def train(epoch):
         train_loss = 0
@@ -1566,9 +1411,7 @@ def test_run_jmvae():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[9]:
-
 
     def test(epoch):
         test_loss = 0
@@ -1582,9 +1425,7 @@ def test_run_jmvae():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[10]:
-
 
     def plot_reconstrunction_missing(x):
         with torch.no_grad():
@@ -1593,7 +1434,6 @@ def test_run_jmvae():
 
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
-
 
     def plot_image_from_label(x, y):
         with torch.no_grad():
@@ -1606,7 +1446,6 @@ def test_run_jmvae():
             comparison = torch.cat(x_all).cpu()
             return comparison
 
-
     def plot_reconstrunction(x, y):
         with torch.no_grad():
             z = q.sample({"x": x, "y": y}, return_all=False)
@@ -1615,9 +1454,7 @@ def test_run_jmvae():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     # In[11]:
-
 
     # writer = SummaryWriter()
 
@@ -1646,24 +1483,21 @@ def test_run_jmvae():
 
     # In[ ]:
 
-
     # !/usr/bin/env python
     # coding: utf-8
 
 
 # # Semi-supervised learning with M2 model
 def test_run_m2():
-
     # In[1]:
     # In[2]:
-
 
     # https://github.com/wohlert/semi-supervised-pytorch/blob/master/examples/notebooks/datautils.py
 
     from functools import reduce
     from operator import __or__
     from torch.utils.data.sampler import SubsetRandomSampler
-    from torchvision.datasets import MNIST
+    # from torchvision.datasets import MNIST
     import numpy as np
 
     labels_per_class = 10
@@ -1672,13 +1506,11 @@ def test_run_m2():
     # root = '../data'
     # transform = transforms.Compose([transforms.ToTensor(),
     #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
-    # 
+    #
     # mnist_train = MNIST(root=root, train=True, download=True, transform=transform)
     # mnist_valid = MNIST(root=root, train=False, transform=transform)
-    kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
-
+    mnist_train = mock_mnist
+    mnist_valid = mock_mnist
 
     def get_sampler(labels, n=None):
         # Only choose digits in n_labels
@@ -1692,19 +1524,25 @@ def test_run_m2():
         sampler = SubsetRandomSampler(indices)
         return sampler
 
-
     # Dataloaders for MNIST
+    # kwargs = {'num_workers': 1, 'pin_memory': True}
+    # labelled = torch.utils.data.DataLoader(mnist_train, batch_size=batch_size,
+    #                                        sampler=get_sampler(mnist_train.targets.numpy(), labels_per_class),
+    #                                        **kwargs)
+    # unlabelled = torch.utils.data.DataLoader(mnist_train, batch_size=batch_size,
+    #                                          sampler=get_sampler(mnist_train.targets.numpy()), **kwargs)
+    # validation = torch.utils.data.DataLoader(mnist_valid, batch_size=batch_size,
+    #                                          sampler=get_sampler(mnist_valid.targets.numpy()), **kwargs)
     kwargs = {'num_workers': 1, 'pin_memory': True}
     labelled = torch.utils.data.DataLoader(mnist_train, batch_size=batch_size,
-                                           sampler=get_sampler(mnist_train.targets.numpy(), labels_per_class),
+                                           sampler=get_sampler(mock_mnist_targets.numpy(), labels_per_class),
                                            **kwargs)
     unlabelled = torch.utils.data.DataLoader(mnist_train, batch_size=batch_size,
-                                             sampler=get_sampler(mnist_train.targets.numpy()), **kwargs)
+                                             sampler=get_sampler(mock_mnist_targets.numpy()), **kwargs)
     validation = torch.utils.data.DataLoader(mnist_valid, batch_size=batch_size,
-                                             sampler=get_sampler(mnist_valid.targets.numpy()), **kwargs)
+                                             sampler=get_sampler(mock_mnist_targets.numpy()), **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, Bernoulli, RelaxedCategorical, Categorical
     from pixyz.models import Model
@@ -1713,11 +1551,9 @@ def test_run_m2():
 
     # In[4]:
 
-
     x_dim = 784
     y_dim = 10
     z_dim = 64
-
 
     # inference model q(z|x,y)
     class Inference(Normal):
@@ -1732,8 +1568,7 @@ def test_run_m2():
             h = F.relu(self.fc1(torch.cat([x, y], 1)))
             return {"loc": self.fc21(h), "scale": F.softplus(self.fc22(h))}
 
-
-    # generative model p(x|z,y)    
+    # generative model p(x|z,y)
     class Generator(Bernoulli):
         def __init__(self):
             super().__init__(cond_var=["z", "y"], var=["x"], name="p")
@@ -1744,7 +1579,6 @@ def test_run_m2():
         def forward(self, z, y):
             h = F.relu(self.fc1(torch.cat([z, y], 1)))
             return {"probs": torch.sigmoid(self.fc2(h))}
-
 
     # classifier p(y|x)
     class Classifier(RelaxedCategorical):
@@ -1758,7 +1592,6 @@ def test_run_m2():
             h = F.softmax(self.fc2(h), dim=1)
             return {"probs": h}
 
-
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[z_dim], name="p_{prior}").to(device)
@@ -1771,24 +1604,20 @@ def test_run_m2():
 
     # In[5]:
 
-
     print(p_joint)
     print_latex(p_joint)
 
     # In[6]:
-
 
     print(q)
     print_latex(q)
 
     # In[7]:
 
-
     print(f)
     print_latex(f)
 
     # In[8]:
-
 
     # distributions for unsupervised learning
     _q_u = q.replace_var(x="x_u", y="y_u")
@@ -1807,18 +1636,15 @@ def test_run_m2():
 
     # In[9]:
 
-
     print(q_u)
     print_latex(q_u)
 
     # In[10]:
 
-
     print(f_u)
     print_latex(f_u)
 
     # In[11]:
-
 
     elbo_u = ELBO(p_joint_u, q_u)
     elbo = ELBO(p_joint, q)
@@ -1832,15 +1658,12 @@ def test_run_m2():
 
     # In[12]:
 
-
     model = Model(loss_cls, test_loss=nll.mean(),
                   distributions=[p, q, f], optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[13]:
-
 
     def train(epoch):
         train_loss = 0
@@ -1857,9 +1680,7 @@ def test_run_m2():
 
         return train_loss
 
-
     # In[14]:
-
 
     def test(epoch):
         test_loss = 0
@@ -1880,24 +1701,21 @@ def test_run_m2():
         print('Test loss: {:.4f}, Test accuracy: {:.4f}'.format(test_loss, test_accuracy))
         return test_loss, test_accuracy
 
-
     # In[15]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     for epoch in range(1, epochs + 1):
         train_loss = train(epoch)
         test_loss, test_accuracy = test(epoch)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-        writer.add_scalar('test_accuracy', test_accuracy, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    #     writer.add_scalar('test_accuracy', test_accuracy, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -1908,21 +1726,22 @@ def test_run_maximum_likelihood():
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Categorical
     from pixyz.models import ML
@@ -1930,10 +1749,8 @@ def test_run_maximum_likelihood():
 
     # In[4]:
 
-
     x_dim = 784
     y_dim = 10
-
 
     # classifier p(y|x)
     class Classifier(Categorical):
@@ -1950,25 +1767,20 @@ def test_run_maximum_likelihood():
 
             return {"probs": h}
 
-
     p = Classifier().to(device)
 
     # In[5]:
-
 
     print(p)
     print_latex(p)
 
     # In[6]:
 
-
     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[7]:
-
 
     def train(epoch):
         train_loss = 0
@@ -1982,9 +1794,7 @@ def test_run_maximum_likelihood():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[8]:
-
 
     def test(epoch):
         test_loss = 0
@@ -1998,23 +1808,20 @@ def test_run_maximum_likelihood():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[9]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     for epoch in range(1, epochs + 1):
         train_loss = train(epoch)
         test_loss = test(epoch)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -2025,21 +1832,22 @@ def test_run_mmd_vae():
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, Bernoulli, DataDistribution
     from pixyz.losses import CrossEntropy, MMD
@@ -2048,10 +1856,8 @@ def test_run_mmd_vae():
 
     # In[4]:
 
-
     x_dim = 784
     z_dim = 64
-
 
     # inference model q(z|x)
     class Inference(Normal):
@@ -2068,7 +1874,6 @@ def test_run_mmd_vae():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z)    
     class Generator(Bernoulli):
         def __init__(self):
@@ -2083,7 +1888,6 @@ def test_run_mmd_vae():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     p = Generator().to(device)
     q = Inference().to(device)
 
@@ -2097,18 +1901,15 @@ def test_run_mmd_vae():
 
     # In[5]:
 
-
     print(p)
     print_latex(p)
 
     # In[6]:
 
-
     print(q_mg)
     print_latex(q_mg)
 
     # In[7]:
-
 
     loss_cls = CrossEntropy(q, p).mean() + MMD(q_mg, prior, kernel="gaussian", sigma_sqr=z_dim / 2.)
     print(loss_cls)
@@ -2116,14 +1917,11 @@ def test_run_mmd_vae():
 
     # In[8]:
 
-
     model = Model(loss=loss_cls, distributions=[p, q, q_mg], optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[9]:
-
 
     def train(epoch):
         train_loss = 0
@@ -2136,9 +1934,7 @@ def test_run_mmd_vae():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[10]:
-
 
     def test(epoch):
         test_loss = 0
@@ -2151,9 +1947,7 @@ def test_run_mmd_vae():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[11]:
-
 
     def plot_reconstrunction(x):
         with torch.no_grad():
@@ -2163,17 +1957,14 @@ def test_run_mmd_vae():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = p.sample_mean({"z": z_sample}).view(-1, 1, 28, 28).cpu()
             return sample
 
-
     # In[12]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     z_sample = 0.5 * torch.randn(64, z_dim).to(device)
     _x, _ = iter(test_loader).next()
@@ -2186,16 +1977,15 @@ def test_run_mmd_vae():
         recon = plot_reconstrunction(_x[:8])
         sample = plot_image_from_latent(z_sample)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -2218,23 +2008,24 @@ def test_run_mvae():
     # In[1]:
     # In[2]:
 
-
     # MNIST
     # treat labels as a second modality
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.utils import print_latex
 
@@ -2268,13 +2059,11 @@ def test_run_mvae():
 
     # In[4]:
 
-
     from pixyz.distributions import Normal, Bernoulli, Categorical, ProductOfNormal
 
     x_dim = 784
     y_dim = 10
     z_dim = 64
-
 
     # inference model q(z|x) for image modality
     class InferenceX(Normal):
@@ -2291,7 +2080,6 @@ def test_run_mvae():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # inference model q(z|y) for label modality
     class InferenceY(Normal):
         def __init__(self):
@@ -2307,7 +2095,6 @@ def test_run_mvae():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z) 
     class GeneratorX(Bernoulli):
         def __init__(self):
@@ -2322,7 +2109,6 @@ def test_run_mvae():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     # generative model p(y|z)    
     class GeneratorY(Categorical):
         def __init__(self):
@@ -2336,7 +2122,6 @@ def test_run_mvae():
             h = F.relu(self.fc1(z))
             h = F.relu(self.fc2(h))
             return {"probs": F.softmax(self.fc3(h), dim=1)}
-
 
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
@@ -2356,12 +2141,10 @@ def test_run_mvae():
 
     # In[5]:
 
-
     print(q)
     print_latex(q)
 
     # In[6]:
-
 
     print(p)
     print_latex(p)
@@ -2371,13 +2154,11 @@ def test_run_mvae():
 
     # In[7]:
 
-
     from pixyz.losses import KullbackLeibler
     from pixyz.losses import LogProb
     from pixyz.losses import Expectation as E
 
     # In[8]:
-
 
     ELBO = -E(q, LogProb(p)) + KullbackLeibler(q, prior)
     ELBO_x = -E(q_x, LogProb(p_x)) + KullbackLeibler(q_x, prior)
@@ -2390,7 +2171,6 @@ def test_run_mvae():
 
     # In[9]:
 
-
     from pixyz.models import Model
 
     model = Model(loss=loss, distributions=[p_x, p_y, q_x, q_y],
@@ -2398,11 +2178,9 @@ def test_run_mvae():
     print(model)
     print_latex(model)
 
-
     # ## Define Train and Test loop using model
 
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -2416,9 +2194,7 @@ def test_run_mvae():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -2432,11 +2208,9 @@ def test_run_mvae():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # ## Reconstruction and generation
 
     # In[12]:
-
 
     def plot_reconstrunction_missing_label_modality(x):
         with torch.no_grad():
@@ -2447,7 +2221,6 @@ def test_run_mvae():
 
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
-
 
     def plot_image_from_label(x, y):
         with torch.no_grad():
@@ -2463,7 +2236,6 @@ def test_run_mvae():
             comparison = torch.cat(x_all).cpu()
             return comparison
 
-
     def plot_reconstrunction(x, y):
         with torch.no_grad():
             # infer from x and y
@@ -2474,12 +2246,10 @@ def test_run_mvae():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     # In[13]:
 
-
     # for visualising in TensorBoard
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     plot_number = 1
 
@@ -2496,17 +2266,16 @@ def test_run_mvae():
         sample = plot_image_from_label(_x[:8], _y[:8])
         recon_missing = plot_reconstrunction_missing_label_modality(_x[:8])
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_label', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-        writer.add_images('Image_reconstrunction_missing_label', recon_missing, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_label', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    #     writer.add_images('Image_reconstrunction_missing_label', recon_missing, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -2514,41 +2283,34 @@ def test_run_mvae():
 
 # # A toy example of variational inference with normalizing flow (using the VI class)
 def test_run_normalizing_flow_toy():
-
     # In[1]:
     # In[2]:
-
 
     from pixyz.distributions import CustomProb, Normal, TransformedDistribution
     from pixyz.models import VI
     from pixyz.flows import PlanarFlow, FlowList
     from pixyz.utils import print_latex
 
-
     # In[3]:
 
-
-    def plot_samples(points):
-        X_LIMS = (-4, 4)
-        Y_LIMS = (-4, 4)
-
-        fig = plt.figure(figsize=(4, 4))
-        ax = fig.add_subplot(111)
-        ax.scatter(points[:, 0], points[:, 1], alpha=0.7, s=25)
-        ax.set_xlim(*X_LIMS)
-        ax.set_ylim(*Y_LIMS)
-        ax.set_xlabel("p(z)")
-
-        plt.show()
-
+    # def plot_samples(points):
+    #     X_LIMS = (-4, 4)
+    #     Y_LIMS = (-4, 4)
+    # 
+    #     fig = plt.figure(figsize=(4, 4))
+    #     ax = fig.add_subplot(111)
+    #     ax.scatter(points[:, 0], points[:, 1], alpha=0.7, s=25)
+    #     ax.set_xlim(*X_LIMS)
+    #     ax.set_ylim(*Y_LIMS)
+    #     ax.set_xlabel("p(z)")
+    # 
+    #     plt.show()
 
     # In[4]:
-
 
     import torch
 
     x_dim = 2
-
 
     def log_prob(z):
         z1, z2 = torch.chunk(z, chunks=2, dim=1)
@@ -2560,36 +2322,31 @@ def test_run_normalizing_flow_toy():
 
         return -u
 
-
     p = CustomProb(log_prob, var=["z"])
-
 
     # In[5]:
 
+    # def plot_density(p):
+    #     X_LIMS = (-4, 4)
+    #     Y_LIMS = (-4, 4)
+    # 
+    #     x1 = np.linspace(*X_LIMS, 300)
+    #     x2 = np.linspace(*Y_LIMS, 300)
+    #     x1, x2 = np.meshgrid(x1, x2)
+    #     shape = x1.shape
+    #     x1 = x1.ravel()
+    #     x2 = x2.ravel()
+    # 
+    #     z = np.c_[x1, x2]
+    #     z = torch.FloatTensor(z)
+    # 
+    #     density_values = p.prob().eval({"z": z}).data.numpy().reshape(shape)
+    #     plt.imshow(density_values, cmap='jet')
+    #     plt.show()
 
-    def plot_density(p):
-        X_LIMS = (-4, 4)
-        Y_LIMS = (-4, 4)
-
-        x1 = np.linspace(*X_LIMS, 300)
-        x2 = np.linspace(*Y_LIMS, 300)
-        x1, x2 = np.meshgrid(x1, x2)
-        shape = x1.shape
-        x1 = x1.ravel()
-        x2 = x2.ravel()
-
-        z = np.c_[x1, x2]
-        z = torch.FloatTensor(z)
-
-        density_values = p.prob().eval({"z": z}).data.numpy().reshape(shape)
-        plt.imshow(density_values, cmap='jet')
-        plt.show()
-
-
-    plot_density(p)
+    # plot_density(p)
 
     # In[6]:
-
 
     # prior
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
@@ -2597,12 +2354,10 @@ def test_run_normalizing_flow_toy():
 
     # In[7]:
 
-
     # flow
     f = FlowList([PlanarFlow(x_dim) for _ in range(32)])
 
     # In[8]:
-
 
     # transformed distribution (x -> f -> z)
     q = TransformedDistribution(prior, f, var=["z"], name="q").to(device)
@@ -2611,13 +2366,11 @@ def test_run_normalizing_flow_toy():
 
     # In[9]:
 
-
     model = VI(p, q, optimizer=optim.Adam, optimizer_params={"lr": 1e-2})
     print(model)
     print_latex(model)
 
     # In[10]:
-
 
     for epoch in range(epochs):
         loss = model.train(batch_size=batch_size)
@@ -2627,10 +2380,9 @@ def test_run_normalizing_flow_toy():
 
             loss = model.test(batch_n=batch_size)
             samples = q.sample(batch_n=1000)
-            plot_samples(samples["z"].cpu().data.numpy())
+            # plot_samples(samples["z"].cpu().data.numpy())
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -2641,21 +2393,22 @@ def test_run_real_nvp_cifar():
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    num_workers = 8
-
-    transform_train = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.ToTensor()])
-    transform_test = transforms.Compose([transforms.ToTensor()])
-
-    train_loader = DataLoader(datasets.CIFAR10(root=root, train=True, download=True, transform=transform_train),
-                              batch_size=batch_size, shuffle=True, num_workers=num_workers)
-
-    test_loader = DataLoader(datasets.CIFAR10(root=root, train=False, download=True, transform=transform_test),
-                             batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    # root = '../data'
+    # num_workers = 8
+    # 
+    # transform_train = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.ToTensor()])
+    # transform_test = transforms.Compose([transforms.ToTensor()])
+    # 
+    # train_loader = DataLoader(datasets.CIFAR10(root=root, train=True, download=True, transform=transform_train),
+    #                           batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    # 
+    # test_loader = DataLoader(datasets.CIFAR10(root=root, train=False, download=True, transform=transform_test),
+    #                          batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    train_loader = torch.utils.data.DataLoader(mock_cifar10, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_cifar10, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, InverseTransformedDistribution
     from pixyz.flows import AffineCoupling, FlowList, Squeeze, Unsqueeze, Preprocess, Flow
@@ -2665,7 +2418,6 @@ def test_run_real_nvp_cifar():
 
     # In[4]:
 
-
     in_channels = 3
     mid_channels = 64
     num_scales = 2
@@ -2673,14 +2425,11 @@ def test_run_real_nvp_cifar():
 
     # In[5]:
 
-
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[in_channels, input_dim, input_dim], name="p_prior")
 
-
     # In[6]:
-
 
     class ScaleTranslateNet(nn.Module):
         def __init__(self, in_channels, mid_channels):
@@ -2695,9 +2444,7 @@ def test_run_real_nvp_cifar():
             log_s = torch.tanh(log_s)
             return log_s, t
 
-
     # In[7]:
-
 
     flow_list = [Preprocess()]
 
@@ -2720,21 +2467,17 @@ def test_run_real_nvp_cifar():
 
     # In[8]:
 
-
     # inverse transformed distribution (z -> f^-1 -> x)
     p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"]).to(device)
     print_latex(p)
 
     # In[9]:
 
-
     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -2748,9 +2491,7 @@ def test_run_real_nvp_cifar():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -2763,15 +2504,12 @@ def test_run_real_nvp_cifar():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[12]:
-
 
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = p.inverse(z_sample).cpu()
             return sample
-
 
     def plot_reconstrunction(x):
         with torch.no_grad():
@@ -2781,11 +2519,9 @@ def test_run_real_nvp_cifar():
             comparison = torch.cat([x.view(-1, 3, 32, 32), recon_batch]).cpu()
             return comparison
 
-
     # In[13]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     z_sample = torch.randn(64, 3, 32, 32).to(device)
     _x, _ = iter(test_loader).next()
@@ -2798,16 +2534,15 @@ def test_run_real_nvp_cifar():
         recon = plot_reconstrunction(_x[:8])
         sample = plot_image_from_latent(z_sample)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -2815,25 +2550,25 @@ def test_run_real_nvp_cifar():
 
 # # Real NVP （CIFAR10）
 def test_run_real_nvp_cond():
-
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    num_workers = 8
-
-    transform_train = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.ToTensor()])
-    transform_test = transforms.Compose([transforms.ToTensor()])
-
-    train_loader = DataLoader(datasets.CIFAR10(root=root, train=True, download=True, transform=transform_train),
-                              batch_size=batch_size, shuffle=True, num_workers=num_workers)
-
-    test_loader = DataLoader(datasets.CIFAR10(root=root, train=False, download=True, transform=transform_test),
-                             batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    # root = '../data'
+    # num_workers = 8
+    # 
+    # transform_train = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.ToTensor()])
+    # transform_test = transforms.Compose([transforms.ToTensor()])
+    # 
+    # train_loader = DataLoader(datasets.CIFAR10(root=root, train=True, download=True, transform=transform_train),
+    #                           batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    # 
+    # test_loader = DataLoader(datasets.CIFAR10(root=root, train=False, download=True, transform=transform_test),
+    #                          batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    train_loader = torch.utils.data.DataLoader(mock_cifar10, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_cifar10, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, InverseTransformedDistribution
     from pixyz.flows import AffineCoupling, FlowList, Squeeze, Unsqueeze, Preprocess, Flow
@@ -2843,7 +2578,6 @@ def test_run_real_nvp_cond():
 
     # In[4]:
 
-
     in_channels = 3
     mid_channels = 64
     num_scales = 2
@@ -2851,14 +2585,11 @@ def test_run_real_nvp_cond():
 
     # In[5]:
 
-
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[in_channels, input_dim, input_dim], name="p_prior")
 
-
     # In[6]:
-
 
     class ScaleTranslateNet(nn.Module):
         def __init__(self, in_channels, mid_channels):
@@ -2873,9 +2604,7 @@ def test_run_real_nvp_cond():
             log_s = torch.tanh(log_s)
             return log_s, t
 
-
     # In[7]:
-
 
     flow_list = [Preprocess()]
 
@@ -2898,21 +2627,17 @@ def test_run_real_nvp_cond():
 
     # In[8]:
 
-
     # inverse transformed distribution (z -> f^-1 -> x)
     p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"]).to(device)
     print_latex(p)
 
     # In[9]:
 
-
     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -2926,9 +2651,7 @@ def test_run_real_nvp_cond():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -2941,15 +2664,12 @@ def test_run_real_nvp_cond():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[12]:
-
 
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = p.inverse(z_sample).cpu()
             return sample
-
 
     def plot_reconstrunction(x):
         with torch.no_grad():
@@ -2959,11 +2679,9 @@ def test_run_real_nvp_cond():
             comparison = torch.cat([x.view(-1, 3, 32, 32), recon_batch]).cpu()
             return comparison
 
-
     # In[13]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     z_sample = torch.randn(64, 3, 32, 32).to(device)
     _x, _ = iter(test_loader).next()
@@ -2976,16 +2694,15 @@ def test_run_real_nvp_cond():
         recon = plot_reconstrunction(_x[:8])
         sample = plot_image_from_latent(z_sample)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -2996,21 +2713,22 @@ def test_run_real_nvp_cond_():
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, InverseTransformedDistribution
     from pixyz.flows import AffineCoupling, FlowList, BatchNorm1d, Shuffle, Preprocess, Reverse
@@ -3019,21 +2737,17 @@ def test_run_real_nvp_cond_():
 
     # In[4]:
 
-
     x_dim = 28 * 28
     y_dim = 10
     z_dim = x_dim
 
     # In[5]:
 
-
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[z_dim], name="p_prior").to(device)
 
-
     # In[6]:
-
 
     class ScaleTranslateNet(nn.Module):
         def __init__(self, in_features, hidden_features):
@@ -3049,9 +2763,7 @@ def test_run_real_nvp_cond_():
             t = self.fc3_t(hidden)
             return log_s, t
 
-
     # In[7]:
-
 
     # flow
     flow_list = []
@@ -3070,21 +2782,17 @@ def test_run_real_nvp_cond_():
 
     # In[8]:
 
-
     # inverse transformed distribution (z -> f^-1 -> x)
     p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"], cond_var=["y"]).to(device)
     print_latex(p)
 
     # In[9]:
 
-
     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -3098,9 +2806,7 @@ def test_run_real_nvp_cond_():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -3114,9 +2820,7 @@ def test_run_real_nvp_cond_():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[12]:
-
 
     def plot_reconstrunction(x, y):
         with torch.no_grad():
@@ -3126,12 +2830,10 @@ def test_run_real_nvp_cond_():
             recon = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return recon
 
-
     def plot_image_from_latent(z, y):
         with torch.no_grad():
             sample = p.inverse(z, y).view(-1, 1, 28, 28).cpu()
             return sample
-
 
     def plot_reconstrunction_changing_y(x, y):
         y_change = torch.eye(10)[range(7)].to(device)
@@ -3148,11 +2850,9 @@ def test_run_real_nvp_cond_():
             recon_changing_y = torch.cat([x.view(-1, 1, 28, 28), recon_changing_y]).cpu()
             return recon_changing_y
 
-
     # In[13]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     plot_number = 5
 
@@ -3171,17 +2871,16 @@ def test_run_real_nvp_cond_():
         sample = plot_image_from_latent(z_sample, y_sample)
         recon_changing_y = plot_reconstrunction_changing_y(_x[:8], _y[:8])
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-        writer.add_images('Image_reconstrunction_change_y', recon_changing_y, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    #     writer.add_images('Image_reconstrunction_change_y', recon_changing_y, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -3192,21 +2891,22 @@ def test_run_real_nvp_cond__():
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, InverseTransformedDistribution
     from pixyz.flows import AffineCoupling, FlowList, BatchNorm1d, Shuffle, Preprocess, Reverse
@@ -3215,21 +2915,17 @@ def test_run_real_nvp_cond__():
 
     # In[4]:
 
-
     x_dim = 28 * 28
     y_dim = 10
     z_dim = x_dim
 
     # In[5]:
 
-
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[z_dim], name="p_prior").to(device)
 
-
     # In[6]:
-
 
     class ScaleTranslateNet(nn.Module):
         def __init__(self, in_features, hidden_features):
@@ -3245,9 +2941,7 @@ def test_run_real_nvp_cond__():
             t = self.fc3_t(hidden)
             return log_s, t
 
-
     # In[7]:
-
 
     # flow
     flow_list = []
@@ -3266,21 +2960,17 @@ def test_run_real_nvp_cond__():
 
     # In[8]:
 
-
     # inverse transformed distribution (z -> f^-1 -> x)
     p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"], cond_var=["y"]).to(device)
     print_latex(p)
 
     # In[9]:
 
-
     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -3294,9 +2984,7 @@ def test_run_real_nvp_cond__():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -3310,9 +2998,7 @@ def test_run_real_nvp_cond__():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[12]:
-
 
     def plot_reconstrunction(x, y):
         with torch.no_grad():
@@ -3322,12 +3008,10 @@ def test_run_real_nvp_cond__():
             recon = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return recon
 
-
     def plot_image_from_latent(z, y):
         with torch.no_grad():
             sample = p.inverse(z, y).view(-1, 1, 28, 28).cpu()
             return sample
-
 
     def plot_reconstrunction_changing_y(x, y):
         y_change = torch.eye(10)[range(7)].to(device)
@@ -3344,11 +3028,9 @@ def test_run_real_nvp_cond__():
             recon_changing_y = torch.cat([x.view(-1, 1, 28, 28), recon_changing_y]).cpu()
             return recon_changing_y
 
-
     # In[13]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     plot_number = 5
 
@@ -3367,197 +3049,197 @@ def test_run_real_nvp_cond__():
         sample = plot_image_from_latent(z_sample, y_sample)
         recon_changing_y = plot_reconstrunction_changing_y(_x[:8], _y[:8])
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-        writer.add_images('Image_reconstrunction_change_y', recon_changing_y, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    #     writer.add_images('Image_reconstrunction_change_y', recon_changing_y, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
 
 
 # # A toy example of Real NVP (using the ML class)
-def test_run_real_nvp_toy():
-
-    # In[1]:
-    # In[2]:
-
-
-    from pixyz.distributions import Normal, InverseTransformedDistribution
-    from pixyz.flows import AffineCoupling, FlowList, BatchNorm1d
-    from pixyz.models import ML
-    from pixyz.utils import print_latex
-
-
-    # In[3]:
-
-
-    def plot_samples(points, noise):
-        X_LIMS = (-1.5, 2.5)
-        Y_LIMS = (-2.5, 2.5)
-
-        fig = plt.figure(figsize=(8, 4))
-        ax = fig.add_subplot(121)
-        ax.scatter(points[:, 0], points[:, 1], alpha=0.7, s=25, c="b")
-        ax.set_xlim(*X_LIMS)
-        ax.set_ylim(*Y_LIMS)
-        ax.set_xlabel("p(x)")
-
-        X_LIMS = (-3, 3)
-        Y_LIMS = (-3, 3)
-
-        ax = fig.add_subplot(122)
-        ax.scatter(noise[:, 0], noise[:, 1], alpha=0.7, s=25, c="r")
-        ax.set_xlim(*X_LIMS)
-        ax.set_ylim(*Y_LIMS)
-        ax.set_xlabel("p(z)")
-
-        plt.show()
-
-
-    # In[4]:
-
-
-    x_dim = 2
-    z_dim = x_dim
-
-    # In[5]:
-
-
-    # prior
-    prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
-                   var=["z"], features_shape=[z_dim], name="prior").to(device)
-
-
-    # In[6]:
-
-
-    class ScaleTranslateNet(nn.Module):
-        def __init__(self, in_features, hidden_features):
-            super().__init__()
-            self.layers = nn.Sequential(nn.Linear(in_features, hidden_features),
-                                        nn.ReLU(),
-                                        nn.Linear(hidden_features, hidden_features),
-                                        nn.ReLU())
-            self.log_s = nn.Linear(hidden_features, in_features)
-            self.t = nn.Linear(hidden_features, in_features)
-
-        def forward(self, x):
-            hidden = self.layers(x)
-            log_s = torch.tanh(self.log_s(hidden))
-            t = self.t(hidden)
-            return log_s, t
-
-
-    # In[7]:
-
-
-    # flow
-    flow_list = []
-    for i in range(5):
-        scale_translate_net = nn.Sequential(nn.Linear(x_dim, 256),
-                                            nn.ReLU(),
-                                            nn.Linear(256, 256),
-                                            nn.ReLU(),
-                                            nn.Linear(256, x_dim * 2))
-        flow_list.append(AffineCoupling(in_features=2,
-                                        scale_translate_net=ScaleTranslateNet(x_dim, 256),
-                                        inverse_mask=(i % 2 != 0)))
-        flow_list.append(BatchNorm1d(2))
-
-    f = FlowList(flow_list)
-
-    # In[8]:
-
-
-    # inverse transformed distribution (z -> f^-1 -> x)
-    p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"]).to(device)
-    print_latex(p)
-
-    # In[9]:
-
-
-    model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-2})
-    print(model)
-    print_latex(model)
-
-    # In[10]:
-
-
-    # plot training set
-    from sklearn import datasets
-
-    x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
-    noise = prior.sample(batch_n=test_size)["z"].data.cpu()
-    plot_samples(x, noise)
-
-    # In[11]:
-
-
-    for epoch in range(epochs):
-        x = datasets.make_moons(n_samples=batch_size, noise=0.1)[0].astype("float32")
-        x = torch.tensor(x).to(device)
-        loss = model.train({"x": x})
-
-        if epoch % 500 == 0:
-            print('Epoch: {} Test loss: {:.4f}'.format(epoch, loss))
-
-            # samples
-            samples = p.sample(batch_n=test_size)["x"].data.cpu()
-
-            # inference
-            _x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
-            _x = torch.tensor(_x).to(device)
-            noise = p.inference({"x": _x})["z"].data.cpu()
-
-            plot_samples(samples, noise)
-
-    # In[12]:
-
-
-    samples = p.sample(batch_n=test_size)["x"].data.cpu()
-
-    # inference
-    _x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
-    _x = torch.tensor(_x).to(device)
-    noise = p.inference({"x": _x})["z"].data.cpu()
-
-    plot_samples(samples, noise)
-
-    # In[ ]:
-
-
-    # !/usr/bin/env python
-    # coding: utf-8
-
+# def test_run_real_nvp_toy():
+# 
+#     # In[1]:
+#     # In[2]:
+# 
+# 
+#     from pixyz.distributions import Normal, InverseTransformedDistribution
+#     from pixyz.flows import AffineCoupling, FlowList, BatchNorm1d
+#     from pixyz.models import ML
+#     from pixyz.utils import print_latex
+# 
+# 
+#     # In[3]:
+# 
+# 
+#     # def plot_samples(points, noise):
+#     #     X_LIMS = (-1.5, 2.5)
+#     #     Y_LIMS = (-2.5, 2.5)
+#     # 
+#     #     fig = plt.figure(figsize=(8, 4))
+#     #     ax = fig.add_subplot(121)
+#     #     ax.scatter(points[:, 0], points[:, 1], alpha=0.7, s=25, c="b")
+#     #     ax.set_xlim(*X_LIMS)
+#     #     ax.set_ylim(*Y_LIMS)
+#     #     ax.set_xlabel("p(x)")
+#     # 
+#     #     X_LIMS = (-3, 3)
+#     #     Y_LIMS = (-3, 3)
+#     # 
+#     #     ax = fig.add_subplot(122)
+#     #     ax.scatter(noise[:, 0], noise[:, 1], alpha=0.7, s=25, c="r")
+#     #     ax.set_xlim(*X_LIMS)
+#     #     ax.set_ylim(*Y_LIMS)
+#     #     ax.set_xlabel("p(z)")
+#     # 
+#     #     plt.show()
+# 
+# 
+#     # In[4]:
+# 
+# 
+#     x_dim = 2
+#     z_dim = x_dim
+# 
+#     # In[5]:
+# 
+# 
+#     # prior
+#     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
+#                    var=["z"], features_shape=[z_dim], name="prior").to(device)
+# 
+# 
+#     # In[6]:
+# 
+# 
+#     class ScaleTranslateNet(nn.Module):
+#         def __init__(self, in_features, hidden_features):
+#             super().__init__()
+#             self.layers = nn.Sequential(nn.Linear(in_features, hidden_features),
+#                                         nn.ReLU(),
+#                                         nn.Linear(hidden_features, hidden_features),
+#                                         nn.ReLU())
+#             self.log_s = nn.Linear(hidden_features, in_features)
+#             self.t = nn.Linear(hidden_features, in_features)
+# 
+#         def forward(self, x):
+#             hidden = self.layers(x)
+#             log_s = torch.tanh(self.log_s(hidden))
+#             t = self.t(hidden)
+#             return log_s, t
+# 
+# 
+#     # In[7]:
+# 
+# 
+#     # flow
+#     flow_list = []
+#     for i in range(5):
+#         scale_translate_net = nn.Sequential(nn.Linear(x_dim, 256),
+#                                             nn.ReLU(),
+#                                             nn.Linear(256, 256),
+#                                             nn.ReLU(),
+#                                             nn.Linear(256, x_dim * 2))
+#         flow_list.append(AffineCoupling(in_features=2,
+#                                         scale_translate_net=ScaleTranslateNet(x_dim, 256),
+#                                         inverse_mask=(i % 2 != 0)))
+#         flow_list.append(BatchNorm1d(2))
+# 
+#     f = FlowList(flow_list)
+# 
+#     # In[8]:
+# 
+# 
+#     # inverse transformed distribution (z -> f^-1 -> x)
+#     p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"]).to(device)
+#     print_latex(p)
+# 
+#     # In[9]:
+# 
+# 
+#     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-2})
+#     print(model)
+#     print_latex(model)
+# 
+#     # In[10]:
+# 
+# 
+#     # plot training set
+#     # from sklearn import datasets
+# 
+#     x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
+#     noise = prior.sample(batch_n=test_size)["z"].data.cpu()
+#     plot_samples(x, noise)
+# 
+#     # In[11]:
+# 
+# 
+#     for epoch in range(epochs):
+#         x = datasets.make_moons(n_samples=batch_size, noise=0.1)[0].astype("float32")
+#         x = torch.tensor(x).to(device)
+#         loss = model.train({"x": x})
+# 
+#         if epoch % 500 == 0:
+#             print('Epoch: {} Test loss: {:.4f}'.format(epoch, loss))
+# 
+#             # samples
+#             samples = p.sample(batch_n=test_size)["x"].data.cpu()
+# 
+#             # inference
+#             _x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
+#             _x = torch.tensor(_x).to(device)
+#             noise = p.inference({"x": _x})["z"].data.cpu()
+# 
+#             plot_samples(samples, noise)
+# 
+#     # In[12]:
+# 
+# 
+#     samples = p.sample(batch_n=test_size)["x"].data.cpu()
+# 
+#     # inference
+#     _x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
+#     _x = torch.tensor(_x).to(device)
+#     noise = p.inference({"x": _x})["z"].data.cpu()
+# 
+#     plot_samples(samples, noise)
+# 
+#     # In[ ]:
+# 
+# 
+#     # !/usr/bin/env python
+#     # coding: utf-8
+# 
 
 # # Real NVP
 def test_run_real_nvp():
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
-    kwargs = {'batch_size': batch_size, 'num_workers': 4, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 4, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
+    kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, InverseTransformedDistribution
     from pixyz.flows import AffineCoupling, FlowList, BatchNorm1d, Shuffle, Preprocess, Reverse
@@ -3566,20 +3248,16 @@ def test_run_real_nvp():
 
     # In[4]:
 
-
     x_dim = 28 * 28
     z_dim = x_dim
 
     # In[5]:
 
-
     # prior model p(z)
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[z_dim], name="p_prior").to(device)
 
-
     # In[6]:
-
 
     class ScaleTranslateNet(nn.Module):
         def __init__(self, in_features, hidden_features):
@@ -3595,9 +3273,7 @@ def test_run_real_nvp():
             t = self.fc3_t(hidden)
             return log_s, t
 
-
     # In[7]:
-
 
     # flow
     flow_list = []
@@ -3616,21 +3292,17 @@ def test_run_real_nvp():
 
     # In[8]:
 
-
     # inverse transformed distribution (z -> f^-1 -> x)
     p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"]).to(device)
     print_latex(p)
 
     # In[9]:
 
-
     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -3644,9 +3316,7 @@ def test_run_real_nvp():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -3659,9 +3329,7 @@ def test_run_real_nvp():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[12]:
-
 
     def plot_reconstrunction(x):
         with torch.no_grad():
@@ -3671,17 +3339,14 @@ def test_run_real_nvp():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = p.inverse(z_sample).view(-1, 1, 28, 28).cpu()
             return sample
 
-
     # In[13]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     z_sample = torch.randn(64, z_dim).to(device)
     _x, _ = iter(test_loader).next()
@@ -3694,16 +3359,15 @@ def test_run_real_nvp():
         recon = plot_reconstrunction(_x[:8])
         sample = plot_image_from_latent(z_sample)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
-
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -3714,21 +3378,22 @@ def test_run_vae_model():
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, Bernoulli
     from pixyz.losses import KullbackLeibler, Expectation as E
@@ -3737,10 +3402,8 @@ def test_run_vae_model():
 
     # In[4]:
 
-
     x_dim = 784
     z_dim = 64
-
 
     # inference model q(z|x)
     class Inference(Normal):
@@ -3757,7 +3420,6 @@ def test_run_vae_model():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z)    
     class Generator(Bernoulli):
         def __init__(self):
@@ -3772,7 +3434,6 @@ def test_run_vae_model():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     p = Generator().to(device)
     q = Inference().to(device)
 
@@ -3782,24 +3443,20 @@ def test_run_vae_model():
 
     # In[5]:
 
-
     print(prior)
     print_latex(prior)
 
     # In[6]:
-
 
     print(p)
     print_latex(p)
 
     # In[7]:
 
-
     print(q)
     print_latex(q)
 
     # In[8]:
-
 
     loss = (KullbackLeibler(q, prior) - E(q, p.log_prob())).mean()
     print(loss)
@@ -3807,15 +3464,12 @@ def test_run_vae_model():
 
     # In[9]:
 
-
     model = Model(loss=loss, distributions=[p, q],
                   optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -3828,9 +3482,7 @@ def test_run_vae_model():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -3843,9 +3495,7 @@ def test_run_vae_model():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[12]:
-
 
     def plot_reconstrunction(x):
         with torch.no_grad():
@@ -3855,17 +3505,14 @@ def test_run_vae_model():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = p.sample_mean({"z": z_sample}).view(-1, 1, 28, 28).cpu()
             return sample
 
-
     # In[13]:
 
-
-    writer = SummaryWriter('/runs/vae_model')
+    # writer = SummaryWriter('/runs/vae_model')
 
     z_sample = 0.5 * torch.randn(64, z_dim).to(device)
     _x, _ = iter(test_loader).next()
@@ -3878,22 +3525,19 @@ def test_run_vae_model():
         recon = plot_reconstrunction(_x[:8])
         sample = plot_image_from_latent(z_sample)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-
-    writer.close()
-
-    # In[ ]:
-
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
 
-
     # In[ ]:
 
+    # In[ ]:
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -3903,26 +3547,26 @@ def test_run_vae_model():
 def test_run_vae_with_vae_class():
     # * Original paper: Auto-Encoding Variational Bayes (https://arxiv.org/pdf/1312.6114.pdf)
 
-
     # In[1]:
     # In[2]:
 
-
     # MNIST
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.utils import print_latex
 
@@ -3933,12 +3577,10 @@ def test_run_vae_with_vae_class():
 
     # In[4]:
 
-
     from pixyz.distributions import Normal, Bernoulli
 
     x_dim = 784
     z_dim = 64
-
 
     # inference model q(z|x)
     class Inference(Normal):
@@ -3965,7 +3607,6 @@ def test_run_vae_with_vae_class():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z)    
     class Generator(Bernoulli):
         """
@@ -3988,7 +3629,6 @@ def test_run_vae_with_vae_class():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     p = Generator().to(device)
     q = Inference().to(device)
 
@@ -3999,18 +3639,15 @@ def test_run_vae_with_vae_class():
 
     # In[5]:
 
-
     print(prior)
     print_latex(prior)
 
     # In[6]:
 
-
     print(p)
     print_latex(p)
 
     # In[7]:
-
 
     print(q)
     print_latex(q)
@@ -4020,7 +3657,6 @@ def test_run_vae_with_vae_class():
 
     # In[8]:
 
-
     from pixyz.losses import KullbackLeibler
 
     # define additional loss terms for regularizing representation of latent variables
@@ -4029,18 +3665,15 @@ def test_run_vae_with_vae_class():
 
     # In[9]:
 
-
     from pixyz.models import VAE
 
     model = VAE(encoder=q, decoder=p, regularizer=kl, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # ## Define Train and Test loop using model
 
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -4053,9 +3686,7 @@ def test_run_vae_with_vae_class():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -4068,11 +3699,9 @@ def test_run_vae_with_vae_class():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # ## Reconstruct image and generate image
 
     # In[12]:
-
 
     def plot_reconstrunction(x):
         """
@@ -4089,7 +3718,6 @@ def test_run_vae_with_vae_class():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     def plot_image_from_latent(z_sample):
         """
         generate new image given latent variable z
@@ -4099,12 +3727,10 @@ def test_run_vae_with_vae_class():
             sample = p.sample_mean({"z": z_sample}).view(-1, 1, 28, 28).cpu()
             return sample
 
-
     # In[13]:
 
-
     # for visualising in TensorBoard
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     # fix latent variable z for watching generative model improvement 
     z_sample = 0.5 * torch.randn(64, z_dim).to(device)
@@ -4120,13 +3746,13 @@ def test_run_vae_with_vae_class():
         recon = plot_reconstrunction(_x[:8])
         sample = plot_image_from_latent(z_sample)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    # 
+    # writer.close()
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -4139,22 +3765,23 @@ def test_run_vae():
     # In[1]:
     # In[2]:
 
-
     # MNIST
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.utils import print_latex
 
@@ -4165,12 +3792,10 @@ def test_run_vae():
 
     # In[4]:
 
-
     from pixyz.distributions import Normal, Bernoulli
 
     x_dim = 784
     z_dim = 64
-
 
     # inference model q(z|x)
     class Inference(Normal):
@@ -4197,7 +3822,6 @@ def test_run_vae():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z)    
     class Generator(Bernoulli):
         """
@@ -4220,7 +3844,6 @@ def test_run_vae():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     p = Generator().to(device)
     q = Inference().to(device)
 
@@ -4231,18 +3854,15 @@ def test_run_vae():
 
     # In[5]:
 
-
     print(prior)
     print_latex(prior)
 
     # In[6]:
 
-
     print(p)
     print_latex(p)
 
     # In[7]:
-
 
     print(q)
     print_latex(q)
@@ -4254,7 +3874,6 @@ def test_run_vae():
 
     # In[8]:
 
-
     from pixyz.losses import LogProb, KullbackLeibler, Expectation as E
 
     loss = (KullbackLeibler(q, prior) - E(q, LogProb(p))).mean()
@@ -4265,7 +3884,6 @@ def test_run_vae():
 
     # In[9]:
 
-
     from pixyz.models import Model
 
     model = Model(loss=loss, distributions=[p, q],
@@ -4273,11 +3891,9 @@ def test_run_vae():
     print(model)
     print_latex(model)
 
-
     # ## Define Train and Test loop using model
 
     # In[10]:
-
 
     def train(epoch):
         train_loss = 0
@@ -4290,9 +3906,7 @@ def test_run_vae():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[11]:
-
 
     def test(epoch):
         test_loss = 0
@@ -4305,11 +3919,9 @@ def test_run_vae():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # ## Reconstruct image and generate image
 
     # In[12]:
-
 
     def plot_reconstrunction(x):
         """
@@ -4326,7 +3938,6 @@ def test_run_vae():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     def plot_image_from_latent(z_sample):
         """
         generate new image given latent variable z
@@ -4336,12 +3947,10 @@ def test_run_vae():
             sample = p.sample_mean({"z": z_sample}).view(-1, 1, 28, 28).cpu()
             return sample
 
-
     # In[13]:
 
-
     # for visualising in TensorBoard
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     # fix latent variable z for watching generative model improvement 
     z_sample = 0.5 * torch.randn(64, z_dim).to(device)
@@ -4357,13 +3966,13 @@ def test_run_vae():
         recon = plot_reconstrunction(_x[:8])
         sample = plot_image_from_latent(z_sample)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    # 
+    # writer.close()
 
     # !/usr/bin/env python
     # coding: utf-8
@@ -4371,25 +3980,25 @@ def test_run_vae():
 
 # # Variational autoencoder (using the VI class)
 def test_run_vi():
-
     # In[1]:
     # In[2]:
 
-
-    root = '../data'
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # root = '../data'
+    # transform = transforms.Compose([transforms.ToTensor(),
+    #                                 transforms.Lambda(lambd=lambda x: x.view(-1))])
+    # kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
+    # 
+    # train_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=True, transform=transform, download=True),
+    #     shuffle=True, **kwargs)
+    # test_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST(root=root, train=False, transform=transform),
+    #     shuffle=False, **kwargs)
     kwargs = {'batch_size': batch_size, 'num_workers': 1, 'pin_memory': True}
-
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=True, transform=transform, download=True),
-        shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root=root, train=False, transform=transform),
-        shuffle=False, **kwargs)
+    train_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(mock_mnist, shuffle=False, **kwargs)
 
     # In[3]:
-
 
     from pixyz.distributions import Normal, Bernoulli
     from pixyz.models import VI
@@ -4397,10 +4006,8 @@ def test_run_vi():
 
     # In[4]:
 
-
     x_dim = 784
     z_dim = 64
-
 
     # inference model q(z|x)
     class Inference(Normal):
@@ -4417,7 +4024,6 @@ def test_run_vi():
             h = F.relu(self.fc2(h))
             return {"loc": self.fc31(h), "scale": F.softplus(self.fc32(h))}
 
-
     # generative model p(x|z)    
     class Generator(Bernoulli):
         def __init__(self):
@@ -4432,7 +4038,6 @@ def test_run_vi():
             h = F.relu(self.fc2(h))
             return {"probs": torch.sigmoid(self.fc3(h))}
 
-
     p = Generator().to(device)
     q = Inference().to(device)
 
@@ -4444,26 +4049,21 @@ def test_run_vi():
 
     # In[5]:
 
-
     print(p_joint)
     print_latex(p_joint)
 
     # In[6]:
-
 
     print(q)
     print_latex(q)
 
     # In[7]:
 
-
     model = VI(p_joint, q, optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     print(model)
     print_latex(model)
 
-
     # In[8]:
-
 
     def train(epoch):
         train_loss = 0
@@ -4476,9 +4076,7 @@ def test_run_vi():
         print('Epoch: {} Train loss: {:.4f}'.format(epoch, train_loss))
         return train_loss
 
-
     # In[9]:
-
 
     def test(epoch):
         test_loss = 0
@@ -4491,9 +4089,7 @@ def test_run_vi():
         print('Test loss: {:.4f}'.format(test_loss))
         return test_loss
 
-
     # In[10]:
-
 
     def plot_reconstrunction(x):
         with torch.no_grad():
@@ -4503,17 +4099,14 @@ def test_run_vi():
             comparison = torch.cat([x.view(-1, 1, 28, 28), recon_batch]).cpu()
             return comparison
 
-
     def plot_image_from_latent(z_sample):
         with torch.no_grad():
             sample = p.sample_mean({"z": z_sample}).view(-1, 1, 28, 28).cpu()
             return sample
 
-
     # In[11]:
 
-
-    writer = SummaryWriter()
+    # writer = SummaryWriter()
 
     z_sample = 0.5 * torch.randn(64, z_dim).to(device)
     _x, _ = iter(test_loader).next()
@@ -4526,12 +4119,12 @@ def test_run_vi():
         recon = plot_reconstrunction(_x[:8])
         sample = plot_image_from_latent(z_sample)
 
-        writer.add_scalar('train_loss', train_loss.item(), epoch)
-        writer.add_scalar('test_loss', test_loss.item(), epoch)
-
-        writer.add_images('Image_from_latent', sample, epoch)
-        writer.add_images('Image_reconstrunction', recon, epoch)
-
-    writer.close()
+    #     writer.add_scalar('train_loss', train_loss.item(), epoch)
+    #     writer.add_scalar('test_loss', test_loss.item(), epoch)
+    # 
+    #     writer.add_images('Image_from_latent', sample, epoch)
+    #     writer.add_images('Image_reconstrunction', recon, epoch)
+    # 
+    # writer.close()
 
     # In[ ]:
