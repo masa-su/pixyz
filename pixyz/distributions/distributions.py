@@ -781,8 +781,7 @@ class DistributionBase(Distribution):
                     replaced_params_dict[replaced_key] = value
 
         vars_dict = {key: value for key, value in params_dict.items() if key not in self.replace_params_dict}
-
-        output_dict = self.forward(**vars_dict)
+        output_dict = self(**vars_dict)
 
         output_dict.update(replaced_params_dict)
 
@@ -1076,7 +1075,7 @@ class ReplaceVarDistribution(Distribution):
         self._input_var = _input_var
 
     def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
+        return self.p(*args, **kwargs)
 
     def get_params(self, params_dict={}):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
@@ -1213,7 +1212,7 @@ class MarginalizeVarDistribution(Distribution):
         self._marginalize_list = marginalize_list
 
     def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
+        return self.p(*args, **kwargs)
 
     def get_params(self, params_dict={}):
         return self.p.get_params(params_dict)
