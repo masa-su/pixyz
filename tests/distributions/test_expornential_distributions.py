@@ -1,6 +1,8 @@
 import pytest
 from os.path import join as pjoin
 import torch
+
+from pixyz.losses import IterativeLoss, Parameter
 from pixyz.utils import lru_cache_for_sample_dict
 from pixyz.distributions.exponential_distributions import RelaxedBernoulli, Normal
 from pixyz.losses import KullbackLeibler
@@ -136,6 +138,16 @@ class TestRelaxedBernoulli:
 
 
 class TestIterativeLoss:
+    def test_print_latex(self):
+        t_max = 3
+        itr = IterativeLoss(Parameter('t'), max_iter=t_max, timestep_var='t')
+        assert itr.loss_text == r"\sum_{t=0}^{" + str(t_max - 1) + "} t"
+
+    def test_time_specific_step_loss(self):
+        t_max = 3
+        itr = IterativeLoss(Parameter('t'), max_iter=t_max, timestep_var='t')
+        assert itr.eval() == sum(range(t_max))
+
     def test_restore_given_value_after_eval(self):
         pass
 
