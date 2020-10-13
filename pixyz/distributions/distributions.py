@@ -4,7 +4,7 @@ import re
 from torch import nn
 from copy import deepcopy
 
-from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
+from ..utils import get_dict_values, replace_dict_keys, delete_dict_values,\
     tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict
 from ..losses import LogProb, Prob
 
@@ -653,7 +653,9 @@ class DistributionBase(Distribution):
         for key in params_dict.keys():
             if type(params_dict[key]) is str:
                 if params_dict[key] in self._cond_var:
-                    self.replace_params_dict[params_dict[key]] = key
+                    if params_dict[key] not in self.replace_params_dict:
+                        self.replace_params_dict[params_dict[key]] = []
+                    self.replace_params_dict[params_dict[key]].append(key)
                 else:
                     raise ValueError("parameter setting {}:{} is not valid because cond_var does not contains {}."
                                      .format(key, params_dict[key], params_dict[key]))
@@ -772,10 +774,16 @@ class DistributionBase(Distribution):
 
     @lru_cache_for_sample_dict()
     def get_params(self, params_dict={}, **kwargs):
-        params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
-        output_dict = self.forward(**vars_dict)
+        replaced_params_dict = {}
+        for key, value in params_dict.items():
+            if key in self.replace_params_dict:
+                for replaced_key in self.replace_params_dict[key]:
+                    replaced_params_dict[replaced_key] = value
 
-        output_dict.update(params_dict)
+        vars_dict = {key: value for key, value in params_dict.items() if key not in self.replace_params_dict}
+        output_dict = self(**vars_dict)
+
+        output_dict.update(replaced_params_dict)
 
         # append constant parameters to output_dict
         constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys,
@@ -1067,7 +1075,7 @@ class ReplaceVarDistribution(Distribution):
         self._input_var = _input_var
 
     def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
+        return self.p(*args, **kwargs)
 
     def get_params(self, params_dict={}):
         params_dict = replace_dict_keys(params_dict, self._replace_inv_cond_var_dict)
@@ -1204,7 +1212,7 @@ class MarginalizeVarDistribution(Distribution):
         self._marginalize_list = marginalize_list
 
     def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
+        return self.p(*args, **kwargs)
 
     def get_params(self, params_dict={}):
         return self.p.get_params(params_dict)

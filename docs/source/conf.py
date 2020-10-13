@@ -165,7 +165,7 @@ texinfo_documents = [
 ]
 
 autodoc_member_order = 'bysource'
-autodoc_default_flags = ['show-inheritance']
+autodoc_default_options = {'show-inheritance': True}
 
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True

@@ -152,7 +152,7 @@ class AffineCoupling(Flow):
         x = x_masked + x_inv_masked * torch.exp(log_s) + t
 
         if compute_jacobian:
-            self._logdet_jacobian = log_s.view(log_s.size(0), -1).sum(-1)
+            self._logdet_jacobian = log_s.contiguous().view(log_s.size(0), -1).sum(-1)
 
         return x
 

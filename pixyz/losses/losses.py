@@ -208,7 +208,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
                                                                                         list(x_dict.keys())))
 
         input_dict = get_dict_values(x_dict, self.input_var, return_dict=True)
-        loss, eval_dict = self.forward(input_dict, **kwargs)
+        loss, eval_dict = self(input_dict, **kwargs)
 
         if return_dict:
             output_dict = x_dict.copy() if return_all else {}

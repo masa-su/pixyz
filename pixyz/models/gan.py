@@ -6,11 +6,78 @@ from ..distributions import DataDistribution
 
 
 class GAN(Model):
-    """
+    r"""
     Generative Adversarial Network
 
     (Adversarial) Jensen-Shannon divergence between given distributions (p_data, p)
     is set as the loss class of this model.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from torch import nn, optim
+    >>> from pixyz.distributions import Deterministic
+    >>> from pixyz.distributions import Normal
+    >>> from pixyz.models import GAN
+    >>> from pixyz.utils import print_latex
+    >>> x_dim = 128
+    >>> z_dim = 100
+    ...
+    >>> # Set distributions (Distribution API)
+    ...
+    >>> # generator model p(x|z)
+    >>> class Generator(Deterministic):
+    ...     def __init__(self):
+    ...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+    ...         self.model = nn.Sequential(
+    ...             nn.Linear(z_dim, x_dim),
+    ...             nn.Sigmoid()
+    ...         )
+    ...     def forward(self, z):
+    ...         x = self.model(z)
+    ...         return {"x": x}
+    ...
+    >>> # prior model p(z)
+    >>> prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
+    ...                var=["z"], features_shape=[z_dim], name="p_{prior}")
+    ...
+    >>> # generative model
+    >>> p_g = Generator()
+    >>> p = (p_g*prior).marginalize_var("z")
+    ...
+    >>> # discriminator model p(t|x)
+    >>> class Discriminator(Deterministic):
+    ...     def __init__(self):
+    ...         super(Discriminator, self).__init__(cond_var=["x"], var=["t"], name="d")
+    ...         self.model = nn.Sequential(
+    ...             nn.Linear(x_dim, 1),
+    ...             nn.Sigmoid()
+    ...         )
+    ...     def forward(self, x):
+    ...         t = self.model(x)
+    ...         return {"t": t}
+    ...
+    >>> d = Discriminator()
+    >>> # Set a model (Model API)
+    >>> model = GAN(p, d, optimizer_params={"lr":0.0002}, d_optimizer_params={"lr":0.0002})
+    >>> print(model)
+    Distributions (for training):
+      p(x)
+    Loss function:
+      mean(D_{JS}^{Adv} \left[p_{data}(x)||p(x) \right])
+    Optimizer:
+      Adam (
+      Parameter Group 0
+          amsgrad: False
+          betas: (0.9, 0.999)
+          eps: 1e-08
+          lr: 0.0002
+          weight_decay: 0
+      )
+    >>> # Train and test the model
+    >>> data = torch.randn(1, x_dim)  # Pseudo data
+    >>> train_loss = model.train({"x": data})
+    >>> test_loss = model.test({"x": data})
     """
     def __init__(self, p, discriminator,
                  optimizer=optim.Adam,
