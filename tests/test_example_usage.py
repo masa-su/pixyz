@@ -35,10 +35,6 @@ else:
 batch_size = 2
 epochs = 2
 
-# TODO: ファイル出力のコメントアウト
-# TODO: モックデータのインプット
-# TODO: 外部ライブラリ依存のコメントアウト
-
 
 mock_mnist = [(torch.zeros(28 * 28), 0), (torch.ones(28 * 28), 1)]
 mock_mnist_targets = torch.tensor([0, 1])
@@ -1500,8 +1496,10 @@ def test_run_m2():
     # from torchvision.datasets import MNIST
     import numpy as np
 
-    labels_per_class = 10
-    n_labels = 10
+    # labels_per_class = 10
+    # n_labels = 10
+    labels_per_class = 1
+    n_labels = 2
 
     # root = '../data'
     # transform = transforms.Compose([transforms.ToTensor(),
@@ -1667,7 +1665,7 @@ def test_run_m2():
 
     def train(epoch):
         train_loss = 0
-        for x_u, y_u in tqdm(unlabelled):
+        for x_u, y_u in unlabelled:
             x, y = iter(labelled).next()
             x = x.to(device)
             y = torch.eye(10)[y].to(device)
@@ -3064,160 +3062,161 @@ def test_run_real_nvp_cond__():
     # coding: utf-8
 
 
-# # A toy example of Real NVP (using the ML class)
-# def test_run_real_nvp_toy():
-# 
-#     # In[1]:
-#     # In[2]:
-# 
-# 
-#     from pixyz.distributions import Normal, InverseTransformedDistribution
-#     from pixyz.flows import AffineCoupling, FlowList, BatchNorm1d
-#     from pixyz.models import ML
-#     from pixyz.utils import print_latex
-# 
-# 
-#     # In[3]:
-# 
-# 
-#     # def plot_samples(points, noise):
-#     #     X_LIMS = (-1.5, 2.5)
-#     #     Y_LIMS = (-2.5, 2.5)
-#     # 
-#     #     fig = plt.figure(figsize=(8, 4))
-#     #     ax = fig.add_subplot(121)
-#     #     ax.scatter(points[:, 0], points[:, 1], alpha=0.7, s=25, c="b")
-#     #     ax.set_xlim(*X_LIMS)
-#     #     ax.set_ylim(*Y_LIMS)
-#     #     ax.set_xlabel("p(x)")
-#     # 
-#     #     X_LIMS = (-3, 3)
-#     #     Y_LIMS = (-3, 3)
-#     # 
-#     #     ax = fig.add_subplot(122)
-#     #     ax.scatter(noise[:, 0], noise[:, 1], alpha=0.7, s=25, c="r")
-#     #     ax.set_xlim(*X_LIMS)
-#     #     ax.set_ylim(*Y_LIMS)
-#     #     ax.set_xlabel("p(z)")
-#     # 
-#     #     plt.show()
-# 
-# 
-#     # In[4]:
-# 
-# 
-#     x_dim = 2
-#     z_dim = x_dim
-# 
-#     # In[5]:
-# 
-# 
-#     # prior
-#     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
-#                    var=["z"], features_shape=[z_dim], name="prior").to(device)
-# 
-# 
-#     # In[6]:
-# 
-# 
-#     class ScaleTranslateNet(nn.Module):
-#         def __init__(self, in_features, hidden_features):
-#             super().__init__()
-#             self.layers = nn.Sequential(nn.Linear(in_features, hidden_features),
-#                                         nn.ReLU(),
-#                                         nn.Linear(hidden_features, hidden_features),
-#                                         nn.ReLU())
-#             self.log_s = nn.Linear(hidden_features, in_features)
-#             self.t = nn.Linear(hidden_features, in_features)
-# 
-#         def forward(self, x):
-#             hidden = self.layers(x)
-#             log_s = torch.tanh(self.log_s(hidden))
-#             t = self.t(hidden)
-#             return log_s, t
-# 
-# 
-#     # In[7]:
-# 
-# 
-#     # flow
-#     flow_list = []
-#     for i in range(5):
-#         scale_translate_net = nn.Sequential(nn.Linear(x_dim, 256),
-#                                             nn.ReLU(),
-#                                             nn.Linear(256, 256),
-#                                             nn.ReLU(),
-#                                             nn.Linear(256, x_dim * 2))
-#         flow_list.append(AffineCoupling(in_features=2,
-#                                         scale_translate_net=ScaleTranslateNet(x_dim, 256),
-#                                         inverse_mask=(i % 2 != 0)))
-#         flow_list.append(BatchNorm1d(2))
-# 
-#     f = FlowList(flow_list)
-# 
-#     # In[8]:
-# 
-# 
-#     # inverse transformed distribution (z -> f^-1 -> x)
-#     p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"]).to(device)
-#     print_latex(p)
-# 
-#     # In[9]:
-# 
-# 
-#     model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-2})
-#     print(model)
-#     print_latex(model)
-# 
-#     # In[10]:
-# 
-# 
-#     # plot training set
-#     # from sklearn import datasets
-# 
-#     x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
-#     noise = prior.sample(batch_n=test_size)["z"].data.cpu()
-#     plot_samples(x, noise)
-# 
-#     # In[11]:
-# 
-# 
-#     for epoch in range(epochs):
-#         x = datasets.make_moons(n_samples=batch_size, noise=0.1)[0].astype("float32")
-#         x = torch.tensor(x).to(device)
-#         loss = model.train({"x": x})
-# 
-#         if epoch % 500 == 0:
-#             print('Epoch: {} Test loss: {:.4f}'.format(epoch, loss))
-# 
-#             # samples
-#             samples = p.sample(batch_n=test_size)["x"].data.cpu()
-# 
-#             # inference
-#             _x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
-#             _x = torch.tensor(_x).to(device)
-#             noise = p.inference({"x": _x})["z"].data.cpu()
-# 
-#             plot_samples(samples, noise)
-# 
-#     # In[12]:
-# 
-# 
-#     samples = p.sample(batch_n=test_size)["x"].data.cpu()
-# 
-#     # inference
-#     _x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
-#     _x = torch.tensor(_x).to(device)
-#     noise = p.inference({"x": _x})["z"].data.cpu()
-# 
-#     plot_samples(samples, noise)
-# 
-#     # In[ ]:
-# 
-# 
-#     # !/usr/bin/env python
-#     # coding: utf-8
-# 
+# A toy example of Real NVP (using the ML class)
+def test_run_real_nvp_toy():
+
+    # In[1]:
+    test_size = 5
+    # In[2]:
+
+
+    from pixyz.distributions import Normal, InverseTransformedDistribution
+    from pixyz.flows import AffineCoupling, FlowList, BatchNorm1d
+    from pixyz.models import ML
+    from pixyz.utils import print_latex
+
+
+    # In[3]:
+
+
+    # def plot_samples(points, noise):
+    #     X_LIMS = (-1.5, 2.5)
+    #     Y_LIMS = (-2.5, 2.5)
+    # 
+    #     fig = plt.figure(figsize=(8, 4))
+    #     ax = fig.add_subplot(121)
+    #     ax.scatter(points[:, 0], points[:, 1], alpha=0.7, s=25, c="b")
+    #     ax.set_xlim(*X_LIMS)
+    #     ax.set_ylim(*Y_LIMS)
+    #     ax.set_xlabel("p(x)")
+    # 
+    #     X_LIMS = (-3, 3)
+    #     Y_LIMS = (-3, 3)
+    # 
+    #     ax = fig.add_subplot(122)
+    #     ax.scatter(noise[:, 0], noise[:, 1], alpha=0.7, s=25, c="r")
+    #     ax.set_xlim(*X_LIMS)
+    #     ax.set_ylim(*Y_LIMS)
+    #     ax.set_xlabel("p(z)")
+    # 
+    #     plt.show()
+
+
+    # In[4]:
+
+
+    x_dim = 2
+    z_dim = x_dim
+
+    # In[5]:
+
+
+    # prior
+    prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
+                   var=["z"], features_shape=[z_dim], name="prior").to(device)
+
+
+    # In[6]:
+
+
+    class ScaleTranslateNet(nn.Module):
+        def __init__(self, in_features, hidden_features):
+            super().__init__()
+            self.layers = nn.Sequential(nn.Linear(in_features, hidden_features),
+                                        nn.ReLU(),
+                                        nn.Linear(hidden_features, hidden_features),
+                                        nn.ReLU())
+            self.log_s = nn.Linear(hidden_features, in_features)
+            self.t = nn.Linear(hidden_features, in_features)
+
+        def forward(self, x):
+            hidden = self.layers(x)
+            log_s = torch.tanh(self.log_s(hidden))
+            t = self.t(hidden)
+            return log_s, t
+
+
+    # In[7]:
+
+
+    # flow
+    flow_list = []
+    for i in range(5):
+        scale_translate_net = nn.Sequential(nn.Linear(x_dim, 256),
+                                            nn.ReLU(),
+                                            nn.Linear(256, 256),
+                                            nn.ReLU(),
+                                            nn.Linear(256, x_dim * 2))
+        flow_list.append(AffineCoupling(in_features=2,
+                                        scale_translate_net=ScaleTranslateNet(x_dim, 256),
+                                        inverse_mask=(i % 2 != 0)))
+        flow_list.append(BatchNorm1d(2))
+
+    f = FlowList(flow_list)
+
+    # In[8]:
+
+
+    # inverse transformed distribution (z -> f^-1 -> x)
+    p = InverseTransformedDistribution(prior=prior, flow=f, var=["x"]).to(device)
+    print_latex(p)
+
+    # In[9]:
+
+
+    model = ML(p, optimizer=optim.Adam, optimizer_params={"lr": 1e-2})
+    print(model)
+    print_latex(model)
+
+    # In[10]:
+
+
+    # plot training set
+    from sklearn import datasets
+
+    x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
+    noise = prior.sample(batch_n=test_size)["z"].data.cpu()
+    # plot_samples(x, noise)
+
+    # In[11]:
+
+
+    for epoch in range(epochs):
+        x = datasets.make_moons(n_samples=batch_size, noise=0.1)[0].astype("float32")
+        x = torch.tensor(x).to(device)
+        loss = model.train({"x": x})
+
+        if epoch % 500 == 0:
+            print('Epoch: {} Test loss: {:.4f}'.format(epoch, loss))
+
+            # samples
+            samples = p.sample(batch_n=test_size)["x"].data.cpu()
+
+            # inference
+            _x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
+            _x = torch.tensor(_x).to(device)
+            noise = p.inference({"x": _x})["z"].data.cpu()
+
+            # plot_samples(samples, noise)
+
+    # In[12]:
+
+
+    samples = p.sample(batch_n=test_size)["x"].data.cpu()
+
+    # inference
+    _x = datasets.make_moons(n_samples=test_size, noise=0.1)[0].astype("float32")
+    _x = torch.tensor(_x).to(device)
+    noise = p.inference({"x": _x})["z"].data.cpu()
+
+    # plot_samples(samples, noise)
+
+    # In[ ]:
+
+
+    # !/usr/bin/env python
+    # coding: utf-8
+
 
 # # Real NVP
 def test_run_real_nvp():

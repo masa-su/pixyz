@@ -50,6 +50,7 @@ setup(
                 'pytest-cov',
                 'sphinx',
                 'sphinx_rtd_theme',
+                'twine',
                 'numpy',
                 'sklearn'],
     },
