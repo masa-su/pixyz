@@ -794,7 +794,10 @@ class Distribution(nn.Module):
     @property
     def graph(self):
         if self._atomic:
-            return DistGraph().appended(atom_dist=self)
+            if not self._graph:
+                # (graph,) for escaping meta-language of nn.Module
+                self._graph = (DistGraph().appended(atom_dist=self),)
+            return self._graph[0]
         else:
             return self._graph
 
