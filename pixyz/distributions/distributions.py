@@ -1473,7 +1473,7 @@ class DistributionBase(Distribution):
 
         """
         params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
-        output_dict = self.forward(**vars_dict)
+        output_dict = self(**vars_dict)
 
         output_dict.update(params_dict)
 
@@ -1658,7 +1658,7 @@ class ReplaceVarDistribution(Distribution):
         return repr(self.graph)
 
     def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
+        return self.p(*args, **kwargs)
 
     def sample_mean(self, x_dict={}):
         return self.p.sample_mean(x_dict)
@@ -1746,7 +1746,7 @@ class MarginalizeVarDistribution(Distribution):
         return repr(self.graph)
 
     def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
+        return self.p(*args, **kwargs)
 
     def sample_mean(self, x_dict={}):
         return self.p.sample_mean(x_dict)
