@@ -2,7 +2,7 @@ from torch import optim
 
 from ..models.model import Model
 from ..losses import AdversarialJensenShannon
-from ..distributions import DataDistribution
+from ..distributions import EmpiricalDistribution
 
 
 class GAN(Model):
@@ -105,7 +105,7 @@ class GAN(Model):
 
         # set distributions (for training)
         distributions = [p]
-        p_data = DataDistribution(p.var)
+        p_data = EmpiricalDistribution(p.var)
 
         # set losses
         loss = AdversarialJensenShannon(p_data, p, discriminator,
