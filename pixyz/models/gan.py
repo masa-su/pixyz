@@ -108,8 +108,8 @@ class GAN(Model):
         p_data = DataDistribution(p.var)
 
         # set losses
-        loss = AdversarialJensenShannon(p_data, p, discriminator,
-                                        optimizer=d_optimizer, optimizer_params=d_optimizer_params)
+        loss = AdversarialJensenShannon(p_data, p, discriminator, optimizer=d_optimizer,
+                                        optimizer_params=d_optimizer_params)
 
         super().__init__(loss, test_loss=loss,
                          distributions=distributions,

@@ -29,17 +29,14 @@ class MMD(Divergence):
     >>> loss = MMD(p, q, kernel="inv-multiquadratic").eval({"x": torch.randn(10, 64)})
     """
 
-    def __init__(self, p, q, input_var=None, kernel="gaussian", **kernel_params):
+    def __init__(self, p, q, kernel="gaussian", **kernel_params):
         if set(p.var) != set(q.var):
             raise ValueError("The two distribution variables must be the same.")
 
         if len(p.var) != 1:
             raise ValueError("A given distribution must have only one variable.")
 
-        if input_var is None:
-            input_var = p.input_var + q.input_var
-
-        super().__init__(p, q, input_var=input_var)
+        super().__init__(p, q)
 
         if len(p.input_var) > 0:
             self.input_dist = p

@@ -6,12 +6,11 @@ from ..utils import get_dict_values, detach_dict
 
 
 class AdversarialLoss(Divergence):
-    def __init__(self, p, q, discriminator, input_var=None,
-                 optimizer=optim.Adam, optimizer_params={}):
+    def __init__(self, p, q, discriminator, optimizer=optim.Adam, optimizer_params={}):
         if set(p.var) != set(q.var):
             raise ValueError("The two distribution variables must be the same.")
 
-        super().__init__(p, q, input_var=input_var)
+        super().__init__(p, q)
 
         if len(p.input_var) > 0:
             self.input_dist = p
@@ -214,11 +213,8 @@ class AdversarialJensenShannon(AdversarialLoss):
     [Goodfellow+ 2014] Generative Adversarial Networks
     """
 
-    def __init__(self, p, q, discriminator, input_var=None, optimizer=optim.Adam, optimizer_params={},
-                 inverse_g_loss=True):
-        super().__init__(p, q, discriminator,
-                         input_var=input_var,
-                         optimizer=optimizer, optimizer_params=optimizer_params)
+    def __init__(self, p, q, discriminator, optimizer=optim.Adam, optimizer_params={}, inverse_g_loss=True):
+        super().__init__(p, q, discriminator, optimizer=optimizer, optimizer_params=optimizer_params)
 
         self.bce_loss = nn.BCELoss()
         self._inverse_g_loss = inverse_g_loss

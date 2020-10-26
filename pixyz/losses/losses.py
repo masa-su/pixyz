@@ -7,7 +7,7 @@ from torch.nn.parallel import DistributedDataParallel
 import numbers
 from copy import deepcopy
 
-from ..utils import tolist, get_dict_values
+from ..utils import get_dict_values
 
 
 class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
@@ -43,7 +43,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
     ...
     >>> # Define a loss function (VAE)
     >>> reconst = -p.log_prob().expectation(q)
-    >>> kl = KullbackLeibler(q, prior)
+    >>> kl = KullbackLeibler(q,prior)
     >>> loss_cls = (reconst - kl).mean()
     >>> print(loss_cls)
     mean \\left(- D_{KL} \\left[q(z|x)||p_{prior}(z) \\right] - \\mathbb{E}_{q(z|x)} \\left[\\log p(x|z) \\right] \\right)
@@ -159,16 +159,13 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
         """
         return Detach(self)
 
-    def expectation(self, p, input_var=None, sample_shape=torch.Size()):
+    def expectation(self, p, sample_shape=torch.Size()):
         """Return an instance of :class:`pixyz.losses.Expectation`.
 
         Parameters
         ----------
         p : pixyz.distributions.Distribution
             Distribution for sampling.
-
-        input_var : list
-            Input variables of this loss.
 
         sample_shape : :obj:`list` or :obj:`NoneType`, defaults to torch.Size()
             Shape of generating samples.
@@ -179,7 +176,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
             An instance of :class:`pixyz.losses.Expectation`
 
         """
-        return Expectation(p, self, input_var=input_var, sample_shape=sample_shape)
+        return Expectation(p, self, sample_shape=sample_shape)
 
     def eval(self, x_dict={}, return_dict=False, return_all=True, **kwargs):
         """Evaluate the value of the loss function given inputs (:attr:`x_dict`).
@@ -234,7 +231,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
 
 
 class Divergence(Loss, abc.ABC):
-    def __init__(self, p, q=None, input_var=None):
+    def __init__(self, p, q=None):
         """
         Parameters
         ----------
@@ -242,19 +239,12 @@ class Divergence(Loss, abc.ABC):
             Distribution.
         q : pixyz.distributions.Distribution, defaults to None
             Distribution.
-        input_var : :obj:`list` of :obj:`str`, defaults to None
-            Input variables of this loss function.
-            In general, users do not need to set them explicitly
-            because these depend on the given distributions and each loss function.
 
         """
-        if input_var is not None:
-            _input_var = deepcopy(input_var)
-        else:
-            _input_var = deepcopy(p.input_var)
-            if q is not None:
-                _input_var += deepcopy(q.input_var)
-                _input_var = sorted(set(_input_var), key=_input_var.index)
+        _input_var = deepcopy(p.input_var)
+        if q is not None:
+            _input_var += deepcopy(q.input_var)
+            _input_var = sorted(set(_input_var), key=_input_var.index)
         super().__init__(_input_var)
         self.p = p
         self.q = q
@@ -310,7 +300,7 @@ class Parameter(Loss):
     def __init__(self, input_var):
         if not isinstance(input_var, str):
             raise ValueError()
-        super().__init__(tolist(input_var))
+        super().__init__([input_var])
 
     def forward(self, x_dict={}, **kwargs):
         return x_dict[self._input_var[0]], {}
@@ -318,6 +308,28 @@ class Parameter(Loss):
     @property
     def _symbol(self):
         return sympy.Symbol(self._input_var[0])
+
+
+class Conditioned(Loss):
+    def __init__(self, base_loss, conditions):
+        _input_var = set(base_loss.input_var) - set(conditions.keys())
+        self.conditions = conditions
+        self.base_loss = base_loss
+        super().__init__(_input_var)
+
+    def forward(self, x_dict={}, **kwargs):
+        input_dict = dict(x_dict)
+        input_dict.update(self.conditions)
+        return self.base_loss.eval(input_dict)
+
+    @property
+    def _symbol(self):
+        raise NotImplementedError()
+
+    @property
+    def loss_text(self):
+        return r"\left." + self.base_loss.loss_text \
+               + r"\right_{" + str(self.conditions.keys()) + "}"
 
 
 class LossOperator(Loss):
@@ -727,12 +739,12 @@ class Expectation(Loss):
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP
     tensor([-12.8181, -12.6062])
-    >>> loss_cls = LogProb(p).expectation(q, sample_shape=(5,))
+    >>> loss_cls = LogProb(p).expectation(q,sample_shape=(5,))
     >>> loss = loss_cls.eval({"x": sample_x})
     >>> print(loss) # doctest: +SKIP
     >>> q = Bernoulli(probs=torch.tensor(0.5), var=["x"], cond_var=[], features_shape=[10]) # q(x)
     >>> p = Bernoulli(probs=torch.tensor(0.3), var=["x"], cond_var=[], features_shape=[10]) # p(x)
-    >>> loss_cls = p.log_prob().expectation(q, sample_shape=[64])
+    >>> loss_cls = p.log_prob().expectation(q,sample_shape=[64])
     >>> train_loss = loss_cls.eval()
     >>> print(train_loss) # doctest: +SKIP
     tensor([46.7559])
@@ -742,9 +754,8 @@ class Expectation(Loss):
 
     """
 
-    def __init__(self, p, f, input_var=None, sample_shape=torch.Size([1]), reparam=True):
-        if input_var is None:
-            input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
+    def __init__(self, p, f, sample_shape=torch.Size([1]), reparam=True):
+        input_var = list(set(p.input_var) | set(f.input_var) - set(p.var))
         super().__init__(input_var=input_var)
         self.p = p
         self.f = f
@@ -776,7 +787,7 @@ class Expectation(Loss):
         return loss, output_dict
 
 
-def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1]), reparam=True):
+def REINFORCE(p, f, b=ValueLoss(0), sample_shape=torch.Size([1]), reparam=True):
     r"""
     Surrogate Loss for Policy Gradient Method (REINFORCE) with a given reward function :math:`f` and a given baseline :math:`b`.
 
@@ -794,10 +805,6 @@ def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1])
         reward function
     b : :class:`pixyz.losses.Loss` default to pixyz.losses.ValueLoss(0)
         baseline function
-    input_var : :obj:`list` of :obj:`str`, defaults to None
-        Input variables of this loss function.
-        In general, users do not need to set them explicitly
-        because these depend on the given distributions and each loss function.
     sample_shape : :class:`torch.Size` default to torch.Size([1])
         sample size for expectation
     reparam : :obj: bool default to True
@@ -815,17 +822,17 @@ def REINFORCE(p, f, b=ValueLoss(0), input_var=None, sample_shape=torch.Size([1])
     >>> from pixyz.losses import LogProb
     >>> q = Bernoulli(probs=torch.tensor(0.5), var=["x"], cond_var=[], features_shape=[10]) # q(x)
     >>> p = Bernoulli(probs=torch.tensor(0.3), var=["x"], cond_var=[], features_shape=[10]) # p(x)
-    >>> loss_cls = REINFORCE(q, p.log_prob(), sample_shape=[64])
+    >>> loss_cls = REINFORCE(q,p.log_prob(),sample_shape=[64])
     >>> train_loss = loss_cls.eval(test_mode=True)
     >>> print(train_loss) # doctest: +SKIP
     tensor([46.7559])
-    >>> loss_cls = p.log_prob().expectation(q, sample_shape=[64])
+    >>> loss_cls = p.log_prob().expectation(q,sample_shape=[64])
     >>> test_loss = loss_cls.eval()
     >>> print(test_loss) # doctest: +SKIP
     tensor([-7.6047])
 
     """
-    return Expectation(p, (f - b).detach() * p.log_prob() + (f - b), None, sample_shape, reparam=reparam)
+    return Expectation(p, (f - b).detach() * p.log_prob() + (f - b), sample_shape, reparam=reparam)
 
 
 class DataParalleledLoss(Loss):
@@ -865,7 +872,7 @@ class DataParalleledLoss(Loss):
     ...                var=["z"], features_shape=[64], name="p_{prior}")
     >>> # Define a loss function (Loss API)
     >>> reconst = -p.log_prob().expectation(q)
-    >>> kl = KullbackLeibler(q, prior)
+    >>> kl = KullbackLeibler(q,prior)
     >>> batch_loss_cls = (reconst - kl)
     >>> # device settings
     >>> device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
