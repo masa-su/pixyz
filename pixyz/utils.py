@@ -5,7 +5,7 @@ from IPython.display import Math
 import pixyz
 
 _EPSILON = 1e-07
-CACHE_SIZE = 0
+CACHE_SIZE = 1
 
 
 def set_epsilon(eps):
