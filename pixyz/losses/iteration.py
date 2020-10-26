@@ -31,7 +31,7 @@ class IterativeLoss(Loss):
     >>> # p(x|z,h_{prev})
     >>> class Decoder(Bernoulli):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["z", "h_prev"], var=["x"], name="p")
+    ...         super().__init__(var=["x"],cond_var=["z", "h_prev"],name="p")
     ...         self.fc = torch.nn.Linear(z_dim + h_dim, x_dim)
     ...     def forward(self, z, h_prev):
     ...         return {"probs": torch.sigmoid(self.fc(torch.cat((z, h_prev), dim=-1)))}
@@ -39,7 +39,7 @@ class IterativeLoss(Loss):
     >>> # q(z|x,h_{prev})
     >>> class Encoder(Normal):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["x", "h_prev"], var=["z"], name="q")
+    ...         super().__init__(var=["z"],cond_var=["x", "h_prev"],name="q")
     ...         self.fc_loc = torch.nn.Linear(x_dim + h_dim, z_dim)
     ...         self.fc_scale = torch.nn.Linear(x_dim + h_dim, z_dim)
     ...     def forward(self, x, h_prev):
@@ -49,7 +49,7 @@ class IterativeLoss(Loss):
     >>> # f(h|x,z,h_{prev}) (update h)
     >>> class Recurrence(Deterministic):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["x", "z", "h_prev"], var=["h"], name="f")
+    ...         super().__init__(var=["h"], cond_var=["x", "z", "h_prev"], name="f")
     ...         self.rnncell = torch.nn.GRUCell(x_dim + z_dim, h_dim)
     ...     def forward(self, x, z, h_prev):
     ...         return {"h": self.rnncell(torch.cat((z, x), dim=-1), h_prev)}

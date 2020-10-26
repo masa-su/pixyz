@@ -23,7 +23,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
     >>> # Set distributions
     >>> class Inference(Normal):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["x"], var=["z"], name="q")
+    ...         super().__init__(var=["z"],cond_var=["x"],name="q")
     ...         self.model_loc = torch.nn.Linear(128, 64)
     ...         self.model_scale = torch.nn.Linear(128, 64)
     ...     def forward(self, x):
@@ -31,7 +31,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
     ...
     >>> class Generator(Bernoulli):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super().__init__(var=["x"],cond_var=["z"],name="p")
     ...         self.model = torch.nn.Linear(64, 128)
     ...     def forward(self, z):
     ...         return {"probs": torch.sigmoid(self.model(z))}
@@ -846,7 +846,7 @@ class DataParalleledLoss(Loss):
     >>> # Set distributions (Distribution API)
     >>> class Inference(Normal):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["x"], var=["z"], name="q")
+    ...         super().__init__(var=["z"],cond_var=["x"],name="q")
     ...         self.model_loc = torch.nn.Linear(128, 64)
     ...         self.model_scale = torch.nn.Linear(128, 64)
     ...     def forward(self, x):
@@ -854,7 +854,7 @@ class DataParalleledLoss(Loss):
     ...         return {"loc": self.model_loc(x), "scale": F.softplus(self.model_scale(x))}
     >>> class Generator(Bernoulli):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super().__init__(var=["x"],cond_var=["z"],name="p")
     ...         self.model = torch.nn.Linear(64, 128)
     ...     def forward(self, z):
     ...         used_gpu_g.add(z.device.index)

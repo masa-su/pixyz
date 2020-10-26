@@ -56,7 +56,7 @@ def test_memoization():
 
     class Encoder(Normal):
         def __init__(self, exec_order):
-            super().__init__(cond_var=["x"], var=["z"], name="q")
+            super().__init__(var=["z"], cond_var=["x"], name="q")
             self.linear = torch.nn.Linear(10, 10)
             self.exec_order = exec_order
 
@@ -70,7 +70,7 @@ def test_memoization():
 
     class Decoder(Normal):
         def __init__(self, exec_order):
-            super().__init__(cond_var=["z"], var=["x"], name="p")
+            super().__init__(var=["x"], cond_var=["z"], name="p")
             self.exec_order = exec_order
 
         @lru_cache_for_sample_dict(maxsize=2)
@@ -82,7 +82,7 @@ def test_memoization():
             return {"loc": z, "scale": 1.0}
 
     def prior():
-        return Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["z"], features_shape=[10], name="p_{prior}")
+        return Normal(var=["z"], name="p_{prior}", features_shape=[10], loc=torch.tensor(0.), scale=torch.tensor(1.))
 
     q = Encoder(exec_order)
     p = Decoder(exec_order)
@@ -121,7 +121,7 @@ def test_save_dist(tmpdir, no_contiguous_tensor):
 
 class TestRelaxedBernoulli:
     def test_log_prob_of_hard_value(self):
-        rb = RelaxedBernoulli(var=['x'], probs=torch.ones(2), temperature=torch.tensor(0.5))
+        rb = RelaxedBernoulli(var=['x'], temperature=torch.tensor(0.5), probs=torch.ones(2))
         assert self.nearly_eq(rb.get_log_prob({'x': torch.tensor([0., 1.])}), torch.tensor([-15.9424]))
 
     def nearly_eq(self, tensor1, tensor2):

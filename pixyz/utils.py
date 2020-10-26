@@ -222,7 +222,7 @@ def lru_cache_for_sample_dict(maxsize=0):
     >>> import pixyz.distributions as pd
     >>> class LongEncoder(pd.Normal):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=['y'], var=['x'])
+    ...         super().__init__(var=['x'], cond_var=['y'])
     ...         self.nn = nn.Sequential(*(nn.Linear(1,1) for i in range(10000)))
     ...     def forward(self, y):
     ...         return {'loc': self.nn(y), 'scale': torch.ones(1,1)}
