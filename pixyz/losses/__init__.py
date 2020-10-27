@@ -25,6 +25,7 @@ from .adversarial_loss import (
 from .losses import (
     Parameter,
     ValueLoss,
+    ConstantVar,
     MinLoss,
     MaxLoss,
     Expectation,
@@ -47,6 +48,7 @@ from .wasserstein import (
 __all__ = [
     'Parameter',
     'ValueLoss',
+    'ConstantVar',
     'MinLoss',
     'MaxLoss',
     'Entropy',

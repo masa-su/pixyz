@@ -178,6 +178,22 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
         """
         return Expectation(p, self, sample_shape=sample_shape)
 
+    def constant_var(self, constant_dict):
+        """Return an instance of :class:`pixyz.losses.ConstantVar`.
+
+        Parameters
+        ----------
+        constant_dict : dict
+            constant variables.
+
+        Returns
+        -------
+        pixyz.losses.ConstantVar
+            An instance of :class:`pixyz.losses.ConstantVar`
+
+        """
+        return ConstantVar(self, constant_dict)
+
     def eval(self, x_dict={}, return_dict=False, return_all=True, **kwargs):
         """Evaluate the value of the loss function given inputs (:attr:`x_dict`).
 
@@ -310,26 +326,35 @@ class Parameter(Loss):
         return sympy.Symbol(self._input_var[0])
 
 
-class Conditioned(Loss):
-    def __init__(self, base_loss, conditions):
-        _input_var = set(base_loss.input_var) - set(conditions.keys())
-        self.conditions = conditions
-        self.base_loss = base_loss
+class ConstantVar(Loss):
+    """
+    This class is defined as a loss class that makes the value of a variable a constant before evaluation.
+
+    It can be used to fix the coefficient parameters of the loss class or to condition random variables.
+
+    Examples
+    --------
+    >>> loss_cls = Parameter('x').constant_var({'x': 1})
+    >>> print(loss_cls)
+    x
+    >>> loss = loss_cls.eval()
+    >>> print(loss)
+    1
+    """
+    def __init__(self, base_loss, constant_dict):
+        _input_var = set(base_loss.input_var) - set(constant_dict.keys())
         super().__init__(_input_var)
+        self.constant_dict = constant_dict
+        self.base_loss = base_loss
 
     def forward(self, x_dict={}, **kwargs):
         input_dict = dict(x_dict)
-        input_dict.update(self.conditions)
-        return self.base_loss.eval(input_dict)
+        input_dict.update(self.constant_dict)
+        return self.base_loss.eval(input_dict, return_dict=True)
 
     @property
     def _symbol(self):
-        raise NotImplementedError()
-
-    @property
-    def loss_text(self):
-        return r"\left." + self.base_loss.loss_text \
-               + r"\right_{" + str(self.conditions.keys()) + "}"
+        return self.base_loss._symbol
 
 
 class LossOperator(Loss):
