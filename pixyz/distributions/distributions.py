@@ -794,7 +794,10 @@ class Distribution(nn.Module):
     @property
     def graph(self):
         if self._atomic:
-            return DistGraph().appended(atom_dist=self)
+            if not self._graph:
+                # (graph,) for escaping meta-language of nn.Module
+                self._graph = (DistGraph().appended(atom_dist=self),)
+            return self._graph[0]
         else:
             return self._graph
 
@@ -1481,7 +1484,7 @@ class DistributionBase(Distribution):
                     replaced_params_dict[replaced_key] = value
 
         vars_dict = {key: value for key, value in params_dict.items() if key not in self.replace_params_dict}
-        output_dict = self.forward(**vars_dict)
+        output_dict = self(**vars_dict)
 
         output_dict.update(replaced_params_dict)
 
@@ -1666,7 +1669,7 @@ class ReplaceVarDistribution(Distribution):
         return repr(self.graph)
 
     def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
+        return self.p(*args, **kwargs)
 
     def sample_mean(self, x_dict={}):
         return self.p.sample_mean(x_dict)
@@ -1754,7 +1757,7 @@ class MarginalizeVarDistribution(Distribution):
         return repr(self.graph)
 
     def forward(self, *args, **kwargs):
-        return self.p.forward(*args, **kwargs)
+        return self.p(*args, **kwargs)
 
     def sample_mean(self, x_dict={}):
         return self.p.sample_mean(x_dict)
