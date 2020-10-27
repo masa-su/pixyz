@@ -78,6 +78,12 @@ class ProductOfNormal(Normal):
         features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size())
             Shape of dimensions (features) of this distribution.
 
+        Examples
+        --------
+        >>> p_x = Normal(cond_var=['z'], loc='z', scale=torch.ones(1, 1))
+        >>> pon = ProductOfNormal([p_x])
+        >>> sample = pon.sample({'z': torch.zeros(1, 1)})
+        >>> sample  # doctest: +SKIP
         """
         p = tolist(p)
         if len(p) == 0:
@@ -96,10 +102,7 @@ class ProductOfNormal(Normal):
             cond_var += _p.cond_var
 
         super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
-        if len(p) == 1:
-            self.p = p[0]
-        else:
-            self.p = nn.ModuleList(p)
+        self.p = nn.ModuleList(p)
 
     @property
     def prob_factorized_text(self):

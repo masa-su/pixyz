@@ -4,7 +4,7 @@
 
 [![pypi](https://img.shields.io/pypi/v/pixyz.svg)](https://pypi.python.org/pypi/pixyz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python Version](https://img.shields.io/pypi/pyversions/Django.svg)](https://github.com/masa-su/pixyz)
+[![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20-blue)](https://github.com/masa-su/pixyz)
 [![Pytorch Version](https://img.shields.io/badge/pytorch-1.0-yellow.svg)](https://github.com/masa-su/pixyz)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
 [![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=master)](https://github.com/masa-su/pixyz)
