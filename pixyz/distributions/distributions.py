@@ -4,7 +4,7 @@ import re
 import networkx as nx
 from torch import nn
 
-from ..utils import get_dict_values, replace_dict_keys, replace_dict_keys_split, delete_dict_values,\
+from ..utils import get_dict_values, replace_dict_keys, delete_dict_values,\
     tolist, sum_samples, convert_latex_name, lru_cache_for_sample_dict
 from ..losses import LogProb, Prob
 
@@ -1306,7 +1306,9 @@ class DistributionBase(Distribution):
         for key in params_dict.keys():
             if type(params_dict[key]) is str:
                 if params_dict[key] in self._cond_var:
-                    self.replace_params_dict[params_dict[key]] = key
+                    if params_dict[key] not in self.replace_params_dict:
+                        self.replace_params_dict[params_dict[key]] = []
+                    self.replace_params_dict[params_dict[key]].append(key)
                 else:
                     raise ValueError(f"parameter setting {key}:{params_dict[key]} is not valid"
                                      f" because cond_var does not contains {params_dict[key]}.")
@@ -1475,10 +1477,16 @@ class DistributionBase(Distribution):
         {'scale': tensor(1.), 'loc': tensor([0.])}
 
         """
-        params_dict, vars_dict = replace_dict_keys_split(params_dict, self.replace_params_dict)
+        replaced_params_dict = {}
+        for key, value in params_dict.items():
+            if key in self.replace_params_dict:
+                for replaced_key in self.replace_params_dict[key]:
+                    replaced_params_dict[replaced_key] = value
+
+        vars_dict = {key: value for key, value in params_dict.items() if key not in self.replace_params_dict}
         output_dict = self(**vars_dict)
 
-        output_dict.update(params_dict)
+        output_dict.update(replaced_params_dict)
 
         # append constant parameters to output_dict
         constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys,
