@@ -1847,7 +1847,7 @@ def test_run_mmd_vae():
 
     # In[3]:
 
-    from pixyz.distributions import Normal, Bernoulli, DataDistribution
+    from pixyz.distributions import Normal, Bernoulli, EmpiricalDistribution
     from pixyz.losses import CrossEntropy, MMD
     from pixyz.models import Model
     from pixyz.utils import print_latex
@@ -1893,7 +1893,7 @@ def test_run_mmd_vae():
     prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
                    var=["z"], features_shape=[z_dim], name="p_{prior}").to(device)
 
-    p_data = DataDistribution(["x"]).to(device)
+    p_data = EmpiricalDistribution(["x"]).to(device)
     q_mg = (q * p_data).marginalize_var("x")
     q_mg.name = "q"
 
