@@ -140,7 +140,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super(Generator, self).__init__(var=["x"], cond_var=["z"], name="p")
     ...         self.model = nn.Linear(32, 64)
     ...     def forward(self, z):
     ...         return {"x": self.model(z)}
@@ -178,7 +178,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
     ...     def __init__(self):
-    ...         super(Discriminator, self).__init__(cond_var=["x"], var=["t"], name="d")
+    ...         super(Discriminator, self).__init__(var=["t"], cond_var=["x"], name="d")
     ...         self.model = nn.Linear(64, 1)
     ...     def forward(self, x):
     ...         return {"t": torch.sigmoid(self.model(x))}
@@ -307,7 +307,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super(Generator, self).__init__(var=["x"], cond_var=["z"], name="p")
     ...         self.model = nn.Linear(32, 64)
     ...     def forward(self, z):
     ...         return {"x": self.model(z)}
@@ -345,7 +345,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
     ...     def __init__(self):
-    ...         super(Discriminator, self).__init__(cond_var=["x"], var=["t"], name="d")
+    ...         super(Discriminator, self).__init__(var=["t"], cond_var=["x"], name="d")
     ...         self.model = nn.Linear(64, 1)
     ...     def forward(self, x):
     ...         return {"t": torch.sigmoid(self.model(x))}
@@ -465,7 +465,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super(Generator, self).__init__(var=["x"], cond_var=["z"], name="p")
     ...         self.model = nn.Linear(32, 64)
     ...     def forward(self, z):
     ...         return {"x": self.model(z)}
@@ -503,7 +503,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
     ...     def __init__(self):
-    ...         super(Discriminator, self).__init__(cond_var=["x"], var=["t"], name="d")
+    ...         super(Discriminator, self).__init__(var=["t"], cond_var=["x"], name="d")
     ...         self.model = nn.Linear(64, 1)
     ...     def forward(self, x):
     ...         return {"t": self.model(x)}

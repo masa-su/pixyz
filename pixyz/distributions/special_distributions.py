@@ -12,7 +12,7 @@ class Deterministic(Distribution):
     >>> import torch
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["z"], var=["x"])
+    ...         super().__init__(var=["x"], cond_var=["z"])
     ...         self.model = torch.nn.Linear(64, 512)
     ...     def forward(self, z):
     ...         return {"x": self.model(z)}

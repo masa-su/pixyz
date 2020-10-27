@@ -740,7 +740,7 @@ class Distribution(nn.Module):
     >>> # Conditional distribution (by neural networks)
     >>> class P(Normal):
     ...     def __init__(self):
-    ...         super().__init__(var=["x"], cond_var=["y"], name="p3")
+    ...         super().__init__(var=["x"],cond_var=["y"],name="p3")
     ...         self.model_loc = nn.Linear(128, 64)
     ...         self.model_scale = nn.Linear(128, 64)
     ...     def forward(self, y):
@@ -1283,8 +1283,8 @@ class Distribution(nn.Module):
 class DistributionBase(Distribution):
     """Distribution class with PyTorch. In Pixyz, all distributions are required to inherit this class."""
 
-    def __init__(self, cond_var=[], var=["x"], name="p", features_shape=torch.Size(), **kwargs):
-        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
+    def __init__(self, var=["x"], cond_var=[], name="p", features_shape=torch.Size(), **kwargs):
+        super().__init__(var=var, cond_var=cond_var, name=name, features_shape=features_shape)
 
         self._set_buffers(**kwargs)
         self._dist = None
@@ -1552,8 +1552,8 @@ class MultiplyDistribution(Distribution):
 
     Examples
     --------
-    >>> a = DistributionBase(var=["x"], cond_var=["z"])
-    >>> b = DistributionBase(var=["z"], cond_var=["y"])
+    >>> a = DistributionBase(var=["x"],cond_var=["z"])
+    >>> b = DistributionBase(var=["z"],cond_var=["y"])
     >>> p_multi = MultiplyDistribution(a, b)
     >>> print(p_multi)
     Distribution:
@@ -1569,7 +1569,7 @@ class MultiplyDistribution(Distribution):
         name=p, distribution_name=,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
-    >>> b = DistributionBase(var=["y"], cond_var=["z"])
+    >>> b = DistributionBase(var=["y"],cond_var=["z"])
     >>> p_multi = MultiplyDistribution(a, b)
     >>> print(p_multi)
     Distribution:
@@ -1585,7 +1585,7 @@ class MultiplyDistribution(Distribution):
         name=p, distribution_name=,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
       )
-    >>> b = DistributionBase(var=["y"], cond_var=["a"])
+    >>> b = DistributionBase(var=["y"],cond_var=["a"])
     >>> p_multi = MultiplyDistribution(a, b)
     >>> print(p_multi)
     Distribution:
@@ -1627,7 +1627,7 @@ class ReplaceVarDistribution(Distribution):
 
     Examples
     --------
-    >>> p = DistributionBase(var=["x"], cond_var=["z"])
+    >>> p = DistributionBase(var=["x"],cond_var=["z"])
     >>> print(p)
     Distribution:
       p(x|z)
@@ -1661,7 +1661,7 @@ class ReplaceVarDistribution(Distribution):
             Dictionary.
 
         """
-        super().__init__(cond_var=[], var=[], name=p.name, features_shape=p.features_shape, atomic=False)
+        super().__init__(var=[], cond_var=[], name=p.name, features_shape=p.features_shape, atomic=False)
         self._graph = p.graph.var_replaced(replace_dict)
         self.p = p
 
@@ -1701,8 +1701,8 @@ class MarginalizeVarDistribution(Distribution):
 
     Examples
     --------
-    >>> a = DistributionBase(var=["x"], cond_var=["z"])
-    >>> b = DistributionBase(var=["y"], cond_var=["z"])
+    >>> a = DistributionBase(var=["x"],cond_var=["z"])
+    >>> b = DistributionBase(var=["y"],cond_var=["z"])
     >>> p_multi = a * b
     >>> print(p_multi)
     Distribution:
@@ -1749,7 +1749,7 @@ class MarginalizeVarDistribution(Distribution):
         """
         marginalize_list = tolist(marginalize_list)
 
-        super().__init__(cond_var=[], var=[], name=p.name, features_shape=p.features_shape, atomic=False)
+        super().__init__(var=[], cond_var=[], name=p.name, features_shape=p.features_shape, atomic=False)
         self._graph = p.graph.marginalized(marginalize_list)
         self.p = p
 

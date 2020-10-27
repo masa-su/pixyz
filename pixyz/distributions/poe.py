@@ -80,7 +80,7 @@ class ProductOfNormal(Normal):
 
         Examples
         --------
-        >>> p_x = Normal(cond_var=['z'], loc='z', scale=torch.ones(1, 1))
+        >>> p_x = Normal(cond_var=['z'],loc='z',scale=torch.ones(1, 1))
         >>> pon = ProductOfNormal([p_x])
         >>> sample = pon.sample({'z': torch.zeros(1, 1)})
         >>> sample  # doctest: +SKIP
@@ -101,7 +101,7 @@ class ProductOfNormal(Normal):
 
             cond_var += _p.cond_var
 
-        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
+        super().__init__(var=var, cond_var=cond_var, name=name, features_shape=features_shape)
         self.p = nn.ModuleList(p)
 
     @property
