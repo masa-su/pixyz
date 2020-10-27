@@ -136,7 +136,7 @@ class AdversarialJensenShannon(AdversarialLoss):
     Examples
     --------
     >>> import torch
-    >>> from pixyz.distributions import Deterministic, DataDistribution, Normal
+    >>> from pixyz.distributions import Deterministic, EmpiricalDistribution, Normal
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
@@ -166,12 +166,12 @@ class AdversarialJensenShannon(AdversarialLoss):
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
-    >>> p_data = DataDistribution(["x"])
+    >>> p_data = EmpiricalDistribution(["x"])
     >>> print(p_data)
     Distribution:
       p_{data}(x)
     Network architecture:
-      DataDistribution(
+      EmpiricalDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
@@ -303,7 +303,7 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Examples
     --------
     >>> import torch
-    >>> from pixyz.distributions import Deterministic, DataDistribution, Normal
+    >>> from pixyz.distributions import Deterministic, EmpiricalDistribution, Normal
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
@@ -333,12 +333,12 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
-    >>> p_data = DataDistribution(["x"])
+    >>> p_data = EmpiricalDistribution(["x"])
     >>> print(p_data)
     Distribution:
       p_{data}(x)
     Network architecture:
-      DataDistribution(
+      EmpiricalDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
@@ -461,7 +461,7 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Examples
     --------
     >>> import torch
-    >>> from pixyz.distributions import Deterministic, DataDistribution, Normal
+    >>> from pixyz.distributions import Deterministic, EmpiricalDistribution, Normal
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
@@ -491,12 +491,12 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
-    >>> p_data = DataDistribution(["x"])
+    >>> p_data = EmpiricalDistribution(["x"])
     >>> print(p_data)
     Distribution:
       p_{data}(x)
     Network architecture:
-      DataDistribution(
+      EmpiricalDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )

@@ -65,7 +65,7 @@ class Deterministic(Distribution):
         return True
 
 
-class DataDistribution(Distribution):
+class EmpiricalDistribution(Distribution):
     """
     Data distribution.
 
@@ -74,12 +74,12 @@ class DataDistribution(Distribution):
     Examples
     --------
     >>> import torch
-    >>> p = DataDistribution(var=["x"])
+    >>> p = EmpiricalDistribution(var=["x"])
     >>> print(p)
     Distribution:
       p_{data}(x)
     Network architecture:
-      DataDistribution(
+      EmpiricalDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
@@ -111,7 +111,7 @@ class DataDistribution(Distribution):
     @property
     def input_var(self):
         """
-        In DataDistribution, `input_var` is same as `var`.
+        In EmpiricalDistribution, `input_var` is same as `var`.
         """
 
         return self.var
