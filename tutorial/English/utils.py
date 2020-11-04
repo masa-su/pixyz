@@ -5,6 +5,7 @@ import torch
 import torchvision
 import matplotlib.pyplot as plt
 
+
 def imshow(img_tensors):
     img = torchvision.utils.make_grid(img_tensors)
     npimg = img.numpy()
@@ -13,10 +14,9 @@ def imshow(img_tensors):
     plt.show()
 
 
-
 class DMMDataset(Dataset):
     def __init__(self, pickle_path="cartpole_28.pickle"):
-        
+
         with open(pickle_path, mode='rb') as f:
             data = pickle.load(f)
         episode_frames, actions = data
@@ -25,13 +25,13 @@ class DMMDataset(Dataset):
         # HWC → CHW
         episode_frames = episode_frames.transpose(0, 1, 4, 2, 3)
         actions = actions[:, :, np.newaxis]
-        
+
         self.episode_frames = torch.from_numpy(episode_frames.astype(np.float32))
         self.actions = torch.from_numpy(actions.astype(np.float32))
-            
+
     def __len__(self):
         return len(self.episode_frames)
- 
+
     def __getitem__(self, idx):
         return {
             "episode_frames": self.episode_frames[idx] / 255,
