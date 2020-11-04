@@ -43,7 +43,7 @@ class Model(object):
     ...
     >>> # Define a loss function (Loss API)
     >>> reconst = -p.log_prob().expectation(q)
-    >>> kl = KullbackLeibler(q, prior)
+    >>> kl = KullbackLeibler(q,prior)
     >>> loss_cls = (reconst - kl).mean()
     >>> print(loss_cls)
     mean \\left(- D_{KL} \\left[q(z|x)||p_{prior}(z) \\right] - \\mathbb{E}_{q(z|x)} \\left[\\log p(x|z) \\right] \\right)

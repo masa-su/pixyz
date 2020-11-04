@@ -34,17 +34,14 @@ class WassersteinDistance(Divergence):
     >>> loss = loss_cls.eval({"x": torch.randn(1, 64)})
     """
 
-    def __init__(self, p, q, metric=PairwiseDistance(p=2), input_var=None):
+    def __init__(self, p, q, metric=PairwiseDistance(p=2)):
         if set(p.var) != set(q.var):
             raise ValueError("The two distribution variables must be the same.")
 
         if len(p.var) != 1:
             raise ValueError("A given distribution must have only one variable.")
 
-        if input_var is None:
-            input_var = p.input_var + q.input_var
-
-        super().__init__(p, q, input_var)
+        super().__init__(p, q)
 
         if len(p.input_var) > 0:
             self.input_dist = p

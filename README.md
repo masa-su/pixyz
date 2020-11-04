@@ -196,7 +196,7 @@ Next, we set the objective (loss) function of the model with defined distributio
 ```python
 >>> from pixyz.losses import KullbackLeibler, LogProb, Expectation as E
 >>> reconst = -E(q, LogProb(p)) # the reconstruction loss (it can also be written as `-p.log_prob().expectation()`)
->>> kl = KullbackLeibler(q, prior) # Kullback-Leibler divergence
+>>> kl = KullbackLeibler(q,prior) # Kullback-Leibler divergence
 >>> loss_cls = (kl + reconst).mean()
 ```
 

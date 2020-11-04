@@ -5,7 +5,7 @@ from pixyz.losses.losses import Loss
 from pixyz.losses.divergences import KullbackLeibler
 
 
-def Entropy(p, input_var=None, analytical=True, sample_shape=torch.Size([1])):
+def Entropy(p, analytical=True, sample_shape=torch.Size([1])):
     r"""
     Entropy (Analytical or Monte Carlo approximation).
 
@@ -19,30 +19,27 @@ def Entropy(p, input_var=None, analytical=True, sample_shape=torch.Size([1])):
     >>> import torch
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64])
-    >>> loss_cls = Entropy(p, analytical=True)
+    >>> loss_cls = Entropy(p,analytical=True)
     >>> print(loss_cls)
     H \left[ {p(x)} \right]
     >>> loss_cls.eval()
     tensor([90.8121])
-    >>> loss_cls = Entropy(p, analytical=False, sample_shape=[10])
+    >>> loss_cls = Entropy(p,analytical=False,sample_shape=[10])
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log p(x) \right]
     >>> loss_cls.eval() # doctest: +SKIP
     tensor([90.5991])
     """
     if analytical:
-        loss = AnalyticalEntropy(p, input_var=input_var)
+        loss = AnalyticalEntropy(p)
     else:
-        loss = -p.log_prob().expectation(p, input_var, sample_shape=sample_shape)
+        loss = -p.log_prob().expectation(p, sample_shape=sample_shape)
     return loss
 
 
 class AnalyticalEntropy(Loss):
-    def __init__(self, p, input_var=None):
-        if input_var is None:
-            _input_var = p.input_var.copy()
-        else:
-            _input_var = list(input_var)
+    def __init__(self, p):
+        _input_var = p.input_var.copy()
         super().__init__(_input_var)
         self.p = p
 
@@ -61,7 +58,7 @@ class AnalyticalEntropy(Loss):
         return entropy, {}
 
 
-def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size([1])):
+def CrossEntropy(p, q, analytical=False, sample_shape=torch.Size([1])):
     r"""
     Cross entropy, a.k.a., the negative expected value of log-likelihood (Monte Carlo approximation or Analytical).
 
@@ -76,12 +73,12 @@ def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size
     >>> from pixyz.distributions import Normal
     >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="p")
     >>> q = Normal(loc=torch.tensor(1.), scale=torch.tensor(1.), var=["x"], features_shape=[64], name="q")
-    >>> loss_cls = CrossEntropy(p, q, analytical=True)
+    >>> loss_cls = CrossEntropy(p,q,analytical=True)
     >>> print(loss_cls)
     D_{KL} \left[p(x)||q(x) \right] + H \left[ {p(x)} \right]
     >>> loss_cls.eval()
     tensor([122.8121])
-    >>> loss_cls = CrossEntropy(p, q, analytical=False, sample_shape=[10])
+    >>> loss_cls = CrossEntropy(p,q,analytical=False,sample_shape=[10])
     >>> print(loss_cls)
     - \mathbb{E}_{p(x)} \left[\log q(x) \right]
     >>> loss_cls.eval() # doctest: +SKIP
@@ -90,11 +87,11 @@ def CrossEntropy(p, q, input_var=None, analytical=False, sample_shape=torch.Size
     if analytical:
         loss = Entropy(p) + KullbackLeibler(p, q)
     else:
-        loss = -q.log_prob().expectation(p, input_var, sample_shape=sample_shape)
+        loss = -q.log_prob().expectation(p, sample_shape=sample_shape)
     return loss
 
 
 class StochasticReconstructionLoss(Loss):
-    def __init__(self, encoder, decoder, input_var=None, sample_shape=torch.Size([1])):
+    def __init__(self, encoder, decoder, sample_shape=torch.Size([1])):
         raise NotImplementedError("This function is obsolete."
                                   " please use `-decoder.log_prob().expectation(encoder)` instead of it.")

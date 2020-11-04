@@ -144,6 +144,14 @@ ValueLoss
     :members:
     :undoc-members:
 
+ConstantVar
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: pixyz.losses.losses
+.. autoclass:: ConstantVar
+    :members:
+    :undoc-members:
+
        
 Operators
 ----------------------------
