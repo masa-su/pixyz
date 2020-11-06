@@ -80,7 +80,7 @@ class ProductOfNormal(Normal):
 
         Examples
         --------
-        >>> p_x = Normal(cond_var=['z'],loc='z',scale=torch.ones(1, 1))
+        >>> p_x = Normal(cond_var=['z'], loc='z', scale=torch.ones(1, 1))
         >>> pon = ProductOfNormal([p_x])
         >>> sample = pon.sample({'z': torch.zeros(1, 1)})
         >>> sample  # doctest: +SKIP
