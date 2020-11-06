@@ -2,7 +2,7 @@ from torch import optim
 
 from ..models.model import Model
 from ..losses import AdversarialJensenShannon
-from ..distributions import DataDistribution
+from ..distributions import EmpiricalDistribution
 
 
 class GAN(Model):
@@ -28,7 +28,7 @@ class GAN(Model):
     >>> # generator model p(x|z)
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super(Generator, self).__init__(var=["x"], cond_var=["z"], name="p")
     ...         self.model = nn.Sequential(
     ...             nn.Linear(z_dim, x_dim),
     ...             nn.Sigmoid()
@@ -48,7 +48,7 @@ class GAN(Model):
     >>> # discriminator model p(t|x)
     >>> class Discriminator(Deterministic):
     ...     def __init__(self):
-    ...         super(Discriminator, self).__init__(cond_var=["x"], var=["t"], name="d")
+    ...         super(Discriminator, self).__init__(var=["t"], cond_var=["x"], name="d")
     ...         self.model = nn.Sequential(
     ...             nn.Linear(x_dim, 1),
     ...             nn.Sigmoid()
@@ -105,11 +105,11 @@ class GAN(Model):
 
         # set distributions (for training)
         distributions = [p]
-        p_data = DataDistribution(p.var)
+        p_data = EmpiricalDistribution(p.var)
 
         # set losses
-        loss = AdversarialJensenShannon(p_data, p, discriminator,
-                                        optimizer=d_optimizer, optimizer_params=d_optimizer_params)
+        loss = AdversarialJensenShannon(p_data, p, discriminator, optimizer=d_optimizer,
+                                        optimizer_params=d_optimizer_params)
 
         super().__init__(loss, test_loss=loss,
                          distributions=distributions,

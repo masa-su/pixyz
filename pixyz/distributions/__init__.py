@@ -17,7 +17,7 @@ from .custom_distributions import (
 
 from .special_distributions import (
     Deterministic,
-    DataDistribution
+    EmpiricalDistribution
 )
 
 from .distributions import (
@@ -37,7 +37,7 @@ __all__ = [
     'Distribution',
     'CustomProb',
     'Deterministic',
-    'DataDistribution',
+    'EmpiricalDistribution',
     'Normal',
     'Bernoulli',
     'RelaxedBernoulli',

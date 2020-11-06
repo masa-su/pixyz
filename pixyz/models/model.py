@@ -23,7 +23,7 @@ class Model(object):
     >>> # Set distributions (Distribution API)
     >>> class Inference(Normal):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["x"], var=["z"], name="q")
+    ...         super().__init__(var=["z"],cond_var=["x"],name="q")
     ...         self.model_loc = torch.nn.Linear(128, 64)
     ...         self.model_scale = torch.nn.Linear(128, 64)
     ...     def forward(self, x):
@@ -31,7 +31,7 @@ class Model(object):
     ...
     >>> class Generator(Bernoulli):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super().__init__(var=["x"],cond_var=["z"],name="p")
     ...         self.model = torch.nn.Linear(64, 128)
     ...     def forward(self, z):
     ...         return {"probs": torch.sigmoid(self.model(z))}
@@ -43,7 +43,7 @@ class Model(object):
     ...
     >>> # Define a loss function (Loss API)
     >>> reconst = -p.log_prob().expectation(q)
-    >>> kl = KullbackLeibler(q, prior)
+    >>> kl = KullbackLeibler(q,prior)
     >>> loss_cls = (reconst - kl).mean()
     >>> print(loss_cls)
     mean \\left(- D_{KL} \\left[q(z|x)||p_{prior}(z) \\right] - \\mathbb{E}_{q(z|x)} \\left[\\log p(x|z) \\right] \\right)

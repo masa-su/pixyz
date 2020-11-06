@@ -141,10 +141,10 @@ Deterministic
     :members:
     :undoc-members:
 
-DataDistribution
+EmpiricalDistribution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: DataDistribution
+.. autoclass:: EmpiricalDistribution
     :members:
     :undoc-members:
 

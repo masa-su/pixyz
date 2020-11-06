@@ -6,12 +6,11 @@ from ..utils import get_dict_values, detach_dict
 
 
 class AdversarialLoss(Divergence):
-    def __init__(self, p, q, discriminator, input_var=None,
-                 optimizer=optim.Adam, optimizer_params={}):
+    def __init__(self, p, q, discriminator, optimizer=optim.Adam, optimizer_params={}):
         if set(p.var) != set(q.var):
             raise ValueError("The two distribution variables must be the same.")
 
-        super().__init__(p, q, input_var=input_var)
+        super().__init__(p, q)
 
         if len(p.input_var) > 0:
             self.input_dist = p
@@ -136,11 +135,11 @@ class AdversarialJensenShannon(AdversarialLoss):
     Examples
     --------
     >>> import torch
-    >>> from pixyz.distributions import Deterministic, DataDistribution, Normal
+    >>> from pixyz.distributions import Deterministic, EmpiricalDistribution, Normal
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super(Generator, self).__init__(var=["x"], cond_var=["z"], name="p")
     ...         self.model = nn.Linear(32, 64)
     ...     def forward(self, z):
     ...         return {"x": self.model(z)}
@@ -152,31 +151,33 @@ class AdversarialJensenShannon(AdversarialLoss):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z):
       Generator(
         name=p, distribution_name=Deterministic,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
-    >>> p_data = DataDistribution(["x"])
+    >>> p_data = EmpiricalDistribution(["x"])
     >>> print(p_data)
     Distribution:
       p_{data}(x)
     Network architecture:
-      DataDistribution(
+      EmpiricalDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
     ...     def __init__(self):
-    ...         super(Discriminator, self).__init__(cond_var=["x"], var=["t"], name="d")
+    ...         super(Discriminator, self).__init__(var=["t"], cond_var=["x"], name="d")
     ...         self.model = nn.Linear(64, 1)
     ...     def forward(self, x):
     ...         return {"t": torch.sigmoid(self.model(x))}
@@ -212,11 +213,8 @@ class AdversarialJensenShannon(AdversarialLoss):
     [Goodfellow+ 2014] Generative Adversarial Networks
     """
 
-    def __init__(self, p, q, discriminator, input_var=None, optimizer=optim.Adam, optimizer_params={},
-                 inverse_g_loss=True):
-        super().__init__(p, q, discriminator,
-                         input_var=input_var,
-                         optimizer=optimizer, optimizer_params=optimizer_params)
+    def __init__(self, p, q, discriminator, optimizer=optim.Adam, optimizer_params={}, inverse_g_loss=True):
+        super().__init__(p, q, discriminator, optimizer=optimizer, optimizer_params=optimizer_params)
 
         self.bce_loss = nn.BCELoss()
         self._inverse_g_loss = inverse_g_loss
@@ -301,11 +299,11 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Examples
     --------
     >>> import torch
-    >>> from pixyz.distributions import Deterministic, DataDistribution, Normal
+    >>> from pixyz.distributions import Deterministic, EmpiricalDistribution, Normal
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super(Generator, self).__init__(var=["x"], cond_var=["z"], name="p")
     ...         self.model = nn.Linear(32, 64)
     ...     def forward(self, z):
     ...         return {"x": self.model(z)}
@@ -317,31 +315,33 @@ class AdversarialKullbackLeibler(AdversarialLoss):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z):
       Generator(
         name=p, distribution_name=Deterministic,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
-    >>> p_data = DataDistribution(["x"])
+    >>> p_data = EmpiricalDistribution(["x"])
     >>> print(p_data)
     Distribution:
       p_{data}(x)
     Network architecture:
-      DataDistribution(
+      EmpiricalDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
     ...     def __init__(self):
-    ...         super(Discriminator, self).__init__(cond_var=["x"], var=["t"], name="d")
+    ...         super(Discriminator, self).__init__(var=["t"], cond_var=["x"], name="d")
     ...         self.model = nn.Linear(64, 1)
     ...     def forward(self, x):
     ...         return {"t": torch.sigmoid(self.model(x))}
@@ -457,11 +457,11 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Examples
     --------
     >>> import torch
-    >>> from pixyz.distributions import Deterministic, DataDistribution, Normal
+    >>> from pixyz.distributions import Deterministic, EmpiricalDistribution, Normal
     >>> # Generator
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+    ...         super(Generator, self).__init__(var=["x"], cond_var=["z"], name="p")
     ...         self.model = nn.Linear(32, 64)
     ...     def forward(self, z):
     ...         return {"x": self.model(z)}
@@ -473,31 +473,33 @@ class AdversarialWassersteinDistance(AdversarialJensenShannon):
     Distribution:
       p(x) = \int p(x|z)p_{prior}(z)dz
     Network architecture:
+      p_{prior}(z):
       Normal(
         name=p_{prior}, distribution_name=Normal,
         var=['z'], cond_var=[], input_var=[], features_shape=torch.Size([32])
         (loc): torch.Size([1, 32])
         (scale): torch.Size([1, 32])
       )
+      p(x|z):
       Generator(
         name=p, distribution_name=Deterministic,
         var=['x'], cond_var=['z'], input_var=['z'], features_shape=torch.Size([])
         (model): Linear(in_features=32, out_features=64, bias=True)
       )
     >>> # Data distribution (dummy distribution)
-    >>> p_data = DataDistribution(["x"])
+    >>> p_data = EmpiricalDistribution(["x"])
     >>> print(p_data)
     Distribution:
       p_{data}(x)
     Network architecture:
-      DataDistribution(
+      EmpiricalDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
     >>> # Discriminator (critic)
     >>> class Discriminator(Deterministic):
     ...     def __init__(self):
-    ...         super(Discriminator, self).__init__(cond_var=["x"], var=["t"], name="d")
+    ...         super(Discriminator, self).__init__(var=["t"], cond_var=["x"], name="d")
     ...         self.model = nn.Linear(64, 1)
     ...     def forward(self, x):
     ...         return {"t": self.model(x)}

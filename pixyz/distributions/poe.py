@@ -101,7 +101,7 @@ class ProductOfNormal(Normal):
 
             cond_var += _p.cond_var
 
-        super().__init__(cond_var=cond_var, var=var, name=name, features_shape=features_shape)
+        super().__init__(var=var, cond_var=cond_var, name=name, features_shape=features_shape)
         self.p = nn.ModuleList(p)
 
     @property

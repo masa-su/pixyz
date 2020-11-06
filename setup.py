@@ -43,6 +43,7 @@ setup(
         "sympy>=1.4",
         "ipython",
         "tensorboardX",
+        "networkx",
     ],
     license='MIT',
     classifiers=[

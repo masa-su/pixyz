@@ -12,7 +12,7 @@ class Deterministic(Distribution):
     >>> import torch
     >>> class Generator(Deterministic):
     ...     def __init__(self):
-    ...         super().__init__(cond_var=["z"], var=["x"])
+    ...         super().__init__(var=["x"], cond_var=["z"])
     ...         self.model = torch.nn.Linear(64, 512)
     ...     def forward(self, z):
     ...         return {"x": self.model(z)}
@@ -30,11 +30,11 @@ class Deterministic(Distribution):
     >>> p.log_prob().eval(sample) # log_prob is not defined.
     Traceback (most recent call last):
      ...
-    NotImplementedError
+    NotImplementedError: Log probability of deterministic distribution is not defined.
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, var, cond_var=[], name='p', **kwargs):
+        super().__init__(var=var, cond_var=cond_var, name=name, **kwargs)
 
     @property
     def distribution_name(self):
@@ -57,12 +57,15 @@ class Deterministic(Distribution):
     def sample_mean(self, x_dict):
         return self.sample(x_dict, return_all=False)[self._var[0]]
 
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+        raise NotImplementedError("Log probability of deterministic distribution is not defined.")
+
     @property
     def has_reparam(self):
         return True
 
 
-class DataDistribution(Distribution):
+class EmpiricalDistribution(Distribution):
     """
     Data distribution.
 
@@ -71,12 +74,12 @@ class DataDistribution(Distribution):
     Examples
     --------
     >>> import torch
-    >>> p = DataDistribution(var=["x"])
+    >>> p = EmpiricalDistribution(var=["x"])
     >>> print(p)
     Distribution:
       p_{data}(x)
     Network architecture:
-      DataDistribution(
+      EmpiricalDistribution(
         name=p_{data}, distribution_name=Data distribution,
         var=['x'], cond_var=[], input_var=['x'], features_shape=torch.Size([])
       )
@@ -90,17 +93,25 @@ class DataDistribution(Distribution):
     def distribution_name(self):
         return "Data distribution"
 
-    def sample(self, x_dict={}, **kwargs):
+    def sample(self, x_dict={}, return_all=True, **kwargs):
         output_dict = self._get_input_dict(x_dict)
+
+        if return_all:
+            x_dict = x_dict.copy()
+            x_dict.update(output_dict)
+            return x_dict
         return output_dict
 
     def sample_mean(self, x_dict):
         return self.sample(x_dict, return_all=False)[self._var[0]]
 
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+        raise NotImplementedError()
+
     @property
     def input_var(self):
         """
-        In DataDistribution, `input_var` is same as `var`.
+        In EmpiricalDistribution, `input_var` is same as `var`.
         """
 
         return self.var

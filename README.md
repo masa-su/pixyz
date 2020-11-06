@@ -86,7 +86,7 @@ and
 >>> # inference model (encoder) q(z|x)
 >>> class Inference(Normal):
 ...     def __init__(self):
-...         super(Inference, self).__init__(cond_var=["x"], var=["z"], name="q")  # var: variables of this distribution, cond_var: coditional variables.
+...         super(Inference, self).__init__(var=["z"],cond_var=["x"],name="q")  # var: variables of this distribution, cond_var: coditional variables.
 ...         self.fc1 = nn.Linear(784, 512)
 ...         self.fc21 = nn.Linear(512, 64)
 ...         self.fc22 = nn.Linear(512, 64)
@@ -99,7 +99,7 @@ and
 >>> # generative model (decoder) p(x|z)    
 >>> class Generator(Bernoulli):
 ...     def __init__(self):
-...         super(Generator, self).__init__(cond_var=["z"], var=["x"], name="p")
+...         super(Generator, self).__init__(var=["x"], cond_var=["z"], name="p")
 ...         self.fc1 = nn.Linear(64, 512)
 ...         self.fc2 = nn.Linear(512, 128)
 ... 
@@ -196,7 +196,7 @@ Next, we set the objective (loss) function of the model with defined distributio
 ```python
 >>> from pixyz.losses import KullbackLeibler, LogProb, Expectation as E
 >>> reconst = -E(q, LogProb(p)) # the reconstruction loss (it can also be written as `-p.log_prob().expectation()`)
->>> kl = KullbackLeibler(q, prior) # Kullback-Leibler divergence
+>>> kl = KullbackLeibler(q,prior) # Kullback-Leibler divergence
 >>> loss_cls = (kl + reconst).mean()
 ```
 
