@@ -1,6 +1,8 @@
 # flake8: noqa: F841
 from __future__ import print_function
+# if you want to run all tests (contains below), type> pytest -m "performance or not performance"
 
+import pytest
 import torch
 import torch.utils.data
 from torch import nn, optim
@@ -42,6 +44,7 @@ mock_cifar10 = [(torch.ones(3, 32, 32), 3), (torch.ones(3, 32, 32), 1)]
 
 
 # # Conditional variational autoencoder (using the VAE class)
+@pytest.mark.performance
 def test_run_cvae():
     # In[2]:
 
@@ -222,6 +225,7 @@ def test_run_cvae():
 
 
 # # Examples of creating and operating distributions in Pixyz
+@pytest.mark.performance
 def test_run_distributions():
     # In[1]:
     # In[2]:
@@ -366,6 +370,7 @@ def test_run_distributions():
 
 
 # # Generative adversarial network (using the GAN class)
+@pytest.mark.performance
 def test_run_gan():
     # In[1]:
     # In[2]:
@@ -529,6 +534,7 @@ def test_run_gan():
 
 
 # # Glow （CIFAR10）
+@pytest.mark.performance
 def test_run_glow():
     # In[1]:
     # In[2]:
@@ -677,6 +683,7 @@ def test_run_glow():
 
 
 # # Gaussian Mixture Model
+@pytest.mark.performance
 def test_run_gmm():
     # In[1]:
     # import matplotlib.pyplot as plt
@@ -854,6 +861,7 @@ def test_run_gmm():
 
 
 # # Variational inference on a hierarchical latent model
+@pytest.mark.performance
 def test_run_hvi():
     # In[1]:
     # In[2]:
@@ -1043,6 +1051,7 @@ def test_run_hvi():
 # # JMVAE with a PoE encoder (using the VAE class)
 # * JMVAE: Joint Multimodal Learning with Deep Generative Models
 # * The PoE encoder is originally proposed in "Multimodal Generative Models for Scalable Weakly-Supervised Learning"
+@pytest.mark.performance
 def test_run_jmvae_poe():
     # In[1]:
     # In[2]:
@@ -1259,6 +1268,7 @@ def test_run_jmvae_poe():
 
 # # Joint multimodal variational autoencoder (JMVAE, using the VAE class)
 # Original paper: Joint Multimodal Learning with Deep Generative Models (https://arxiv.org/abs/1611.01891 )
+@pytest.mark.performance
 def test_run_jmvae():
     # In[1]:
     # In[2]:
@@ -1484,6 +1494,7 @@ def test_run_jmvae():
 
 
 # # Semi-supervised learning with M2 model
+@pytest.mark.performance
 def test_run_m2():
     # In[1]:
     # In[2]:
@@ -1720,6 +1731,7 @@ def test_run_m2():
 
 
 # # Maximum likelihood estimation (using the ML class)
+@pytest.mark.performance
 def test_run_maximum_likelihood():
     # In[1]:
     # In[2]:
@@ -1826,6 +1838,7 @@ def test_run_maximum_likelihood():
 
 
 # # MMD-VAE (using the Model class)
+@pytest.mark.performance
 def test_run_mmd_vae():
     # In[1]:
     # In[2]:
@@ -1990,6 +2003,7 @@ def test_run_mmd_vae():
 
 
 # # MVAE
+@pytest.mark.performance
 def test_run_mvae():
     # * Original paper: Multimodal Generative Models for Scalable Weakly-Supervised Learning (https://papers.nips.cc/paper/7801-multimodal-generative-models-for-scalable-weakly-supervised-learning.pdf)
     # * Original code: https://github.com/mhw32/multimodal-vae-public
@@ -2280,6 +2294,7 @@ def test_run_mvae():
 
 
 # # A toy example of variational inference with normalizing flow (using the VI class)
+@pytest.mark.performance
 def test_run_normalizing_flow_toy():
     # In[1]:
     # In[2]:
@@ -2387,6 +2402,7 @@ def test_run_normalizing_flow_toy():
 
 
 # # Real NVP （CIFAR10）
+@pytest.mark.performance
 def test_run_real_nvp_cifar():
     # In[1]:
     # In[2]:
@@ -2547,6 +2563,7 @@ def test_run_real_nvp_cifar():
 
 
 # # Real NVP （CIFAR10）
+@pytest.mark.performance
 def test_run_real_nvp_cond():
     # In[1]:
     # In[2]:
@@ -2707,6 +2724,7 @@ def test_run_real_nvp_cond():
 
 
 # # Conditional Real NVP
+@pytest.mark.performance
 def test_run_real_nvp_cond_():
     # In[1]:
     # In[2]:
@@ -2885,6 +2903,7 @@ def test_run_real_nvp_cond_():
 
 
 # # Conditional Real NVP
+@pytest.mark.performance
 def test_run_real_nvp_cond__():
     # In[1]:
     # In[2]:
@@ -3063,6 +3082,7 @@ def test_run_real_nvp_cond__():
 
 
 # A toy example of Real NVP (using the ML class)
+@pytest.mark.performance
 def test_run_real_nvp_toy():
 
     # In[1]:
@@ -3219,6 +3239,7 @@ def test_run_real_nvp_toy():
 
 
 # # Real NVP
+@pytest.mark.performance
 def test_run_real_nvp():
     # In[1]:
     # In[2]:
@@ -3373,6 +3394,7 @@ def test_run_real_nvp():
 
 
 # # Variational autoencoder (using the Model class)
+@pytest.mark.performance
 def test_run_vae_model():
     # In[1]:
     # In[2]:
@@ -3543,6 +3565,7 @@ def test_run_vae_model():
 
 
 # # Variational autoencoder (using the VAE class)
+@pytest.mark.performance
 def test_run_vae_with_vae_class():
     # * Original paper: Auto-Encoding Variational Bayes (https://arxiv.org/pdf/1312.6114.pdf)
 
@@ -3758,6 +3781,7 @@ def test_run_vae_with_vae_class():
 
 
 # # Variational autoencoder
+@pytest.mark.performance
 def test_run_vae():
     # * Original paper: Auto-Encoding Variational Bayes (https://arxiv.org/pdf/1312.6114.pdf)
 
@@ -3978,6 +4002,7 @@ def test_run_vae():
 
 
 # # Variational autoencoder (using the VI class)
+@pytest.mark.performance
 def test_run_vi():
     # In[1]:
     # In[2]:
