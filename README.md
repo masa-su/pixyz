@@ -7,7 +7,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20-blue)](https://github.com/masa-su/pixyz)
 [![Pytorch Version](https://img.shields.io/badge/pytorch-1.0-yellow.svg)](https://github.com/masa-su/pixyz)
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
-[![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=master)](https://github.com/masa-su/pixyz)
+[![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=master)](https://travis-ci.org/github/masa-su/pixyz)
 [![Downloads](https://pepy.tech/badge/pixyz)](https://pepy.tech/project/pixyz)
 
 [Docs](https://docs.pixyz.io) | [Examples](https://github.com/masa-su/pixyz/tree/master/examples) | [Pixyzoo](https://github.com/masa-su/pixyzoo)
