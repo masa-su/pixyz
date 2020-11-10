@@ -45,6 +45,7 @@ setup(
     extras_require={
         'dev': ['pytest',
                 'pytest-cov',
+                'pytest-flake8',
                 'sphinx',
                 'sphinx_rtd_theme',
                 'twine',
@@ -52,8 +53,8 @@ setup(
                 "torchvision",
                 "tensorboardX",
                 'sklearn'],
-        'test': [
-                 'pytest-cov',
+        'test': ['pytest-cov',
+                 'pytest-flake8',
                  'sphinx',
                  'sphinx_rtd_theme',
                  'tqdm',
