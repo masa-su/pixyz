@@ -38,8 +38,9 @@ setup(
     install_requires=[
         "torch>=1.0",
         "scipy",
-        'numpy',
+        "numpy",
         "sympy>=1.4",
+        "ipython",
         "networkx",
     ],
     extras_require={
