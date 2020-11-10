@@ -52,7 +52,7 @@ setup(
                 "torchvision",
                 "tensorboardX",
                 'sklearn'],
-        'test': ['pytest',
+        'test': [
                  'pytest-cov',
                  'sphinx',
                  'sphinx_rtd_theme',
