@@ -9,6 +9,7 @@
 [![Read the Docs](https://readthedocs.org/projects/pixyz/badge/?version=latest)](http://docs.pixyz.io)
 [![TravisCI](https://travis-ci.org/masa-su/pixyz.svg?branch=master)](https://github.com/masa-su/pixyz)
 [![Downloads](https://pepy.tech/badge/pixyz)](https://pepy.tech/project/pixyz)
+[![Docker Pulls](https://img.shields.io/docker/pulls/kenoharada/pixyz.svg)](https://hub.docker.com/r/kenoharada/pixyz)
 
 [Docs](https://docs.pixyz.io) | [Examples](https://github.com/masa-su/pixyz/tree/master/examples) | [Pixyzoo](https://github.com/masa-su/pixyzoo)
 
@@ -50,6 +51,16 @@ If installing from source code, execute the following commands.
 ```
 $ git clone https://github.com/masa-su/pixyz.git
 $ pip install -e pixyz
+```
+
+
+You can also install pixyz and PyTorch environment through Docker Hub
+```
+# pull docker image from https://hub.docker.com/r/kenoharada/pixyz
+$ docker pull kenoharada/pixyz:v0.3.0_python_3.7.7_pytorch_1.6.0_cuda_10.1
+
+# Run pixyz environment
+$ docker run --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=0 --rm -it kenoharada/pixyz:v0.3.0_python_3.7.7_pytorch_1.6.0_cuda_10.1
 ```
 
 ## Quick Start
