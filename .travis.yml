@@ -2,10 +2,6 @@ language: python
 python:
     - 3.6.5
 install:
-  - pip install pytest-cov
-  - pip install pytest-flake8
-  - pip install sphinx
-  - pip install sphinx_rtd_theme
-  - python setup.py install
+  - pip install -e "."[test]
 script:
   - pytest

@@ -938,8 +938,7 @@ class Distribution(nn.Module):
         --------
         >>> from pixyz.distributions import Normal
         >>> # Marginal distribution
-        >>> p = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.), var=["x"],
-        ...            features_shape=[10, 2])
+        >>> p = Normal(loc=0, scale=1, var=["x"], features_shape=[10, 2])
         >>> print(p)
         Distribution:
           p(x)
@@ -958,8 +957,7 @@ class Distribution(nn.Module):
         torch.Size([40, 30, 20, 10, 2])
 
         >>> # Conditional distribution
-        >>> p = Normal(loc="y", scale=torch.tensor(1.), var=["x"], cond_var=["y"],
-        ...            features_shape=[10])
+        >>> p = Normal(loc="y", scale=1., var=["x"], cond_var=["y"], features_shape=[10])
         >>> print(p)
         Distribution:
           p(x|y)
@@ -1302,25 +1300,27 @@ class DistributionBase(Distribution):
         """
 
         self.replace_params_dict = {}
-
-        for key in params_dict.keys():
-            if type(params_dict[key]) is str:
-                if params_dict[key] in self._cond_var:
-                    if params_dict[key] not in self.replace_params_dict:
-                        self.replace_params_dict[params_dict[key]] = []
-                    self.replace_params_dict[params_dict[key]].append(key)
+        for key, value in params_dict.items():
+            if type(value) is str:
+                if value in self._cond_var:
+                    if value not in self.replace_params_dict:
+                        self.replace_params_dict[value] = []
+                    self.replace_params_dict[value].append(key)
                 else:
-                    raise ValueError(f"parameter setting {key}:{params_dict[key]} is not valid"
-                                     f" because cond_var does not contains {params_dict[key]}.")
-            elif isinstance(params_dict[key], torch.Tensor):
-                features = params_dict[key]
+                    raise ValueError(f"parameter setting {key}:{value} is not valid"
+                                     f" because cond_var does not contains {value}.")
+            elif isinstance(value, torch.Tensor) \
+                    or isinstance(value, float) or isinstance(value, int):
+                if not isinstance(value, torch.Tensor):
+                    features = torch.tensor(value, dtype=torch.float)
+                else:
+                    features = value
                 features_checked = self._check_features_shape(features)
                 # clone features to make it contiguous & to make it independent.
                 self.register_buffer(key, features_checked.clone())
             else:
-                # TODO: int, double, LongTensor are not supported.
                 raise ValueError(f"The types that can be specified as parameters of distribution"
-                                 f" are limited to str & torch.Tensor. Got: {type(params_dict[key])}")
+                                 f" are limited to str & torch.Tensor. Got: {type(value)}")
 
     def _check_features_shape(self, features):
         # scalar

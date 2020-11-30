@@ -23,7 +23,6 @@ def train_loader():
         ("bbb", "bbb")
     ]
 )
-@pytest.mark.small
 def test_something(train_loader, x, y, tmpdir):
     print(tmpdir)
     assert True
