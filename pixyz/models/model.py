@@ -179,3 +179,16 @@ class Model(object):
             loss = self.test_loss_cls.eval(test_x_dict, **kwargs)
 
         return loss
+
+    def save(self, path):
+        torch.save({
+            'loss_cls': self.loss_cls.state_dict(),
+            'test_loss_cls': self.test_loss_cls.state_dict(),
+            'distributions': self.distributions.state_dict(),
+        }, path)
+
+    def load(self, path):
+        checkpoint = torch.load(path)
+        self.loss_cls.load_state_dict(checkpoint['loss_cls'])
+        self.test_loss_cls.load_state_dict(checkpoint['test_loss_cls'])
+        self.distributions.load_state_dict(checkpoint['distributions'])
