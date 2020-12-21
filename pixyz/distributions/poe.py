@@ -227,13 +227,13 @@ class ProductOfNormal(Normal):
 
         return get_dict_values(checked_x, var, return_dict=True)
 
-    def log_prob(self, sum_features=True, feature_dims=None):
+    def log_prob(self, sum_features=True):
         raise NotImplementedError()
 
-    def prob(self, sum_features=True, feature_dims=None):
+    def prob(self, sum_features=True):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True):
         raise NotImplementedError()
 
 

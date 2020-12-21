@@ -27,11 +27,10 @@ class LogProb(Loss):
 
     """
 
-    def __init__(self, p, sum_features=True, feature_dims=None):
+    def __init__(self, p, sum_features=True):
         input_var = p.var + p.cond_var
         super().__init__(input_var=input_var)
         self.sum_features = sum_features
-        self.feature_dims = feature_dims
         self.p = p
 
     @property
@@ -39,7 +38,7 @@ class LogProb(Loss):
         return sympy.Symbol("\\log {}".format(self.p.prob_text))
 
     def forward(self, x={}, **kwargs):
-        log_prob = self.p.get_log_prob(x, sum_features=self.sum_features, feature_dims=self.feature_dims)
+        log_prob = self.p.get_log_prob(x, sum_features=self.sum_features)
         return log_prob, {}
 
 

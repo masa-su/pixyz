@@ -541,11 +541,10 @@ class DistGraph(nn.Module):
         else:
             return delete_dict_values(result_dict, self.input_var)
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
-        return self(mode='get_log_prob', kwargs={'x_dict': x_dict, 'sum_features': sum_features,
-                                                 'feature_dims': feature_dims})
+    def get_log_prob(self, x_dict, sum_features=True):
+        return self(mode='get_log_prob', kwargs={'x_dict': x_dict, 'sum_features': sum_features})
 
-    def _get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def _get_log_prob(self, x_dict, sum_features=True):
         """ Giving variables, this method returns values of log-pdf.
 
         Parameters
@@ -553,9 +552,7 @@ class DistGraph(nn.Module):
         x_dict : dict
             Input variables.
         sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some dimensions which are specified by `feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set dimensions to sum across the output.
+            Whether the output is summed across all dimensions except for a batch dimension.
 
         Returns
         -------
@@ -612,7 +609,7 @@ class DistGraph(nn.Module):
             raise NotImplementedError()
 
         log_prob_option = dict(self.global_option)
-        log_prob_option.update(dict(sum_features=sum_features, feature_dims=feature_dims))
+        log_prob_option.update(dict(sum_features=sum_features))
 
         require_var = self.var + self.cond_var
         if not(set(x_dict) >= set(require_var)):
@@ -1056,7 +1053,7 @@ class Distribution(nn.Module):
         """
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True):
         """Giving variables, this method returns values of log-pdf.
 
         Parameters
@@ -1064,9 +1061,7 @@ class Distribution(nn.Module):
         x_dict : dict
             Input variables.
         sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some dimensions which are specified by `feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set dimensions to sum across the output.
+            Whether the output is summed across all dimensions except for a batch dimension.
 
         Returns
         -------
@@ -1095,10 +1090,10 @@ class Distribution(nn.Module):
 
         """
         if self.graph:
-            return self.graph.get_log_prob(x_dict, sum_features, feature_dims)
+            return self.graph.get_log_prob(x_dict, sum_features)
         raise NotImplementedError()
 
-    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+    def get_entropy(self, x_dict={}, sum_features=True):
         """Giving variables, this method returns values of entropy.
 
         Parameters
@@ -1106,9 +1101,7 @@ class Distribution(nn.Module):
         x_dict : dict, defaults to {}
             Input variables.
         sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some dimensions which are specified by :attr:`feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set dimensions to sum across the output.
+            Whether the output is summed across all dimensions except for a batch dimension.
 
         Returns
         -------
@@ -1137,15 +1130,13 @@ class Distribution(nn.Module):
         """
         raise NotImplementedError()
 
-    def log_prob(self, sum_features=True, feature_dims=None):
+    def log_prob(self, sum_features=True):
         """Return an instance of :class:`pixyz.losses.LogProb`.
 
         Parameters
         ----------
         sum_features : :obj:`bool`, defaults to True
-            Whether the output is summed across some axes (dimensions) which are specified by :attr:`feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set axes to sum across the output.
+            Whether the output is summed across all dimensions except for a batch dimension.
 
         Returns
         -------
@@ -1173,18 +1164,15 @@ class Distribution(nn.Module):
         tensor([-21.5251])
 
         """
-        return LogProb(self, sum_features=sum_features, feature_dims=feature_dims)
+        return LogProb(self, sum_features=sum_features)
 
-    def prob(self, sum_features=True, feature_dims=None):
+    def prob(self, sum_features=True):
         """Return an instance of :class:`pixyz.losses.Prob`.
 
         Parameters
         ----------
         sum_features : :obj:`bool`, defaults to True
-            Choose whether the output is summed across some axes (dimensions)
-            which are specified by :attr:`feature_dims`.
-        feature_dims : :obj:`list` or :obj:`NoneType`, defaults to None
-            Set dimensions to sum across the output. (Note: this parameter is not used for now.)
+            Whether the output is summed across all dimensions except for a batch dimension.
 
         Returns
         -------
@@ -1212,7 +1200,7 @@ class Distribution(nn.Module):
         tensor([2.9628e-09])
 
         """
-        return Prob(self, sum_features=sum_features, feature_dims=feature_dims)
+        return Prob(self, sum_features=sum_features)
 
     def forward(self, *args, **kwargs):
         """When this class is inherited by DNNs, this method should be overrided."""
@@ -1417,7 +1405,7 @@ class DistributionBase(Distribution):
     def has_reparam(self):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
         self.set_dist(_x_dict)
 
@@ -1495,7 +1483,7 @@ class DistributionBase(Distribution):
 
         return output_dict
 
-    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
+    def get_entropy(self, x_dict={}, sum_features=True):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
         self.set_dist(_x_dict)
 
@@ -1677,8 +1665,8 @@ class ReplaceVarDistribution(Distribution):
     def sample_variance(self, x_dict={}):
         return self.p.sample_variance(x_dict)
 
-    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
-        return self.p.get_entropy(x_dict, sum_features, feature_dims)
+    def get_entropy(self, x_dict={}, sum_features=True):
+        return self.p.get_entropy(x_dict, sum_features)
 
     @property
     def distribution_name(self):
@@ -1765,8 +1753,8 @@ class MarginalizeVarDistribution(Distribution):
     def sample_variance(self, x_dict={}):
         return self.p.sample_variance(x_dict)
 
-    def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
-        return self.p.get_entropy(x_dict, sum_features, feature_dims)
+    def get_entropy(self, x_dict={}, sum_features=True):
+        return self.p.get_entropy(x_dict, sum_features)
 
     @property
     def distribution_name(self):
