@@ -59,7 +59,7 @@ class CustomProb(Distribution):
         x_dict = get_dict_values(x_dict, self._var, return_dict=True)
         log_prob = self.log_prob_function(**x_dict)
         if sum_features:
-            log_prob = sum_samples(log_prob)
+            log_prob = sum_samples(log_prob, feature_dims)
 
         return log_prob
 

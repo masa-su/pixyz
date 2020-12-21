@@ -1,3 +1,4 @@
+import pytest
 import torch
 from pixyz.distributions import Normal
 
@@ -50,3 +51,20 @@ class TestDistributionBase:
     def test_batch_n(self):
         normal = Normal(loc=0, scale=1)
         assert normal.sample(batch_n=3)['x'].shape == torch.Size([3])
+
+    @pytest.mark.parametrize(
+        "dist", [
+            Normal(loc=0, scale=1),
+            Normal(var=['x'], loc=0, scale=1) * Normal(var=['y'], loc=0, scale=1),
+            # Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1),
+        ],
+    )
+    def test_get_log_prob_feature_dims(self, dist):
+        assert dist.get_log_prob(dist.sample(batch_n=4, sample_shape=(2, 3)),
+                                 sum_features=True, feature_dims=None).shape == torch.Size([2])
+        assert dist.get_log_prob(dist.sample(batch_n=4, sample_shape=(2, 3)),
+                                 sum_features=True, feature_dims=[-2]).shape == torch.Size([2, 4])
+        assert dist.get_log_prob(dist.sample(batch_n=4, sample_shape=(2, 3)),
+                                 sum_features=True, feature_dims=[0, 1]).shape == torch.Size([4])
+        assert dist.get_log_prob(dist.sample(batch_n=4, sample_shape=(2, 3)),
+                                 sum_features=True, feature_dims=[]).shape == torch.Size([2, 3, 4])

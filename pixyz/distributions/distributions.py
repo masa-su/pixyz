@@ -1439,7 +1439,7 @@ class DistributionBase(Distribution):
             raise ValueError(f"x_dict has no value of the stochastic variable. x_dict: {x_dict}")
         log_prob = self.dist.log_prob(*x_targets)
         if sum_features:
-            log_prob = sum_samples(log_prob)
+            log_prob = sum_samples(log_prob, feature_dims)
 
         return log_prob
 
@@ -1514,7 +1514,7 @@ class DistributionBase(Distribution):
 
         entropy = self.dist.entropy()
         if sum_features:
-            entropy = sum_samples(entropy)
+            entropy = sum_samples(entropy, feature_dims)
 
         return entropy
 
