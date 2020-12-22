@@ -78,8 +78,9 @@ class Factor:
 
         local_input_dict = replace_dict_keys(input_dict, self.name_dict)
 
-        option = dict(self.option)
-        option.update(sample_option)
+        # Overwrite log_prob_option with self.option to give priority to local settings such as batch_n
+        option = dict(sample_option)
+        option.update(self.option)
         local_output_dict = self.dist.sample(local_input_dict, **option)
 
         # TODO: It shows return_hidden option change graphical model. This is bad operation.
@@ -100,8 +101,9 @@ class Factor:
         input_dict = get_dict_values(values, global_input_var, return_dict=True)
         local_input_dict = replace_dict_keys(input_dict, self.name_dict)
 
-        option = dict(self.option)
-        option.update(log_prob_option)
+        # Overwrite log_prob_option with self.option to give priority to local settings such as batch_n
+        option = dict(log_prob_option)
+        option.update(self.option)
         log_prob = self.dist.get_log_prob(local_input_dict, **option)
         return log_prob
 
@@ -189,7 +191,7 @@ class DistGraph(nn.Module):
         var: list of string
         """
         if not var:
-            self.global_option.update(option_dict)
+            self.global_option = option_dict
         else:
             for var_name in var:
                 for factor in self._factors_from_variable(var_name):
