@@ -189,6 +189,17 @@ class DistGraph(nn.Module):
         ----------
         option_dict: dict of str and any object
         var: list of string
+        Examples
+        --------
+        >>> from pixyz.distributions import Normal
+        >>> dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1)
+        >>> # Set options only on the sampling start node
+        >>> dist.graph.set_option(dict(batch_n=4, sample_shape=(2, 3)), ['y'])
+        >>> sample = dist.sample()
+        >>> sample['y'].shape
+        torch.Size([2, 3, 4])
+        >>> sample['x'].shape
+        torch.Size([2, 3, 4])
         """
         if not var:
             self.global_option = option_dict
