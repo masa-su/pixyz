@@ -449,11 +449,13 @@ class DistGraph(nn.Module):
         else:
             raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
-        return self('sample', kwargs={'x_dict': x_dict, 'batch_n': batch_n, 'sample_shape': sample_shape,
-                                      'return_all': return_all, 'reparam': reparam})
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               bypass_from=None):
+        return self('sample', kwargs=dict(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape,
+                                          return_all=return_all, reparam=reparam, bypass_from=bypass_from))
 
-    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+                bypass_from=None):
         """
         Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
@@ -470,6 +472,8 @@ class DistGraph(nn.Module):
             Choose whether the output contains input variables.
         reparam : :obj:`bool`, defaults to False.
             Choose whether we sample variables with re-parameterized trick.
+        bypass_from : :obj:`str`, defaults to None.
+            Choose a parameter name to bypass stochastic sampling. The value of parameter is returned as a sample.
 
         Returns
         -------
@@ -536,7 +540,7 @@ class DistGraph(nn.Module):
 
         sample_option = dict(self.global_option)
         sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape,
-                                  return_all=False, reparam=reparam))
+                                  return_all=False, reparam=reparam, bypass_from=bypass_from))
         # ignore return_all because overriding is now under control.
         if not(set(x_dict) >= set(self.input_var)):
             raise ValueError(f"Input keys are not valid, expected {set(self.input_var)} but got {set(x_dict)}.")
@@ -925,7 +929,7 @@ class Distribution(nn.Module):
         return input_dict
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
-               reparam=False):
+               reparam=False, bypass_from=None):
         """Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
 
@@ -941,6 +945,8 @@ class Distribution(nn.Module):
             Choose whether the output contains input variables.
         reparam : :obj:`bool`, defaults to False.
             Choose whether we sample variables with re-parameterized trick.
+        bypass_from : :obj:`str`, defaults to None.
+            Choose a parameter name to bypass stochastic sampling. The value of parameter is returned as a sample.
 
         Returns
         -------
@@ -999,7 +1005,7 @@ class Distribution(nn.Module):
 
         """
         if self.graph:
-            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam)
+            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, bypass_from=bypass_from)
         raise NotImplementedError()
 
     @property
@@ -1518,12 +1524,28 @@ class DistributionBase(Distribution):
 
         return entropy
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               bypass_from=None):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 
-        self.set_dist(input_dict, batch_n=batch_n)
-        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
+        if bypass_from:
+            params = self.get_params(input_dict)
+            output_value = params[bypass_from]
+            # expand batch_n
+            if batch_n:
+                output_shape = output_value.shape
+                if output_shape[0] == 1:
+                    output_value = output_value.expand(torch.Size([batch_n]) + output_shape[1:])
+                elif output_shape[0] == batch_n:
+                    pass
+                else:
+                    raise ValueError(f"Batch shape mismatch. batch_shape from parameters: {output_shape}\n"
+                                     f" specified batch size:{batch_n}")
+            output_dict = {self.var[0]: output_value}
+        else:
+            self.set_dist(input_dict, batch_n=batch_n)
+            output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
             x_dict = x_dict.copy()

@@ -50,3 +50,18 @@ class TestDistributionBase:
     def test_batch_n(self):
         normal = Normal(loc=0, scale=1)
         assert normal.sample(batch_n=3)['x'].shape == torch.Size([3])
+
+    def test_bypass_from(self):
+        normal = Normal(loc=0, scale=1)
+        assert normal.sample(bypass_from='loc')['x'] == torch.tensor([0])
+        assert normal.sample(bypass_from='scale')['x'] == torch.tensor([1])
+
+        normal = Normal(loc=torch.zeros(2, 3), scale=1)
+        bypassed = normal.sample(bypass_from='loc')['x']
+        assert torch.equal(bypassed, torch.zeros(1, 2, 3))
+        bypassed = normal.sample(bypass_from='scale')['x']
+        assert torch.equal(bypassed, torch.ones(1, 2, 3))
+
+        normal = Normal(loc=torch.zeros(2, 3), scale=1)
+        bypassed = normal.sample(bypass_from='loc', batch_n=4)['x']
+        assert torch.equal(bypassed, torch.zeros(4, 2, 3))
