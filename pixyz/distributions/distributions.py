@@ -931,7 +931,7 @@ class Distribution(nn.Module):
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
                reparam=False, bypass_from=None):
         """Sample variables of this distribution.
-        If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
+        If :attr:`cond_var` is not empty, you need to set x_dict containing values of :attr:`cond_var`.
 
         Parameters
         ----------

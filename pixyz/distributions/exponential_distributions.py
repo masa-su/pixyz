@@ -123,12 +123,28 @@ class RelaxedBernoulli(Bernoulli):
             else:
                 raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               bypass_from=None):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 
-        self.set_dist(input_dict, batch_n=batch_n, sampling=True)
-        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
+        if bypass_from:
+            params = self.get_params(input_dict)
+            output_value = params[bypass_from]
+            # expand batch_n
+            if batch_n:
+                output_shape = output_value.shape
+                if output_shape[0] == 1:
+                    output_value = output_value.expand(torch.Size([batch_n]) + output_shape[1:])
+                elif output_shape[0] == batch_n:
+                    pass
+                else:
+                    raise ValueError(f"Batch shape mismatch. batch_shape from parameters: {output_shape}\n"
+                                     f" specified batch size:{batch_n}")
+            output_dict = {self.var[0]: output_value}
+        else:
+            self.set_dist(input_dict, batch_n=batch_n, sampling=True)
+            output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
             x_dict = x_dict.copy()
@@ -254,12 +270,28 @@ class RelaxedCategorical(Categorical):
             else:
                 raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               bypass_from=None):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 
-        self.set_dist(input_dict, batch_n=batch_n, sampling=True)
-        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
+        if bypass_from:
+            params = self.get_params(input_dict)
+            output_value = params[bypass_from]
+            # expand batch_n
+            if batch_n:
+                output_shape = output_value.shape
+                if output_shape[0] == 1:
+                    output_value = output_value.expand(torch.Size([batch_n]) + output_shape[1:])
+                elif output_shape[0] == batch_n:
+                    pass
+                else:
+                    raise ValueError(f"Batch shape mismatch. batch_shape from parameters: {output_shape}\n"
+                                     f" specified batch size:{batch_n}")
+            output_dict = {self.var[0]: output_value}
+        else:
+            self.set_dist(input_dict, batch_n=batch_n, sampling=True)
+            output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
             x_dict = x_dict.copy()

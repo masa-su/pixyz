@@ -131,13 +131,52 @@ class MixtureModel(Distribution):
     def posterior(self, name=None):
         return PosteriorMixtureModel(self, name=name)
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, return_hidden=False, **kwargs):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, return_hidden=False,
+               bypass_from=None, **kwargs):
+        """Sample variables of this distribution.
+        If :attr:`cond_var` is not empty, you need to set :attr:`x_dict` containing values of :attr:`cond_var`.
+
+        Parameters
+        ----------
+        x_dict : :obj:`torch.Tensor`, :obj:`list`, or :obj:`dict`, defaults to {}
+            Input variables.
+        batch_n : :obj:`int`, defaults to None.
+            Set batch size of parameters.
+        sample_shape : :obj:`list` or :obj:`NoneType`, defaults to torch.Size()
+            Shape of generating samples.
+        return_all : :obj:`bool`, defaults to True
+            Choose whether the output contains input variables.
+        return_hidden : :obj: `bool`, defaults to False
+            Choose whether the output contains the hidden variable.
+        bypass_from : :obj:`str`, defaults to None.
+            Choose a parameter name to bypass stochastic sampling. The value of parameter is returned as a sample.
+
+        Returns
+        -------
+        output : dict
+            Samples of this distribution.
+
+        Examples
+        --------
+        >>> from pixyz.distributions import Normal, Categorical
+        >>> dist = MixtureModel([Normal(loc=0, scale=1), Normal(loc=1, scale=1)],
+        ...                     Categorical(probs=torch.tensor([0., 1.])))
+        >>> print(dist.sample()) # doctest: +SKIP
+        {'x': tensor([0.6070])}
+        >>> print(dist.sample(bypass_from="loc"))
+        {'x': tensor([1.])}
+        """
         # sample from prior
-        hidden_output = self.prior.sample(batch_n=batch_n)[self._hidden_var[0]]
+        hidden_output = self.prior.sample(batch_n=batch_n, sample_shape=sample_shape)[self._hidden_var[0]]
 
         var_output = []
+        if sample_shape != torch.Size():
+            # MixtureModel does not support sample_shape option because for loop is not scalable.
+            raise ValueError("sample_shape option is not supported for MixtureModel.")
         for _hidden_output in hidden_output:
-            var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample()[self._var[0]])
+            dist = self.distributions[_hidden_output.argmax(dim=-1)]
+            sample = dist.sample(bypass_from=bypass_from)[self._var[0]]
+            var_output.append(sample)
 
         var_output = torch.cat(var_output, dim=0)
         output_dict = {self._var[0]: var_output}
