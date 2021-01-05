@@ -135,6 +135,10 @@ class TestRelaxedBernoulli:
     def nearly_eq(self, tensor1, tensor2):
         return abs(tensor1.item() - tensor2.item()) < 0.001
 
+    def test_bypass_from_option(self):
+        rb = RelaxedBernoulli(var=['x'], temperature=torch.tensor(0.5), probs=torch.ones(2))
+        assert torch.equal(rb.sample(bypass_from='probs')['x'], torch.ones(1, 2))
+
 
 class TestIterativeLoss:
     def test_print_latex(self):
