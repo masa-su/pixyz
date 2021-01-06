@@ -158,11 +158,12 @@ class FactorizedBernoulli(Bernoulli):
     def distribution_name(self):
         return "FactorizedBernoulli"
 
-    def get_log_prob(self, x_dict):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         log_prob = super().get_log_prob(x_dict, sum_features=False)
         [_x] = get_dict_values(x_dict, self._var)
         log_prob[_x == 0] = 0
-        log_prob = sum_samples(log_prob)
+        if sum_features:
+            log_prob = sum_samples(log_prob, feature_dims)
         return log_prob
 
 
