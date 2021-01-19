@@ -41,6 +41,10 @@ class TestGraph:
         # dist.graph.set_option(dict(sum_features=True, feature_dims=[-1]))
         # assert dist.get_log_prob(sample).shape == torch.Size([4, 3])
 
+    def test_input_extra_var(self):
+        normal = Normal(var=['x'], loc=0, scale=1) * Normal(var=['y'], loc=0, scale=1)
+        assert set(normal.sample({'z': torch.zeros(1)})) == set(('x', 'y', 'z'))
+
 
 class TestDistributionBase:
     def test_init_with_scalar_params(self):
@@ -55,6 +59,11 @@ class TestDistributionBase:
     def test_batch_n(self):
         normal = Normal(loc=0, scale=1)
         assert normal.sample(batch_n=3)['x'].shape == torch.Size([3])
+
+    def test_input_extra_var(self):
+        normal = Normal(loc=0, scale=1)
+        assert set(normal.sample({'y': torch.zeros(1)})) == set(('x', 'y'))
+        assert normal.get_log_prob({'y': torch.zeros(1), 'x': torch.zeros(1)}).shape == torch.Size([1])
 
 
 def test_memoization():
