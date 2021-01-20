@@ -113,7 +113,7 @@ class IterativeLoss(Loss):
         if self.max_iter:
             max_iter = self.max_iter
         else:
-            max_iter = sympy.Symbol(sympy.latex(self.timpstep_symbol , order="old") + "_{max}")
+            max_iter = sympy.Symbol(sympy.latex(self.timpstep_symbol , order="old", mode = "plain") + "_{max}")
 
         _symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 0, max_iter - 1))
         _symbol = _symbol.subs({dummy_loss: self.step_loss._symbol})
