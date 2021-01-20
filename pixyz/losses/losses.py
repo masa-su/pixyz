@@ -80,7 +80,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
 
     @property
     def loss_text(self):
-        return sympy.latex(self._symbol)
+        return sympy.latex(self._symbol , order="old")
 
     def __str__(self):
         return self.loss_text

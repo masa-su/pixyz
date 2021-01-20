@@ -368,4 +368,4 @@ def print_latex(obj):
 
 
 def convert_latex_name(name):
-    return sympy.latex(sympy.Symbol(name))
+    return sympy.latex(sympy.Symbol(name), order="old")
