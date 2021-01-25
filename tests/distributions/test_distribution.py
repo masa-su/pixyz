@@ -44,6 +44,9 @@ class TestGraph:
     def test_input_extra_var(self):
         normal = Normal(var=['x'], loc=0, scale=1) * Normal(var=['y'], loc=0, scale=1)
         assert set(normal.sample({'z': torch.zeros(1)})) == set(('x', 'y', 'z'))
+        assert normal.get_log_prob({'y': torch.zeros(1), 'x': torch.zeros(1),
+                                    'z': torch.zeros(1)}).shape == torch.Size([1])
+        assert set(normal.sample({'x': torch.zeros(1)})) == set(('x', 'y'))
 
 
 class TestDistributionBase:
@@ -64,6 +67,7 @@ class TestDistributionBase:
         normal = Normal(loc=0, scale=1)
         assert set(normal.sample({'y': torch.zeros(1)})) == set(('x', 'y'))
         assert normal.get_log_prob({'y': torch.zeros(1), 'x': torch.zeros(1)}).shape == torch.Size([1])
+        assert set(normal.sample({'x': torch.zeros(1)})) == set(('x'))
 
 
 def test_memoization():
