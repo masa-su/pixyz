@@ -60,7 +60,7 @@ class TransformedDistribution(Distribution):
         return self.flow.logdet_jacobian
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
-               compute_jacobian=True):
+               compute_jacobian=True, **kwargs):
         # sample from the prior
         sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False)
 
@@ -229,10 +229,10 @@ class InverseTransformedDistribution(Distribution):
         return self.flow.logdet_jacobian
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
-               return_hidden=True):
+               return_hidden=True, sample_mean=False, **kwargs):
         # sample from the prior
         sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
-                                        reparam=reparam)
+                                        reparam=reparam, sample_mean=sample_mean)
 
         # inverse flow transformation
         _z = get_dict_values(sample_dict, self.flow_output_var)

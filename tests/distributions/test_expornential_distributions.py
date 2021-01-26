@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from pixyz.distributions.exponential_distributions import RelaxedBernoulli, Normal
@@ -17,3 +18,8 @@ class TestRelaxedBernoulli:
 
     def nearly_eq(self, tensor1, tensor2):
         return abs(tensor1.item() - tensor2.item()) < 0.001
+
+    def test_sample_mean(self):
+        rb = RelaxedBernoulli(var=['x'], temperature=torch.tensor(0.5), probs=torch.tensor([1, 2]))
+        with pytest.raises(NotImplementedError):
+            rb.sample(sample_mean=True)
