@@ -449,9 +449,11 @@ class DistGraph(nn.Module):
         else:
             raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
-        return self('sample', kwargs={'x_dict': x_dict, 'batch_n': batch_n, 'sample_shape': sample_shape,
-                                      'return_all': return_all, 'reparam': reparam})
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
+        _kwargs = dict(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape,
+                       return_all=return_all, reparam=reparam)
+        _kwargs.update(kwargs)
+        return self('sample', kwargs=_kwargs)
 
     def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
         """
@@ -925,7 +927,7 @@ class Distribution(nn.Module):
         return input_dict
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
-               reparam=False):
+               reparam=False, **kwargs):
         """Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
 
@@ -999,7 +1001,7 @@ class Distribution(nn.Module):
 
         """
         if self.graph:
-            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam)
+            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, **kwargs)
         raise NotImplementedError()
 
     @property
@@ -1518,7 +1520,7 @@ class DistributionBase(Distribution):
 
         return entropy
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 

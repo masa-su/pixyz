@@ -87,6 +87,7 @@ class TestDistributionBase:
         assert dist.get_log_prob(sample,
                                  sum_features=True, feature_dims=[]).shape == torch.Size([2, 3, 4])
 
+
 def test_memoization():
     exec_order = []
 
