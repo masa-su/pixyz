@@ -87,6 +87,16 @@ class TestDistributionBase:
         assert dist.get_log_prob(sample,
                                  sum_features=True, feature_dims=[]).shape == torch.Size([2, 3, 4])
 
+    @pytest.mark.parametrize(
+        "dist", [
+            Normal(loc=0, scale=1),
+            Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1),
+        ],
+    )
+    def test_unknown_option(self, dist):
+        x_dict = dist.sample(unknown_opt=None)
+        dist.get_log_prob(x_dict, unknown_opt=None)
+
 
 def test_memoization():
     exec_order = []

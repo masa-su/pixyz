@@ -65,8 +65,8 @@ class MMD(Divergence):
         batch_n = self._get_batch_n(x_dict)
 
         # sample from distributions
-        p_x = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.p.var)[0]
-        q_x = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.q.var)[0]
+        p_x = get_dict_values(self.p.sample(x_dict, batch_n=batch_n, **kwargs), self.p.var)[0]
+        q_x = get_dict_values(self.q.sample(x_dict, batch_n=batch_n, **kwargs), self.q.var)[0]
 
         if p_x.shape != q_x.shape:
             raise ValueError("The two distribution variables must have the same shape.")
