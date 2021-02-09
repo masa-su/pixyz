@@ -184,7 +184,8 @@ class FrozenSampleDict:
         self.dict = dict_
 
     def __hash__(self):
-        hashes = [(hash(key), hash(value)) for key, value in self.dict.items()]
+        # value tensors are identified by id because hashing is heavy.
+        hashes = [(hash(key), id(value)) for key, value in self.dict.items()]
         return hash(tuple(hashes))
 
     def __eq__(self, other):
@@ -248,7 +249,7 @@ def lru_cache_for_sample_dict(maxsize=0):
         return lambda x: x
     if not maxsize:
         maxsize = CACHE_SIZE
-    raw_decorating_function = functools.lru_cache(maxsize=maxsize, typed=False)
+    lru_cached = functools.lru_cache(maxsize=maxsize, typed=False)
 
     def decorating_function(user_function):
         def wrapped_user_function(sender, *args, **kwargs):
@@ -279,7 +280,7 @@ def lru_cache_for_sample_dict(maxsize=0):
                 result = wrapper(sender, *new_args, **new_kwargs)
                 return result
             return frozen_wrapper
-        return frozen(raw_decorating_function(wrapped_user_function))
+        return frozen(lru_cached(wrapped_user_function))
     return decorating_function
 
 
