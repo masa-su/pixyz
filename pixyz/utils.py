@@ -189,16 +189,8 @@ class FrozenSampleDict:
         return hash(tuple(hashes))
 
     def __eq__(self, other):
-        class EqTensor:
-            def __init__(self, tensor):
-                self.tensor = tensor
-
-            def __eq__(self, other):
-                if not torch.is_tensor(self.tensor):
-                    return self.tensor == other.tensor
-                return torch.all(self.tensor.eq(other.tensor))
-        return {key: EqTensor(value) for key, value in self.dict.items()} ==\
-               {key: EqTensor(value) for key, value in other.dict.items()}
+        return {key: id(value) for key, value in self.dict.items()} ==\
+               {key: id(value) for key, value in other.dict.items()}
 
 
 def lru_cache_for_sample_dict(maxsize=0):
@@ -252,7 +244,7 @@ def lru_cache_for_sample_dict(maxsize=0):
     lru_cached = functools.lru_cache(maxsize=maxsize, typed=False)
 
     def decorating_function(user_function):
-        def wrapped_user_function(sender, *args, **kwargs):
+        def unfrozen(sender, *args, **kwargs):
             new_args = list(args)
             new_kwargs = dict(kwargs)
             for i in range(len(args)):
@@ -280,7 +272,7 @@ def lru_cache_for_sample_dict(maxsize=0):
                 result = wrapper(sender, *new_args, **new_kwargs)
                 return result
             return frozen_wrapper
-        return frozen(lru_cached(wrapped_user_function))
+        return frozen(lru_cached(unfrozen))
     return decorating_function
 
 
