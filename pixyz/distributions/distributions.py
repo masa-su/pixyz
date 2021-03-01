@@ -449,13 +449,15 @@ class DistGraph(nn.Module):
         else:
             raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               sample_mean=False, **kwargs):
         _kwargs = dict(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape,
-                       return_all=return_all, reparam=reparam)
+                       return_all=return_all, reparam=reparam, sample_mean=sample_mean)
         _kwargs.update(kwargs)
         return self('sample', kwargs=_kwargs)
 
-    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
+    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+                sample_mean=False, **kwargs):
         """
         Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
@@ -538,7 +540,7 @@ class DistGraph(nn.Module):
 
         sample_option = dict(self.global_option)
         sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape,
-                                  return_all=False, reparam=reparam))
+                                  return_all=False, reparam=reparam, sample_mean=sample_mean))
         sample_option.update(kwargs)
         # ignore return_all because overriding is now under control.
         if not(set(x_dict) >= set(self.input_var)):
@@ -558,9 +560,8 @@ class DistGraph(nn.Module):
             return delete_dict_values(result_dict, self.input_var)
 
     def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
-        _kwargs = dict(x_dict=x_dict, sum_features=sum_features, feature_dims=feature_dims)
-        _kwargs.update(kwargs)
-        return self(mode='get_log_prob', kwargs=_kwargs)
+        return self(mode='get_log_prob', kwargs={'x_dict': x_dict, 'sum_features': sum_features,
+                                                 'feature_dims': feature_dims})
 
     def _get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         """ Giving variables, this method returns values of log-pdf.
@@ -930,7 +931,7 @@ class Distribution(nn.Module):
         return input_dict
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
-               reparam=False, **kwargs):
+               reparam=False, sample_mean=False, **kwargs):
         """Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
 
@@ -1004,7 +1005,7 @@ class Distribution(nn.Module):
 
         """
         if self.graph:
-            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, **kwargs)
+            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, sample_mean, **kwargs)
         raise NotImplementedError()
 
     @property
@@ -1523,12 +1524,22 @@ class DistributionBase(Distribution):
 
         return entropy
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, **kwargs):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               sample_mean=False, **kwargs):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 
         self.set_dist(input_dict, batch_n=batch_n)
-        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
+
+        if sample_mean:
+            mean = self.dist.mean
+            if sample_shape != torch.Size():
+                unsqueeze_shape = torch.Size([1] * len(sample_shape))
+                unrepeat_shape = torch.Size([1] * mean.ndim)
+                mean = mean.reshape(unsqueeze_shape + mean.shape).repeat(sample_shape + unrepeat_shape)
+            output_dict = {self._var[0]: mean}
+        else:
+            output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
             x_dict = x_dict.copy()

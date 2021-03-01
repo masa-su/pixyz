@@ -1,7 +1,7 @@
 import pytest
 from os.path import join as pjoin
 import torch
-from pixyz.distributions import Normal, FactorizedBernoulli
+from pixyz.distributions import Normal, MixtureModel, Categorical, FactorizedBernoulli
 from pixyz.utils import lru_cache_for_sample_dict
 from pixyz.losses import KullbackLeibler
 from pixyz.models import VAE
@@ -40,6 +40,10 @@ class TestGraph:
         dist.graph.set_option(dict(), ['y'])
         assert dist.get_log_prob(sample, sum_features=True, feature_dims=[-1]).shape == torch.Size([4, 3])
 
+    def test_sample_mean(self):
+        dist = Normal(var=['x'], loc=0, scale=1) * Normal(var=['y'], cond_var=['x'], loc='x', scale=1)
+        assert dist.sample(sample_mean=True)['y'] == torch.zeros(1)
+
 
 class TestDistributionBase:
     def test_init_with_scalar_params(self):
@@ -54,6 +58,10 @@ class TestDistributionBase:
     def test_batch_n(self):
         normal = Normal(loc=0, scale=1)
         assert normal.sample(batch_n=3)['x'].shape == torch.Size([3])
+
+    def test_sample_mean(self):
+        dist = Normal(loc=0, scale=1)
+        assert dist.sample(sample_mean=True)['x'] == torch.zeros(1)
 
     @pytest.mark.parametrize(
         "dist", [
@@ -91,11 +99,16 @@ class TestDistributionBase:
         "dist", [
             Normal(loc=0, scale=1),
             Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1),
-        ],
-    )
+        ])
     def test_unknown_option(self, dist):
         x_dict = dist.sample(unknown_opt=None)
         dist.get_log_prob(x_dict, unknown_opt=None)
+
+
+class TestMixtureDistribution:
+    def test_sample_mean(self):
+        dist = MixtureModel([Normal(loc=0, scale=1), Normal(loc=1, scale=1)], Categorical(probs=torch.tensor([1, 2])))
+        assert dist.sample(sample_mean=True)['x'] == torch.ones(1)
 
 
 def test_memoization():

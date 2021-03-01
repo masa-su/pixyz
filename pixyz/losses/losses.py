@@ -793,7 +793,7 @@ class Expectation(Loss):
         return sympy.Symbol("\\mathbb{{E}}_{} \\left[{} \\right]".format(p_text, self.f.loss_text))
 
     def forward(self, x_dict={}, **kwargs):
-        samples_dicts = [self.p.sample(x_dict, reparam=self.reparam, return_all=False)
+        samples_dicts = [self.p.sample(x_dict, reparam=self.reparam, return_all=False, **kwargs)
                          for i in range(self.sample_shape.numel())]
 
         loss_and_dicts = []

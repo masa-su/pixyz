@@ -131,13 +131,18 @@ class MixtureModel(Distribution):
     def posterior(self, name=None):
         return PosteriorMixtureModel(self, name=name)
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, return_hidden=False, **kwargs):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, return_hidden=False,
+               sample_mean=False, **kwargs):
+        input_dict = self._get_input_dict(x_dict)
+
         # sample from prior
-        hidden_output = self.prior.sample(batch_n=batch_n, **kwargs)[self._hidden_var[0]]
+        hidden_output = self.prior.sample(input_dict, batch_n=batch_n,
+                                          sample_mean=sample_mean, return_all=False, **kwargs)[self._hidden_var[0]]
 
         var_output = []
         for _hidden_output in hidden_output:
-            var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample(**kwargs)[self._var[0]])
+            var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample(
+                input_dict, sample_mean=sample_mean, return_all=False, **kwargs)[self._var[0]])
 
         var_output = torch.cat(var_output, dim=0)
         output_dict = {self._var[0]: var_output}
