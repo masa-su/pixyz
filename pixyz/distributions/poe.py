@@ -233,7 +233,7 @@ class ProductOfNormal(Normal):
     def prob(self, sum_features=True, feature_dims=None):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         raise NotImplementedError()
 
 

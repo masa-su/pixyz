@@ -137,12 +137,12 @@ class MixtureModel(Distribution):
 
         # sample from prior
         hidden_output = self.prior.sample(input_dict, batch_n=batch_n,
-                                          sample_mean=sample_mean, return_all=False)[self._hidden_var[0]]
+                                          sample_mean=sample_mean, return_all=False, **kwargs)[self._hidden_var[0]]
 
         var_output = []
         for _hidden_output in hidden_output:
             var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample(
-                input_dict, sample_mean=sample_mean, return_all=False)[self._var[0]])
+                input_dict, sample_mean=sample_mean, return_all=False, **kwargs)[self._var[0]])
 
         var_output = torch.cat(var_output, dim=0)
         output_dict = {self._var[0]: var_output}
@@ -250,5 +250,5 @@ class PosteriorMixtureModel(Distribution):
 
     def get_log_prob(self, x_dict, **kwargs):
         # log p(z|x) = log p(x, z) - log p(x)
-        log_prob = self.p.get_log_prob(x_dict, return_hidden=True) - self.p.get_log_prob(x_dict)
+        log_prob = self.p.get_log_prob(x_dict, return_hidden=True, **kwargs) - self.p.get_log_prob(x_dict, **kwargs)
         return log_prob  # (num_mix, batch_size)

@@ -57,7 +57,7 @@ class Deterministic(Distribution):
     def sample_mean(self, x_dict):
         return self.sample(x_dict, return_all=False)[self._var[0]]
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         raise NotImplementedError("Log probability of deterministic distribution is not defined.")
 
     @property
@@ -105,7 +105,7 @@ class EmpiricalDistribution(Distribution):
     def sample_mean(self, x_dict):
         return self.sample(x_dict, return_all=False)[self._var[0]]
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         raise NotImplementedError()
 
     @property

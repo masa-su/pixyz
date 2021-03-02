@@ -228,21 +228,21 @@ class AdversarialJensenShannon(AdversarialLoss):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_p_dict = get_dict_values(self.p.sample(x_dict, batch_n=batch_n, **kwargs), self.d.input_var, True)
         # sample x_q from q
-        x_q_dict = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_q_dict = get_dict_values(self.q.sample(x_dict, batch_n=batch_n, **kwargs), self.d.input_var, True)
         if discriminator:
             # sample y_p from d
-            y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict)), self.d.var)[0]
+            y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict), **kwargs), self.d.var)[0]
             # sample y_q from d
-            y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
+            y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict), **kwargs), self.d.var)[0]
 
             return self.d_loss(y_p, y_q, batch_n), x_dict
 
         # sample y_p from d
-        y_p_dict = self.d.sample(x_p_dict)
+        y_p_dict = self.d.sample(x_p_dict, **kwargs)
         # sample y_q from d
-        y_q_dict = self.d.sample(x_q_dict)
+        y_q_dict = self.d.sample(x_q_dict, **kwargs)
 
         y_p = get_dict_values(y_p_dict, self.d.var)[0]
         y_q = get_dict_values(y_q_dict, self.d.var)[0]
@@ -391,21 +391,21 @@ class AdversarialKullbackLeibler(AdversarialLoss):
         batch_n = self._get_batch_n(x_dict)
 
         # sample x_p from p
-        x_p_dict = get_dict_values(self.p.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+        x_p_dict = get_dict_values(self.p.sample(x_dict, batch_n=batch_n, **kwargs), self.d.input_var, True)
 
         if discriminator:
             # sample x_q from q
-            x_q_dict = get_dict_values(self.q.sample(x_dict, batch_n=batch_n), self.d.input_var, True)
+            x_q_dict = get_dict_values(self.q.sample(x_dict, batch_n=batch_n, **kwargs), self.d.input_var, True)
 
             # sample y_p from d
-            y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict)), self.d.var)[0]
+            y_p = get_dict_values(self.d.sample(detach_dict(x_p_dict), **kwargs), self.d.var)[0]
             # sample y_q from d
-            y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict)), self.d.var)[0]
+            y_q = get_dict_values(self.d.sample(detach_dict(x_q_dict), **kwargs), self.d.var)[0]
 
             return self.d_loss(y_p, y_q, batch_n), {}
 
         # sample y from d
-        y_p = get_dict_values(self.d.sample(x_p_dict), self.d.var)[0]
+        y_p = get_dict_values(self.d.sample(x_p_dict, **kwargs), self.d.var)[0]
 
         return self.g_loss(y_p, batch_n), {}
 

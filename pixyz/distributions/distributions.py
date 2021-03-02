@@ -449,11 +449,15 @@ class DistGraph(nn.Module):
         else:
             raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, sample_mean=False):
-        return self('sample', kwargs={'x_dict': x_dict, 'batch_n': batch_n, 'sample_shape': sample_shape,
-                                      'return_all': return_all, 'reparam': reparam, 'sample_mean': sample_mean})
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               sample_mean=False, **kwargs):
+        _kwargs = dict(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape,
+                       return_all=return_all, reparam=reparam, sample_mean=sample_mean)
+        _kwargs.update(kwargs)
+        return self('sample', kwargs=_kwargs)
 
-    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False, sample_mean=False):
+    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+                sample_mean=False, **kwargs):
         """
         Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
@@ -537,6 +541,7 @@ class DistGraph(nn.Module):
         sample_option = dict(self.global_option)
         sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape,
                                   return_all=False, reparam=reparam, sample_mean=sample_mean))
+        sample_option.update(kwargs)
         # ignore return_all because overriding is now under control.
         if not(set(x_dict) >= set(self.input_var)):
             raise ValueError(f"Input keys are not valid, expected {set(self.input_var)} but got {set(x_dict)}.")
@@ -554,11 +559,11 @@ class DistGraph(nn.Module):
         else:
             return delete_dict_values(result_dict, self.input_var)
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         return self(mode='get_log_prob', kwargs={'x_dict': x_dict, 'sum_features': sum_features,
                                                  'feature_dims': feature_dims})
 
-    def _get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def _get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         """ Giving variables, this method returns values of log-pdf.
 
         Parameters
@@ -626,6 +631,7 @@ class DistGraph(nn.Module):
 
         log_prob_option = dict(self.global_option)
         log_prob_option.update(dict(sum_features=sum_features, feature_dims=feature_dims))
+        log_prob_option.update(kwargs)
 
         require_var = self.var + self.cond_var
         if not(set(x_dict) >= set(require_var)):
@@ -999,7 +1005,7 @@ class Distribution(nn.Module):
 
         """
         if self.graph:
-            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, sample_mean)
+            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, sample_mean, **kwargs)
         raise NotImplementedError()
 
     @property
@@ -1069,7 +1075,7 @@ class Distribution(nn.Module):
         """
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         """Giving variables, this method returns values of log-pdf.
 
         Parameters
@@ -1108,7 +1114,7 @@ class Distribution(nn.Module):
 
         """
         if self.graph:
-            return self.graph.get_log_prob(x_dict, sum_features, feature_dims)
+            return self.graph.get_log_prob(x_dict, sum_features, feature_dims, **kwargs)
         raise NotImplementedError()
 
     def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
@@ -1430,7 +1436,7 @@ class DistributionBase(Distribution):
     def has_reparam(self):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
         self.set_dist(_x_dict)
 
@@ -1439,7 +1445,7 @@ class DistributionBase(Distribution):
             raise ValueError(f"x_dict has no value of the stochastic variable. x_dict: {x_dict}")
         log_prob = self.dist.log_prob(*x_targets)
         if sum_features:
-            log_prob = sum_samples(log_prob)
+            log_prob = sum_samples(log_prob, feature_dims)
 
         return log_prob
 
@@ -1514,7 +1520,7 @@ class DistributionBase(Distribution):
 
         entropy = self.dist.entropy()
         if sum_features:
-            entropy = sum_samples(entropy)
+            entropy = sum_samples(entropy, feature_dims)
 
         return entropy
 

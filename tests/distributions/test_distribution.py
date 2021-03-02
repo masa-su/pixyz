@@ -1,7 +1,7 @@
 import pytest
 from os.path import join as pjoin
 import torch
-from pixyz.distributions import Normal, MixtureModel, Categorical
+from pixyz.distributions import Normal, MixtureModel, Categorical, FactorizedBernoulli
 from pixyz.utils import lru_cache_for_sample_dict
 from pixyz.losses import KullbackLeibler
 from pixyz.models import VAE
@@ -31,15 +31,14 @@ class TestGraph:
         assert dist.get_log_prob(sample,
                                  sum_features=False).shape == torch.Size([2, 3, 4])
 
-        # dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * FactorizedBernoulli(
-        #     var=['y'], probs=torch.tensor([0.3, 0.8]))
-        # dist.graph.set_option(dict(batch_n=3, sample_shape=(4,)), ['y'])
-        # sample = dist.sample()
-        # assert sample['y'].shape == torch.Size([4, 3, 2])
-        # assert sample['x'].shape == torch.Size([4, 3, 2])
-        # dist.graph.set_option(dict(), ['y'])
-        # dist.graph.set_option(dict(sum_features=True, feature_dims=[-1]))
-        # assert dist.get_log_prob(sample).shape == torch.Size([4, 3])
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * FactorizedBernoulli(
+            var=['y'], probs=torch.tensor([0.3, 0.8]))
+        dist.graph.set_option(dict(batch_n=3, sample_shape=(4,)), ['y'])
+        sample = dist.sample()
+        assert sample['y'].shape == torch.Size([4, 3, 2])
+        assert sample['x'].shape == torch.Size([4, 3, 2])
+        dist.graph.set_option(dict(), ['y'])
+        assert dist.get_log_prob(sample, sum_features=True, feature_dims=[-1]).shape == torch.Size([4, 3])
 
     def test_sample_mean(self):
         dist = Normal(var=['x'], loc=0, scale=1) * Normal(var=['y'], cond_var=['x'], loc='x', scale=1)
@@ -76,6 +75,47 @@ class TestDistributionBase:
     def test_sample_mean(self):
         dist = Normal(loc=0, scale=1)
         assert dist.sample(sample_mean=True)['x'] == torch.zeros(1)
+
+    @pytest.mark.parametrize(
+        "dist", [
+            Normal(loc=0, scale=1),
+            Normal(var=['x'], loc=0, scale=1) * Normal(var=['y'], loc=0, scale=1),
+            # Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1),
+        ],
+    )
+    def test_get_log_prob_feature_dims(self, dist):
+        assert dist.get_log_prob(dist.sample(batch_n=4, sample_shape=(2, 3)),
+                                 sum_features=True, feature_dims=None).shape == torch.Size([2])
+        assert dist.get_log_prob(dist.sample(batch_n=4, sample_shape=(2, 3)),
+                                 sum_features=True, feature_dims=[-2]).shape == torch.Size([2, 4])
+        assert dist.get_log_prob(dist.sample(batch_n=4, sample_shape=(2, 3)),
+                                 sum_features=True, feature_dims=[0, 1]).shape == torch.Size([4])
+        assert dist.get_log_prob(dist.sample(batch_n=4, sample_shape=(2, 3)),
+                                 sum_features=True, feature_dims=[]).shape == torch.Size([2, 3, 4])
+
+    def test_get_log_prob_feature_dims2(self):
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1)
+        dist.graph.set_option(dict(batch_n=4, sample_shape=(2, 3)), ['y'])
+        sample = dist.sample()
+        assert sample['y'].shape == torch.Size([2, 3, 4])
+        list(dist.graph._factors_from_variable('y'))[0].option = {}
+        assert dist.get_log_prob(sample,
+                                 sum_features=True, feature_dims=None).shape == torch.Size([2])
+        assert dist.get_log_prob(sample,
+                                 sum_features=True, feature_dims=[-2]).shape == torch.Size([2, 4])
+        assert dist.get_log_prob(sample,
+                                 sum_features=True, feature_dims=[0, 1]).shape == torch.Size([4])
+        assert dist.get_log_prob(sample,
+                                 sum_features=True, feature_dims=[]).shape == torch.Size([2, 3, 4])
+
+    @pytest.mark.parametrize(
+        "dist", [
+            Normal(loc=0, scale=1),
+            Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1),
+        ])
+    def test_unknown_option(self, dist):
+        x_dict = dist.sample(unknown_opt=None)
+        dist.get_log_prob(x_dict, unknown_opt=None)
 
 
 class TestMixtureDistribution:

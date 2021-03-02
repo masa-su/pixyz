@@ -62,7 +62,7 @@ class TransformedDistribution(Distribution):
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
                compute_jacobian=True, **kwargs):
         # sample from the prior
-        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False)
+        sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False, **kwargs)
 
         # flow transformation
         _x = get_dict_values(sample_dict, self.flow_input_var)[0]
@@ -83,14 +83,15 @@ class TransformedDistribution(Distribution):
     def has_reparam(self):
         return self.prior.has_reparam
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, compute_jacobian=False):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, compute_jacobian=False, **kwargs):
         """
         It calculates the log-likelihood for a given z.
         If a flow module has no inverse method, it only supports the previously sampled z-values.
         """
         inf_dict = self._inference(x_dict, compute_jacobian=compute_jacobian)
         # prior
-        log_prob_prior = self.prior.get_log_prob(inf_dict, sum_features=sum_features, feature_dims=feature_dims)
+        log_prob_prior = self.prior.get_log_prob(inf_dict, sum_features=sum_features, feature_dims=feature_dims,
+                                                 **kwargs)
 
         return log_prob_prior - self.logdet_jacobian
 
@@ -232,7 +233,7 @@ class InverseTransformedDistribution(Distribution):
                return_hidden=True, sample_mean=False, **kwargs):
         # sample from the prior
         sample_dict = self.prior.sample(x_dict, batch_n=batch_n, sample_shape=sample_shape, return_all=False,
-                                        reparam=reparam, sample_mean=sample_mean)
+                                        reparam=reparam, sample_mean=sample_mean, **kwargs)
 
         # inverse flow transformation
         _z = get_dict_values(sample_dict, self.flow_output_var)
@@ -276,12 +277,13 @@ class InverseTransformedDistribution(Distribution):
 
         return output_dict
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         # flow
         output_dict = self.inference(x_dict, return_all=True, compute_jacobian=True)
 
         # prior
-        log_prob_prior = self.prior.get_log_prob(output_dict, sum_features=sum_features, feature_dims=feature_dims)
+        log_prob_prior = self.prior.get_log_prob(output_dict, sum_features=sum_features, feature_dims=feature_dims,
+                                                 **kwargs)
 
         return log_prob_prior + self.logdet_jacobian
 
