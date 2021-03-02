@@ -915,8 +915,8 @@ class Distribution(nn.Module):
             input_dict = dict(zip(var, input))
 
         elif type(input) is dict:
-            if not (set(list(input.keys())) >= set(var)):
-                raise ValueError("Input keys are not valid.")
+            if not (set(input) >= set(var)):
+                raise ValueError(f"Input keys are not valid, expected {set(var)} but got {set(input)}.")
             input_dict = get_dict_values(input, var, return_dict=True)
 
         else:
