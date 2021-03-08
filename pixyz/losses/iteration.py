@@ -65,7 +65,7 @@ class IterativeLoss(Loss):
     >>> loss_cls = IterativeLoss(step_loss=step_loss_cls,
     ...                          series_var=["x"], update_value={"h": "h_prev"})
     >>> print(loss_cls)
-    \sum_{t=0}^{t_{max} - 1} mean \left(\mathbb{E}_{q(z,h|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
+    \sum_{t=0}^{-1 + t_{max}} mean \left(\mathbb{E}_{q(z,h|x,h_{prev})} \left[\log p(x|z,h_{prev}) \right] \right)
     >>>
     >>> # Evaluate
     >>> x_sample = torch.randn(30, 2, 128) # (timestep_size, batch_size, feature_size)
@@ -113,7 +113,7 @@ class IterativeLoss(Loss):
         if self.max_iter:
             max_iter = self.max_iter
         else:
-            max_iter = sympy.Symbol(sympy.latex(self.timpstep_symbol) + "_{max}")
+            max_iter = sympy.Symbol(sympy.latex(self.timpstep_symbol, order="old", mode="plain") + "_{max}")
 
         _symbol = sympy.Sum(dummy_loss, (self.timpstep_symbol, 0, max_iter - 1))
         _symbol = _symbol.subs({dummy_loss: self.step_loss._symbol})

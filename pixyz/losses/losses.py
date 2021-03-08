@@ -80,7 +80,7 @@ class Loss(torch.nn.Module, metaclass=abc.ABCMeta):
 
     @property
     def loss_text(self):
-        return sympy.latex(self._symbol)
+        return sympy.latex(self._symbol, order="old", mode="plain")
 
     def __str__(self):
         return self.loss_text
@@ -414,7 +414,7 @@ class AddLoss(LossOperator):
     >>> loss_cls_2 = Parameter("x")
     >>> loss_cls = loss_cls_1 + loss_cls_2  # equals to AddLoss(loss_cls_1, loss_cls_2)
     >>> print(loss_cls)
-    x + 2
+    2 + x
     >>> loss = loss_cls.eval({"x": 3})
     >>> print(loss)
     tensor(5.)
@@ -445,7 +445,7 @@ class SubLoss(LossOperator):
     tensor(-2.)
     >>> loss_cls = loss_cls_2 - loss_cls_1  # equals to SubLoss(loss_cls_2, loss_cls_1)
     >>> print(loss_cls)
-    x - 2
+    -2 + x
     >>> loss = loss_cls.eval({"x": 4})
     >>> print(loss)
     tensor(2.)
