@@ -2,6 +2,6 @@ language: python
 python:
     - 3.6.5
 install:
-  - pip install -e "."[test]
+  - pip install -e ".[test]"
 script:
   - pytest

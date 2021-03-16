@@ -9,6 +9,8 @@ from torch.distributions import Dirichlet as DirichletTorch
 from torch.distributions import Beta as BetaTorch
 from torch.distributions import Laplace as LaplaceTorch
 from torch.distributions import Gamma as GammaTorch
+from torch.distributions.utils import broadcast_all
+from torch.nn.functional import binary_cross_entropy_with_logits
 
 from ..utils import get_dict_values, sum_samples
 from .distributions import DistributionBase
@@ -40,6 +42,12 @@ class Normal(DistributionBase):
         return True
 
 
+class BernoulliTorchOld(BernoulliTorch):
+    def log_prob(self, value):
+        logits, value = broadcast_all(self.logits, value)
+        return -binary_cross_entropy_with_logits(logits, value, reduction='none')
+
+
 class Bernoulli(DistributionBase):
     """Bernoulli distribution parameterized by :attr:`probs`."""
     def __init__(self, var=['x'], cond_var=[], name='p', features_shape=torch.Size(), probs=None):
@@ -51,7 +59,7 @@ class Bernoulli(DistributionBase):
 
     @property
     def distribution_torch_class(self):
-        return BernoulliTorch
+        return BernoulliTorchOld
 
     @property
     def distribution_name(self):
@@ -111,7 +119,7 @@ class RelaxedBernoulli(Bernoulli):
             self._dist = self.distribution_torch_class(**params)
         else:
             hard_params_keys = ["probs"]
-            self._dist = BernoulliTorch(**get_dict_values(params, hard_params_keys, return_dict=True))
+            self._dist = BernoulliTorchOld(**get_dict_values(params, hard_params_keys, return_dict=True))
 
         # expand batch_n
         if batch_n:
@@ -176,6 +184,12 @@ class FactorizedBernoulli(Bernoulli):
         return log_prob
 
 
+class CategoricalTorchOld(CategoricalTorch):
+    def log_prob(self, value):
+        indices = value.max(-1)[1]
+        return self._categorical.log_prob(indices)
+
+
 class Categorical(DistributionBase):
     """Categorical distribution parameterized by :attr:`probs`."""
     def __init__(self, var=['x'], cond_var=[], name='p', features_shape=torch.Size(), probs=None):
@@ -188,7 +202,7 @@ class Categorical(DistributionBase):
 
     @property
     def distribution_torch_class(self):
-        return CategoricalTorch
+        return CategoricalTorchOld
 
     @property
     def distribution_name(self):
@@ -251,7 +265,7 @@ class RelaxedCategorical(Categorical):
             self._dist = self.distribution_torch_class(**params)
         else:
             hard_params_keys = ["probs"]
-            self._dist = BernoulliTorch(**get_dict_values(params, hard_params_keys, return_dict=True))
+            self._dist = BernoulliTorchOld(**get_dict_values(params, hard_params_keys, return_dict=True))
 
         # expand batch_n
         if batch_n:
