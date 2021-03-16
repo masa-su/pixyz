@@ -78,8 +78,9 @@ class Factor:
 
         local_input_dict = replace_dict_keys(input_dict, self.name_dict)
 
-        option = dict(self.option)
-        option.update(sample_option)
+        # Overwrite log_prob_option with self.option to give priority to local settings such as batch_n
+        option = dict(sample_option)
+        option.update(self.option)
         local_output_dict = self.dist.sample(local_input_dict, **option)
 
         # TODO: It shows return_hidden option change graphical model. This is bad operation.
@@ -100,8 +101,9 @@ class Factor:
         input_dict = get_dict_values(values, global_input_var, return_dict=True)
         local_input_dict = replace_dict_keys(input_dict, self.name_dict)
 
-        option = dict(self.option)
-        option.update(log_prob_option)
+        # Overwrite log_prob_option with self.option to give priority to local settings such as batch_n
+        option = dict(log_prob_option)
+        option.update(self.option)
         log_prob = self.dist.get_log_prob(local_input_dict, **option)
         return log_prob
 
@@ -187,9 +189,20 @@ class DistGraph(nn.Module):
         ----------
         option_dict: dict of str and any object
         var: list of string
+        Examples
+        --------
+        >>> from pixyz.distributions import Normal
+        >>> dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1)
+        >>> # Set options only on the sampling start node
+        >>> dist.graph.set_option(dict(batch_n=4, sample_shape=(2, 3)), ['y'])
+        >>> sample = dist.sample()
+        >>> sample['y'].shape
+        torch.Size([2, 3, 4])
+        >>> sample['x'].shape
+        torch.Size([2, 3, 4])
         """
         if not var:
-            self.global_option.update(option_dict)
+            self.global_option = option_dict
         else:
             for var_name in var:
                 for factor in self._factors_from_variable(var_name):
@@ -436,11 +449,15 @@ class DistGraph(nn.Module):
         else:
             raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
-        return self('sample', kwargs={'x_dict': x_dict, 'batch_n': batch_n, 'sample_shape': sample_shape,
-                                      'return_all': return_all, 'reparam': reparam})
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               sample_mean=False, **kwargs):
+        _kwargs = dict(x_dict=x_dict, batch_n=batch_n, sample_shape=sample_shape,
+                       return_all=return_all, reparam=reparam, sample_mean=sample_mean)
+        _kwargs.update(kwargs)
+        return self('sample', kwargs=_kwargs)
 
-    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def _sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+                sample_mean=False, **kwargs):
         """
         Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
@@ -523,7 +540,8 @@ class DistGraph(nn.Module):
 
         sample_option = dict(self.global_option)
         sample_option.update(dict(batch_n=batch_n, sample_shape=sample_shape,
-                                  return_all=False, reparam=reparam))
+                                  return_all=False, reparam=reparam, sample_mean=sample_mean))
+        sample_option.update(kwargs)
         # ignore return_all because overriding is now under control.
         if not(set(x_dict) >= set(self.input_var)):
             raise ValueError(f"Input keys are not valid, expected {set(self.input_var)} but got {set(x_dict)}.")
@@ -541,11 +559,11 @@ class DistGraph(nn.Module):
         else:
             return delete_dict_values(result_dict, self.input_var)
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         return self(mode='get_log_prob', kwargs={'x_dict': x_dict, 'sum_features': sum_features,
                                                  'feature_dims': feature_dims})
 
-    def _get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def _get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         """ Giving variables, this method returns values of log-pdf.
 
         Parameters
@@ -613,6 +631,7 @@ class DistGraph(nn.Module):
 
         log_prob_option = dict(self.global_option)
         log_prob_option.update(dict(sum_features=sum_features, feature_dims=feature_dims))
+        log_prob_option.update(kwargs)
 
         require_var = self.var + self.cond_var
         if not(set(x_dict) >= set(require_var)):
@@ -902,8 +921,8 @@ class Distribution(nn.Module):
             input_dict = dict(zip(var, input))
 
         elif type(input) is dict:
-            if not (set(list(input.keys())) >= set(var)):
-                raise ValueError("Input keys are not valid.")
+            if not (set(input) >= set(var)):
+                raise ValueError(f"Input keys are not valid, expected {set(var)} but got {set(input)}.")
             input_dict = get_dict_values(input, var, return_dict=True)
 
         else:
@@ -912,7 +931,7 @@ class Distribution(nn.Module):
         return input_dict
 
     def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True,
-               reparam=False):
+               reparam=False, sample_mean=False, **kwargs):
         """Sample variables of this distribution.
         If :attr:`cond_var` is not empty, you should set inputs as :obj:`dict`.
 
@@ -986,7 +1005,7 @@ class Distribution(nn.Module):
 
         """
         if self.graph:
-            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam)
+            return self.graph.sample(x_dict, batch_n, sample_shape, return_all, reparam, sample_mean, **kwargs)
         raise NotImplementedError()
 
     @property
@@ -1056,7 +1075,7 @@ class Distribution(nn.Module):
         """
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         """Giving variables, this method returns values of log-pdf.
 
         Parameters
@@ -1095,7 +1114,7 @@ class Distribution(nn.Module):
 
         """
         if self.graph:
-            return self.graph.get_log_prob(x_dict, sum_features, feature_dims)
+            return self.graph.get_log_prob(x_dict, sum_features, feature_dims, **kwargs)
         raise NotImplementedError()
 
     def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
@@ -1417,7 +1436,7 @@ class DistributionBase(Distribution):
     def has_reparam(self):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
         _x_dict = get_dict_values(x_dict, self._cond_var, return_dict=True)
         self.set_dist(_x_dict)
 
@@ -1426,7 +1445,7 @@ class DistributionBase(Distribution):
             raise ValueError(f"x_dict has no value of the stochastic variable. x_dict: {x_dict}")
         log_prob = self.dist.log_prob(*x_targets)
         if sum_features:
-            log_prob = sum_samples(log_prob)
+            log_prob = sum_samples(log_prob, feature_dims)
 
         return log_prob
 
@@ -1501,16 +1520,26 @@ class DistributionBase(Distribution):
 
         entropy = self.dist.entropy()
         if sum_features:
-            entropy = sum_samples(entropy)
+            entropy = sum_samples(entropy, feature_dims)
 
         return entropy
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               sample_mean=False, **kwargs):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 
         self.set_dist(input_dict, batch_n=batch_n)
-        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
+
+        if sample_mean:
+            mean = self.dist.mean
+            if sample_shape != torch.Size():
+                unsqueeze_shape = torch.Size([1] * len(sample_shape))
+                unrepeat_shape = torch.Size([1] * mean.ndim)
+                mean = mean.reshape(unsqueeze_shape + mean.shape).repeat(sample_shape + unrepeat_shape)
+            output_dict = {self._var[0]: mean}
+        else:
+            output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
             x_dict = x_dict.copy()

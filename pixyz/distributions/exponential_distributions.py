@@ -123,12 +123,21 @@ class RelaxedBernoulli(Bernoulli):
             else:
                 raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               sample_mean=False, **kwargs):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 
         self.set_dist(input_dict, batch_n=batch_n, sampling=True)
-        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
+        if sample_mean:
+            mean = self.dist.mean
+            if sample_shape != torch.Size():
+                unsqueeze_shape = torch.Size([1] * len(sample_shape))
+                unrepeat_shape = torch.Size([1] * mean.ndim)
+                mean = mean.reshape(unsqueeze_shape + mean.shape).repeat(sample_shape + unrepeat_shape)
+            output_dict = {self._var[0]: mean}
+        else:
+            output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
             x_dict = x_dict.copy()
@@ -158,11 +167,12 @@ class FactorizedBernoulli(Bernoulli):
     def distribution_name(self):
         return "FactorizedBernoulli"
 
-    def get_log_prob(self, x_dict):
-        log_prob = super().get_log_prob(x_dict, sum_features=False)
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
+        log_prob = super().get_log_prob(x_dict, sum_features=False, **kwargs)
         [_x] = get_dict_values(x_dict, self._var)
         log_prob[_x == 0] = 0
-        log_prob = sum_samples(log_prob)
+        if sum_features:
+            log_prob = sum_samples(log_prob, feature_dims)
         return log_prob
 
 
@@ -253,12 +263,21 @@ class RelaxedCategorical(Categorical):
             else:
                 raise ValueError()
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, reparam=False,
+               sample_mean=False, **kwargs):
         # check whether the input is valid or convert it to valid dictionary.
         input_dict = self._get_input_dict(x_dict)
 
         self.set_dist(input_dict, batch_n=batch_n, sampling=True)
-        output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
+        if sample_mean:
+            mean = self.dist.mean
+            if sample_shape != torch.Size():
+                unsqueeze_shape = torch.Size([1] * len(sample_shape))
+                unrepeat_shape = torch.Size([1] * mean.ndim)
+                mean = mean.reshape(unsqueeze_shape + mean.shape).repeat(sample_shape + unrepeat_shape)
+            output_dict = {self._var[0]: mean}
+        else:
+            output_dict = self.get_sample(reparam=reparam, sample_shape=sample_shape)
 
         if return_all:
             x_dict = x_dict.copy()

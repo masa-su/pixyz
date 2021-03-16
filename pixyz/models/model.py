@@ -179,3 +179,29 @@ class Model(object):
             loss = self.test_loss_cls.eval(test_x_dict, **kwargs)
 
         return loss
+
+    def save(self, path):
+        """Save the model. The only parameters that are saved are those that are included in the distribution.
+         Parameters such as device, optimizer, placement of clip_grad, etc. are not saved.
+
+        Parameters
+        ----------
+        path : str
+            Target file path
+
+        """
+        torch.save({
+            'distributions': self.distributions.state_dict(),
+        }, path)
+
+    def load(self, path):
+        """Load the model.
+
+        Parameters
+        ----------
+        path : str
+            Target file path
+
+        """
+        checkpoint = torch.load(path)
+        self.distributions.load_state_dict(checkpoint['distributions'])

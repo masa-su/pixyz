@@ -131,13 +131,18 @@ class MixtureModel(Distribution):
     def posterior(self, name=None):
         return PosteriorMixtureModel(self, name=name)
 
-    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, return_hidden=False, **kwargs):
+    def sample(self, x_dict={}, batch_n=None, sample_shape=torch.Size(), return_all=True, return_hidden=False,
+               sample_mean=False, **kwargs):
+        input_dict = self._get_input_dict(x_dict)
+
         # sample from prior
-        hidden_output = self.prior.sample(batch_n=batch_n)[self._hidden_var[0]]
+        hidden_output = self.prior.sample(input_dict, batch_n=batch_n,
+                                          sample_mean=sample_mean, return_all=False, **kwargs)[self._hidden_var[0]]
 
         var_output = []
         for _hidden_output in hidden_output:
-            var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample()[self._var[0]])
+            var_output.append(self.distributions[_hidden_output.argmax(dim=-1)].sample(
+                input_dict, sample_mean=sample_mean, return_all=False, **kwargs)[self._var[0]])
 
         var_output = torch.cat(var_output, dim=0)
         output_dict = {self._var[0]: var_output}
@@ -245,5 +250,5 @@ class PosteriorMixtureModel(Distribution):
 
     def get_log_prob(self, x_dict, **kwargs):
         # log p(z|x) = log p(x, z) - log p(x)
-        log_prob = self.p.get_log_prob(x_dict, return_hidden=True) - self.p.get_log_prob(x_dict)
+        log_prob = self.p.get_log_prob(x_dict, return_hidden=True, **kwargs) - self.p.get_log_prob(x_dict, **kwargs)
         return log_prob  # (num_mix, batch_size)
