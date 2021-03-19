@@ -20,6 +20,6 @@ class TestRelaxedBernoulli:
         return abs(tensor1.item() - tensor2.item()) < 0.001
 
     def test_sample_mean(self):
-        rb = RelaxedBernoulli(var=['x'], temperature=torch.tensor(0.5), probs=torch.tensor([1 / 3., 2 / 3.]))
+        rb = RelaxedBernoulli(var=['x'], temperature=torch.tensor(0.5), probs=torch.tensor([0.5, 0.8]))
         with pytest.raises(NotImplementedError):
             rb.sample(sample_mean=True)
