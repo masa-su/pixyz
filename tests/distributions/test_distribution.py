@@ -120,7 +120,7 @@ class TestDistributionBase:
 
 class TestMixtureDistribution:
     def test_sample_mean(self):
-        dist = MixtureModel([Normal(loc=0, scale=1), Normal(loc=1, scale=1)], Categorical(probs=torch.tensor([1, 2])))
+        dist = MixtureModel([Normal(loc=0, scale=1), Normal(loc=1, scale=1)], Categorical(probs=torch.tensor([1., 2.])))
         assert dist.sample(sample_mean=True)['x'] == torch.ones(1)
 
 
