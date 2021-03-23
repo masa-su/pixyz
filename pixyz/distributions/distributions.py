@@ -1300,6 +1300,9 @@ class DistributionBase(Distribution):
         self._set_buffers(**kwargs)
         self._dist = None
 
+        self.input_ids = None
+        self.save_output_dict = 0
+
     def _set_buffers(self, **params_dict):
         """Format constant parameters of this distribution as buffers.
 
@@ -1443,7 +1446,7 @@ class DistributionBase(Distribution):
 
         return log_prob
 
-    @lru_cache_for_sample_dict()
+    # @lru_cache_for_sample_dict()
     def get_params(self, params_dict={}, **kwargs):
         """This method aims to get parameters of this distributions from constant parameters set in initialization
         and outputs of DNNs.
@@ -1490,6 +1493,10 @@ class DistributionBase(Distribution):
         {'scale': tensor(1.), 'loc': tensor([0.])}
 
         """
+        _input_ids = [id(v) for v in list(params_dict.values())]
+        if _input_ids == self.input_ids:
+            return self.save_output_dict
+
         replaced_params_dict = {}
         for key, value in params_dict.items():
             if key in self.replace_params_dict:
@@ -1505,6 +1512,16 @@ class DistributionBase(Distribution):
         constant_params_dict = get_dict_values(dict(self.named_buffers()), self.params_keys,
                                                return_dict=True)
         output_dict.update(constant_params_dict)
+
+        self.save_output_dict = output_dict
+        self.input_ids = _input_ids
+        def hook(x):
+            # print('hooked')
+            self.input_ids = None
+        for value in output_dict.values():
+            if value.requires_grad:
+                pass
+                value.register_hook(hook)
 
         return output_dict
 
