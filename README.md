@@ -17,6 +17,7 @@
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [More information](#more-information)
+- [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
 
 ## What is Pixyz?
@@ -246,6 +247,18 @@ See [sample codes](https://github.com/masa-su/pixyz/tree/master/examples) and th
 For more detailed usage, please check the [Pixyz documentation](https://docs.pixyz.io).
 
 If you encounter some problems in using Pixyz, please let us know.
+
+## Citation
+```
+@misc{suzuki2021pixyz,
+      title={Pixyz: a library for developing deep generative models}, 
+      author={Masahiro Suzuki and Takaaki Kaneko and Yutaka Matsuo},
+      year={2021},
+      eprint={2107.13109},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
 
 ## Acknowledgements
 This library is based on results obtained from a project commissioned by the New Energy and Industrial Technology Development Organization (NEDO). 
