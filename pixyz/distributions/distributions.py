@@ -1760,13 +1760,6 @@ class ReplaceVarDistribution(Distribution):
     def forward(self, *args, **kwargs):
         return self.p(*args, **kwargs)
 
-    # def sample_mean(self, x_dict={}):
-    #     return self.p.sample_mean(x_dict)
-    # def sample_variance(self, x_dict={}):
-    #     return self.p.sample_variance(x_dict)
-    # def get_entropy(self, x_dict={}, sum_features=True, feature_dims=None):
-    #     return self.p.get_entropy(x_dict, sum_features, feature_dims)
-
     @property
     def distribution_name(self):
         return self.p.distribution_name
