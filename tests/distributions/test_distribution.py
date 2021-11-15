@@ -118,6 +118,67 @@ class TestDistributionBase:
         dist.get_log_prob(x_dict, unknown_opt=None)
 
 
+class TestReplaceVarDistribution:
+    def test_get_params(self):
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1)
+        result = dist.get_params({'y': torch.ones(1)})
+        assert list(result.keys()) == ['loc', 'scale']
+
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1).replace_var(y='z')
+        result = dist.get_params({'z': torch.ones(1)})
+        assert list(result.keys()) == ['loc', 'scale']
+
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1).replace_var(y='z')
+        with pytest.raises(ValueError):
+            dist.get_params({'y': torch.ones(1)})
+
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1).replace_var(x='z')
+        result = dist.get_params({'y': torch.ones(1)})
+        assert list(result.keys()) == ['loc', 'scale']
+
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1) * Normal(var=['y'], loc=0, scale=1)
+        with pytest.raises(NotImplementedError):
+            dist.get_params()
+
+    def test_sample_mean(self):
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1)
+        result = dist.sample_mean({'y': torch.ones(1)})
+        assert result == torch.ones(1)
+
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1).replace_var(y='z')
+        result = dist.sample_mean({'z': torch.ones(1)})
+        assert result == torch.ones(1)
+
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1).replace_var(y='z')
+        with pytest.raises(ValueError):
+            dist.sample_mean({'y': torch.ones(1)})
+
+    def test_sample_variance(self):
+        dist = Normal(var=['x'], cond_var=['y'], loc=2, scale='y')
+        result = dist.sample_variance({'y': torch.ones(1)})
+        assert result == torch.ones(1)
+
+        dist = Normal(var=['x'], cond_var=['y'], loc=2, scale='y').replace_var(y='z')
+        result = dist.sample_variance({'z': torch.ones(1)})
+        assert result == torch.ones(1)
+
+        dist = Normal(var=['x'], cond_var=['y'], loc=2, scale='y').replace_var(y='z')
+        with pytest.raises(ValueError):
+            dist.sample_variance({'y': torch.ones(1)})
+
+    def test_get_entropy(self):
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1)
+        truth = dist.get_entropy({'y': torch.ones(1)})
+
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1).replace_var(y='z', x='y')
+        result = dist.get_entropy({'z': torch.ones(1)})
+        assert result == truth
+
+        dist = Normal(var=['x'], cond_var=['y'], loc='y', scale=1).replace_var(y='z')
+        with pytest.raises(ValueError):
+            dist.get_entropy({'y': torch.ones(1)})
+
+
 class TestMixtureDistribution:
     def test_sample_mean(self):
         dist = MixtureModel([Normal(loc=0, scale=1), Normal(loc=1, scale=1)], Categorical(probs=torch.tensor([1., 2.])))
@@ -193,4 +254,4 @@ def test_save_dist(tmpdir, no_contiguous_tensor):
 
 
 if __name__ == "__main__":
-    test_save_dist(".", torch.zeros(2, 3))
+    TestReplaceVarDistribution().test_get_entropy()
