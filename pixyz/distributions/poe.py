@@ -3,24 +3,19 @@ import torch
 from torch import nn
 
 from ..utils import tolist, get_dict_values
-from .exponential_distributions import Normal
+from ..distributions import Normal
 
 
 class ProductOfNormal(Normal):
     r"""Product of normal distributions.
-
     .. math::
         p(z|x,y) \propto p(z)p(z|x)p(z|y)
-
-    In this model, :math:`p(z|x)` and :math:`p(a|y)` perform as `experts` and :math:`p(z)` corresponds
+    In this models, :math:`p(z|x)` and :math:`p(a|y)` perform as `experts` and :math:`p(z)` corresponds
     a prior of `experts`.
-
     References
     ----------
     [Vedantam+ 2017] Generative Models of Visually Grounded Imagination
-
     [Wu+ 2018] Multimodal Generative Models for Scalable Weakly-Supervised Learning
-
     Examples
     --------
     >>> pon = ProductOfNormal([p_x, p_y]) # doctest: +SKIP
@@ -63,10 +58,9 @@ class ProductOfNormal(Normal):
          [ 0.0299,  0.5148, -0.1001,  ...,  0.9938,  1.0689, -1.1902]])}
     >>> pon.sample()  # same as sampling from unit Gaussian. # doctest: +SKIP
     {'z': tensor(-0.4494)}
-
     """
 
-    def __init__(self, p=[], name="p", features_shape=torch.Size()):
+    def __init__(self, p=[], weight_modalities=None, name="p", features_shape=torch.Size()):
         """
         Parameters
         ----------
@@ -77,7 +71,6 @@ class ProductOfNormal(Normal):
             This name is displayed in prob_text and prob_factorized_text.
         features_shape : :obj:`torch.Size` or :obj:`list`, defaults to torch.Size())
             Shape of dimensions (features) of this distribution.
-
         Examples
         --------
         >>> p_x = Normal(cond_var=['z'], loc='z', scale=torch.ones(1, 1))
@@ -88,6 +81,9 @@ class ProductOfNormal(Normal):
         p = tolist(p)
         if len(p) == 0:
             raise ValueError()
+        if weight_modalities is not None:
+            if len(weight_modalities) != len(p) + 1:
+                raise ValueError()
 
         var = p[0].var
         cond_var = []
@@ -101,8 +97,15 @@ class ProductOfNormal(Normal):
 
             cond_var += _p.cond_var
 
+        self.input_ids = [[] for _ in p]
+        self.save_output_dict = 0
+
         super().__init__(var=var, cond_var=cond_var, name=name, features_shape=features_shape)
         self.p = nn.ModuleList(p)
+        if weight_modalities is None:
+            self.weight_modalities = [1. for _ in range(len(self.p) + 1)]
+        else:
+            self.weight_modalities = weight_modalities
 
     @property
     def prob_factorized_text(self):
@@ -126,83 +129,96 @@ class ProductOfNormal(Normal):
 
     def _get_expert_params(self, params_dict={}, **kwargs):
         """Get the output parameters of all experts.
-
         Parameters
         ----------
         params_dict : dict
         **kwargs
             Arbitrary keyword arguments.
-
         Returns
         -------
-        torch.Tensor
-
+        loc : torch.Tensor
+            Concatenation of mean vectors for specified experts. (n_expert, n_batch, output_dim)
+        scale : torch.Tensor
+            Concatenation of the square root of a diagonal covariance matrix for specified experts.
+            (n_expert, n_batch, output_dim)
+        weight : np.array
+            (n_expert, )
         """
 
         loc = []
         scale = []
+        weight = [self.weight_modalities[0]]
 
-        for _p in self.p:
+        for i, _p in enumerate(self.p):
             inputs_dict = get_dict_values(params_dict, _p.cond_var, True)
             if len(inputs_dict) != 0:
                 outputs = _p.get_params(inputs_dict, **kwargs)
                 loc.append(outputs["loc"])
                 scale.append(outputs["scale"])
+                weight.append(self.weight_modalities[i + 1])
 
         loc = torch.stack(loc)
         scale = torch.stack(scale)
+        weight = torch.Tensor(weight).to(scale.device)
 
-        return loc, scale
+        # expand weight
+        for i in range(len(loc.shape) - 1):
+            weight = weight.unsqueeze(-1)
+
+        return loc, scale, weight
 
     def get_params(self, params_dict={}, **kwargs):
-        # experts
-        if len(params_dict) > 0:
-            loc, scale = self._get_expert_params(params_dict, **kwargs)  # (n_expert, n_batch, output_dim)
+        _input_ids = [id(v) for v in list(params_dict.values())]
+        if _input_ids == self.input_ids:
+            return self.save_output_dict
         else:
-            loc = torch.zeros(1)
-            scale = torch.zeros(1)
-
-        output_loc, output_scale = self._compute_expert_params(loc, scale)
-        output_dict = {"loc": output_loc, "scale": output_scale}
+            # experts
+            if len(params_dict) > 0:
+                loc, scale, weight = self._get_expert_params(params_dict, **kwargs)  # (n_expert, n_batch, output_dim)
+            else:
+                loc = torch.zeros(1)
+                scale = torch.zeros(1)
+                weight = torch.ones(1).to(scale.device)
+            output_loc, output_scale = self._compute_expert_params(loc, scale, weight)
+            output_dict = {"loc": output_loc, "scale": output_scale}
+            self.save_output_dict = output_dict
+            self.input_ids = _input_ids
 
         return output_dict
 
     @staticmethod
-    def _compute_expert_params(loc, scale):
+    def _compute_expert_params(loc, scale, weight):
         """Compute parameters for the product of experts.
         Is is assumed that unspecified experts are excluded from inputs.
-
         Parameters
         ----------
         loc : torch.Tensor
             Concatenation of mean vectors for specified experts. (n_expert, n_batch, output_dim)
-
         scale : torch.Tensor
             Concatenation of the square root of a diagonal covariance matrix for specified experts.
             (n_expert, n_batch, output_dim)
-
         Returns
         -------
         output_loc : torch.Tensor
             Mean vectors for this distribution. (n_batch, output_dim)
-
         output_scale : torch.Tensor
             The square root of diagonal covariance matrices for this distribution. (n_batch, output_dim)
-
         """
+        variance = scale ** 2
+
         # parameter for prior
         prior_prec = 1  # prior_loc is not specified because it is equal to 0.
 
         # compute the diagonal precision matrix.
-        prec = torch.zeros_like(scale).type(scale.dtype)
-        prec[scale != 0] = 1. / scale[scale != 0]
+        prec = torch.zeros_like(variance).type(scale.dtype)
+        prec[variance != 0] = 1. / variance[variance != 0]
 
         # compute the square root of a diagonal covariance matrix for the product of distributions.
-        output_prec = torch.sum(prec, dim=0) + prior_prec
+        output_prec = torch.sum(weight[1:] * prec, dim=0) + weight[0] * prior_prec
         output_variance = 1. / output_prec   # (n_batch, output_dim)
 
         # compute the mean vectors for the product of normal distributions.
-        output_loc = torch.sum(prec * loc, dim=0)   # (n_batch, output_dim)
+        output_loc = torch.sum(weight[1:] * prec * loc, dim=0)   # (n_batch, output_dim)
         output_loc = output_loc * output_variance
 
         return output_loc, torch.sqrt(output_variance)
@@ -233,7 +249,7 @@ class ProductOfNormal(Normal):
     def prob(self, sum_features=True, feature_dims=None):
         raise NotImplementedError()
 
-    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None, **kwargs):
+    def get_log_prob(self, x_dict, sum_features=True, feature_dims=None):
         raise NotImplementedError()
 
 
