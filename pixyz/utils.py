@@ -5,7 +5,7 @@ from IPython.display import Math
 import pixyz
 
 _EPSILON = 1e-07
-CACHE_SIZE = 1
+_CACHE_MAXSIZE = 2*10
 
 
 def set_epsilon(eps):
@@ -45,6 +45,45 @@ def epsilon():
     1e-07
     """
     return _EPSILON
+
+
+def set_cache_maxsize(cache_maxsize):
+    """Set a `cache_maxsize` parameter.
+
+    Parameters
+    ----------
+    cache_maxsize : int
+
+    Returns
+    -------
+
+    Examples
+    --------
+    >>> from unittest import mock
+    >>> with mock.patch('pixyz.utils._CACHE_MAXSIZE', 100):
+    ...     set_cache_maxsize(100)
+    ...     cache_maxsize()
+    100
+    """
+    global _CACHE_MAXSIZE
+    _CACHE_MAXSIZE = cache_maxsize
+
+
+def cache_maxsize():
+    """Get a `cache_maxsize` parameter.
+
+    Returns
+    -------
+    int
+
+    Examples
+    --------
+    >>> from unittest import mock
+    >>> with mock.patch('pixyz.utils._CACHE_MAXSIZE', 100):
+    ...     cache_maxsize()
+    100
+    """
+    return _CACHE_MAXSIZE
 
 
 def get_dict_values(dicts, keys, return_dict=False):
@@ -200,14 +239,10 @@ class FrozenSampleDict:
                {key: EqTensor(value) for key, value in other.dict.items()}
 
 
-def lru_cache_for_sample_dict(maxsize=0):
+def lru_cache_for_sample_dict():
     """
     Memoize the calculation result linked to the argument of sample dict.
     Note that dictionary arguments of the target function must be sample dict.
-
-    Parameters
-    ----------
-    maxsize: cache size prepared for the target method
 
     Returns
     -------
@@ -218,7 +253,6 @@ def lru_cache_for_sample_dict(maxsize=0):
     >>> import time
     >>> import torch.nn as nn
     >>> import pixyz.utils as utils
-    >>> # utils.CACHE_SIZE = 2  # you can also use this module option to enable all memoization of distribution
     >>> import pixyz.distributions as pd
     >>> class LongEncoder(pd.Normal):
     ...     def __init__(self):
@@ -244,10 +278,7 @@ def lru_cache_for_sample_dict(maxsize=0):
     >>> print ("sample2:{0}".format(t_sample2) + "[sec]") # doctest: +SKIP
     >>> assert t_sample1 > t_sample2, "processing time increases: {0}".format(t_sample2 - t_sample1)
     """
-    if not CACHE_SIZE and not maxsize:
-        return lambda x: x
-    if not maxsize:
-        maxsize = CACHE_SIZE
+    maxsize = cache_maxsize()
     raw_decorating_function = functools.lru_cache(maxsize=maxsize, typed=False)
 
     def decorating_function(user_function):
