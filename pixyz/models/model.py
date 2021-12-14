@@ -64,7 +64,8 @@ class Model(object):
                  optimizer=optim.Adam,
                  optimizer_params={},
                  clip_grad_norm=None,
-                 clip_grad_value=None):
+                 clip_grad_value=None,
+                 retain_graph=False):
         """
         Parameters
         ----------
@@ -98,6 +99,7 @@ class Model(object):
 
         self.clip_norm = clip_grad_norm
         self.clip_value = clip_grad_value
+        self.retain_graph = retain_graph
 
     def __str__(self):
         prob_text = []
@@ -146,7 +148,7 @@ class Model(object):
         loss = self.loss_cls.eval(train_x_dict, **kwargs)
 
         # backprop
-        loss.backward()
+        loss.backward(retain_graph=self.retain_graph)
 
         if self.clip_norm:
             clip_grad_norm_(self.distributions.parameters(), self.clip_norm)
