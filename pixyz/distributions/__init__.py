@@ -28,6 +28,7 @@ from .distributions import (
 )
 
 from .poe import ProductOfNormal, ElementWiseProductOfNormal
+from .moe import MixtureOfNormal
 
 from .mixture_distributions import MixtureModel
 
@@ -55,6 +56,7 @@ __all__ = [
     'MarginalizeVarDistribution',
     'ProductOfNormal',
     'ElementWiseProductOfNormal',
+    'MixtureOfNormal',
     'MixtureModel',
 
     'TransformedDistribution',
