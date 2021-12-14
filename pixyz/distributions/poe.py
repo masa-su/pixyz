@@ -2,15 +2,6 @@ from __future__ import print_function
 import torch
 from torch import nn
 
-from ..utils import tolist, get_dict_values
-from .exponential_distributions import Normal
-
-
-from __future__ import print_function
-import torch
-from torch import nn
-import numpy as np
-
 from pixyz.utils import tolist, get_dict_values
 from pixyz.distributions import Normal
 
