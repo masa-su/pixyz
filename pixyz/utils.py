@@ -5,7 +5,7 @@ from IPython.display import Math
 import pixyz
 
 _EPSILON = 1e-07
-_CACHE_MAXSIZE = 2*10
+_CACHE_MAXSIZE = 2 * 10
 
 
 def set_epsilon(eps):
@@ -253,6 +253,7 @@ def lru_cache_for_sample_dict():
     >>> import time
     >>> import torch.nn as nn
     >>> import pixyz.utils as utils
+    >>> utils.set_cache_maxsize(2)
     >>> import pixyz.distributions as pd
     >>> class LongEncoder(pd.Normal):
     ...     def __init__(self):
@@ -260,7 +261,7 @@ def lru_cache_for_sample_dict():
     ...         self.nn = nn.Sequential(*(nn.Linear(1,1) for i in range(10000)))
     ...     def forward(self, y):
     ...         return {'loc': self.nn(y), 'scale': torch.ones(1,1)}
-    ...     @lru_cache_for_sample_dict(maxsize=2)
+    ...     @lru_cache_for_sample_dict()
     ...     def get_params(self, params_dict={}, **kwargs):
     ...         return super().get_params(params_dict, **kwargs)
     >>> def measure_time(func):

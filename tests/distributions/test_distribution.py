@@ -133,7 +133,7 @@ def test_memoization():
             self.linear = torch.nn.Linear(10, 10)
             self.exec_order = exec_order
 
-        @lru_cache_for_sample_dict(maxsize=2)
+        @lru_cache_for_sample_dict()
         def get_params(self, params_dict={}, **kwargs):
             return super().get_params(params_dict, **kwargs)
 
@@ -146,7 +146,7 @@ def test_memoization():
             super().__init__(var=["x"], cond_var=["z"], name="p")
             self.exec_order = exec_order
 
-        @lru_cache_for_sample_dict(maxsize=2)
+        @lru_cache_for_sample_dict()
         def get_params(self, params_dict={}, **kwargs):
             return super().get_params(params_dict, **kwargs)
 

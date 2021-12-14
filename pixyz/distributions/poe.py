@@ -2,8 +2,8 @@ from __future__ import print_function
 import torch
 from torch import nn
 
-from pixyz.utils import tolist, get_dict_values
-from pixyz.distributions import Normal
+from ..utils import tolist, get_dict_values
+from ..distributions import Normal
 
 
 class ProductOfNormal(Normal):
@@ -82,7 +82,7 @@ class ProductOfNormal(Normal):
         if len(p) == 0:
             raise ValueError()
         if weight_modalities is not None:
-            if len(weight_modalities) != len(p)+1:
+            if len(weight_modalities) != len(p) + 1:
                 raise ValueError()
 
         var = p[0].var
@@ -103,7 +103,7 @@ class ProductOfNormal(Normal):
         super().__init__(var=var, cond_var=cond_var, name=name, features_shape=features_shape)
         self.p = nn.ModuleList(p)
         if weight_modalities is None:
-            self.weight_modalities = [1. for _ in range(len(self.p)+1)]
+            self.weight_modalities = [1. for _ in range(len(self.p) + 1)]
         else:
             self.weight_modalities = weight_modalities
 
@@ -155,14 +155,14 @@ class ProductOfNormal(Normal):
                 outputs = _p.get_params(inputs_dict, **kwargs)
                 loc.append(outputs["loc"])
                 scale.append(outputs["scale"])
-                weight.append(self.weight_modalities[i+1])
+                weight.append(self.weight_modalities[i + 1])
 
         loc = torch.stack(loc)
         scale = torch.stack(scale)
         weight = torch.Tensor(weight).to(scale.device)
 
         # expand weight
-        for i in range(len(loc.shape)-1):
+        for i in range(len(loc.shape) - 1):
             weight = weight.unsqueeze(-1)
 
         return loc, scale, weight

@@ -879,22 +879,22 @@ class DataParalleledLoss(Loss):
     >>> class Inference(Normal):
     ...     def __init__(self):
     ...         super().__init__(var=["z"],cond_var=["x"],name="q")
-    ...         self.model_loc = torch.nn.Linear(128, 64)
-    ...         self.model_scale = torch.nn.Linear(128, 64)
+    ...         self.model_loc = torch.nn.Linear(12, 6)
+    ...         self.model_scale = torch.nn.Linear(12, 6)
     ...     def forward(self, x):
     ...         used_gpu_i.add(x.device.index)
     ...         return {"loc": self.model_loc(x), "scale": F.softplus(self.model_scale(x))}
     >>> class Generator(Bernoulli):
     ...     def __init__(self):
     ...         super().__init__(var=["x"],cond_var=["z"],name="p")
-    ...         self.model = torch.nn.Linear(64, 128)
+    ...         self.model = torch.nn.Linear(6, 12)
     ...     def forward(self, z):
     ...         used_gpu_g.add(z.device.index)
     ...         return {"probs": torch.sigmoid(self.model(z))}
     >>> p = Generator()
     >>> q = Inference()
     >>> prior = Normal(loc=torch.tensor(0.), scale=torch.tensor(1.),
-    ...                var=["z"], features_shape=[64], name="p_{prior}")
+    ...                var=["z"], features_shape=[6], name="p_{prior}")
     >>> # Define a loss function (Loss API)
     >>> reconst = -p.log_prob().expectation(q)
     >>> kl = KullbackLeibler(q,prior)
@@ -902,17 +902,17 @@ class DataParalleledLoss(Loss):
     >>> # device settings
     >>> device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     >>> device_count = torch.cuda.device_count()
+    >>> expected = set(range(device_count)) if torch.cuda.is_available() else {None}
     >>> if device_count > 1:
-    ...     loss_cls = DataParalleledLoss(batch_loss_cls).mean().to(device)
+    ...     loss_cls = DataParalleledLoss(batch_loss_cls, device_ids=list(expected)).mean().to(device)
     ... else:
     ...     loss_cls = batch_loss_cls.mean().to(device)
     >>> # Set a model (Model API)
     >>> model = Model(loss=loss_cls, distributions=[p, q],
     ...               optimizer=optim.Adam, optimizer_params={"lr": 1e-3})
     >>> # Train and test the model
-    >>> data = torch.randn(2, 128).to(device)  # Pseudo data
+    >>> data = torch.randn(10, 12).to(device)  # Pseudo data
     >>> train_loss = model.train({"x": data})
-    >>> expected = set(range(device_count)) if torch.cuda.is_available() else {None}
     >>> assert used_gpu_i==expected
     >>> assert used_gpu_g==expected
     """
