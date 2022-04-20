@@ -295,12 +295,17 @@ def lru_cache_for_sample_dict():
             return user_function(sender, *new_args, **new_kwargs)
 
         def frozen(wrapper):
-            def frozen_wrapper(sender, *args, **kwargs):
-                if len(args) == 0 and len(kwargs) == 0:
-                    result = wrapper(sender)
+            def frozen_wrapper(sender, *args, params_dict=None, **kwargs):
+                if params_dict is None and len(args) >= 1:
+                    params_dict = args[0]
+                    args = args[1:]
+                if (params_dict is None or len(params_dict) == 0) and len(args) == 0 and len(kwargs) == 0:
+                    result = user_function(sender)
                     return result
                 new_args = list(args)
                 new_kwargs = dict(kwargs)
+                new_params_dict = FrozenSampleDict(params_dict)
+
                 for i in range(len(args)):
                     if isinstance(args[i], list):
                         new_args[i] = tuple(args[i])
@@ -311,7 +316,7 @@ def lru_cache_for_sample_dict():
                         new_kwargs[key] = tuple(kwargs[key])
                     elif isinstance(kwargs[key], dict):
                         new_kwargs[key] = FrozenSampleDict(kwargs[key])
-                result = wrapper(sender, *new_args, **new_kwargs)
+                result = wrapper(sender, *new_args, params_dict=new_params_dict, **new_kwargs)
                 return result
             return frozen_wrapper
         return frozen(raw_decorating_function(wrapped_user_function))

@@ -5,6 +5,9 @@ from pixyz.distributions import Normal, MixtureModel, Categorical, FactorizedBer
 from pixyz.utils import lru_cache_for_sample_dict
 from pixyz.losses import KullbackLeibler
 from pixyz.models import VAE
+import torch.nn.functional as F
+from torch.optim import Adam
+import pixyz.distributions as pd
 
 
 class TestGraph:
@@ -231,6 +234,58 @@ def test_memoization():
     assert exec_order == ["E", "D"]
 
 
+# 重みの更新を挟んでキャッシュが使用されると、リセットなしでbackwardを使用したとpytorchからエラーが出る
+# 重みの更新が終わったらキャッシュをclearしたほうがいいかもしれない
+def test_memoization_for_prior():
+    class GeneratorC0(pd.Categorical):
+        def __init__(self, n_mix):
+            super().__init__(var=["i"], name="p_i")
+            self.pi = torch.nn.Parameter(torch.ones(n_mix), requires_grad=True)
+
+        def forward(self):
+            return {"probs": F.softplus(self.pi)}
+
+    class GeneratorC1(pd.Categorical):
+        def __init__(self, n_mix):
+            super().__init__(var=["i"], cond_var=["c"], name="p_i")
+            self.pi = torch.nn.Parameter(torch.ones(n_mix), requires_grad=True)
+
+        def forward(self, c):
+            return {"probs": F.softplus(self.pi)}
+
+    x_dict = {'i': torch.Tensor([0, 1])}
+    gi = GeneratorC0(2)
+    optim = Adam(gi.parameters())
+    optim.zero_grad()
+    loss = gi.log_prob().eval(x_dict)
+    loss.backward()
+    optim.step()
+    optim.zero_grad()
+    loss = gi.log_prob().eval(x_dict)
+    loss.backward()
+    # error
+    optim.zero_grad()
+    loss = gi.get_log_prob(x_dict)
+    loss.backward()
+    # error
+
+    # x_dict1 = {'i': torch.Tensor([0, 1]), 'c': torch.tensor(1)}
+    # gi = GeneratorC1(2)
+    # optim = Adam(gi.parameters())
+    # optim.zero_grad()
+    # loss = gi.log_prob().eval(x_dict1)
+    # loss.backward()
+    # optim.step()
+    # optim.zero_grad()
+    # loss = gi.log_prob().eval(x_dict1)
+    # loss.backward()
+    # # error
+    # optim.zero_grad()
+    # loss = gi.get_log_prob(x_dict)
+    # loss.backward()
+    # # error
+
+
 @pytest.mark.parametrize(
     "no_contiguous_tensor", [
         torch.zeros(2, 3),
@@ -254,4 +309,5 @@ def test_save_dist(tmpdir, no_contiguous_tensor):
 
 
 if __name__ == "__main__":
-    TestReplaceVarDistribution().test_get_entropy()
+    # TestReplaceVarDistribution().test_get_entropy()
+    test_memoization_for_prior()
