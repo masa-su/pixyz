@@ -296,6 +296,9 @@ def lru_cache_for_sample_dict():
 
         def frozen(wrapper):
             def frozen_wrapper(sender, *args, **kwargs):
+                if len(args) == 0 and len(kwargs) == 0:
+                    result = wrapper(sender)
+                    return result
                 new_args = list(args)
                 new_kwargs = dict(kwargs)
                 for i in range(len(args)):
