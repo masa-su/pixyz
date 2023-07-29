@@ -65,7 +65,8 @@ class Model(object):
                  optimizer_params={},
                  clip_grad_norm=None,
                  clip_grad_value=None,
-                 retain_graph=False):
+                 retain_graph=False,
+                 use_amp=False):
         """
         Parameters
         ----------
@@ -83,6 +84,10 @@ class Model(object):
             Maximum allowed norm of the gradients.
         clip_grad_value : float or int
             Maximum allowed value of the gradients.
+        retain_graph : bool
+            If False, the graph used to compute the grads will be freed.
+        use_amp : bool
+            If True, use automatic mixed precision (AMP).
         """
 
         # set losses
@@ -100,6 +105,9 @@ class Model(object):
         self.clip_norm = clip_grad_norm
         self.clip_value = clip_grad_value
         self.retain_graph = retain_graph
+        self.use_amp = use_amp
+
+        self.scale = torch.amp.GradScaler(enabled=self.use_amp)
 
     def __str__(self):
         prob_text = []
@@ -145,10 +153,13 @@ class Model(object):
         self.distributions.train()
 
         self.optimizer.zero_grad()
-        loss = self.loss_cls.eval(train_x_dict, **kwargs)
+
+        with torch.cuda.amp.autocast(enabled=self.use_amp):
+            loss = self.loss_cls.eval(train_x_dict, **kwargs)
 
         # backprop
-        loss.backward(retain_graph=self.retain_graph)
+        self.scale.scale(loss).backward(retain_graph=self.retain_graph)
+        # loss.backward(retain_graph=self.retain_graph)
 
         if self.clip_norm:
             clip_grad_norm_(self.distributions.parameters(), self.clip_norm)
@@ -156,7 +167,10 @@ class Model(object):
             clip_grad_value_(self.distributions.parameters(), self.clip_value)
 
         # update params
-        self.optimizer.step()
+        self.scale.step(self.optimizer)
+        # self.optimizer.step()
+
+        self.scale.update()
 
         return loss
 
@@ -177,7 +191,7 @@ class Model(object):
         """
         self.distributions.eval()
 
-        with torch.no_grad():
+        with torch.no_grad(), torch.cuda.amp.autocast(enabled=self.use_amp):
             loss = self.test_loss_cls.eval(test_x_dict, **kwargs)
 
         return loss
