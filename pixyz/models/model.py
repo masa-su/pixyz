@@ -107,7 +107,7 @@ class Model(object):
         self.retain_graph = retain_graph
         self.use_amp = use_amp
 
-        self.scale = torch.cuda.amp.GradScaler(enabled=self.use_amp)
+        self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
 
     def __str__(self):
         prob_text = []
@@ -158,8 +158,8 @@ class Model(object):
             loss = self.loss_cls.eval(train_x_dict, **kwargs)
 
         # backprop
-        #self.scale(loss).backward(retain_graph=self.retain_graph)
-        self.scaler.scale(loss).backward()
+        self.scale(loss).backward(retain_graph=self.retain_graph)
+        # self.scaler.scale(loss).backward()
         # loss.backward(retain_graph=self.retain_graph)
 
         if self.clip_norm:
