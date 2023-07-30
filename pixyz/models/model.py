@@ -107,7 +107,7 @@ class Model(object):
         self.retain_graph = retain_graph
         self.use_amp = use_amp
 
-        self.scale = torch.amp.GradScaler(enabled=self.use_amp)
+        self.scale = torch.cuda.amp.GradScaler(enabled=self.use_amp)
 
     def __str__(self):
         prob_text = []
