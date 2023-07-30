@@ -158,7 +158,7 @@ class Model(object):
             loss = self.loss_cls.eval(train_x_dict, **kwargs)
 
         # backprop
-        self.scale.scale(loss).backward(retain_graph=self.retain_graph)
+        self.scale(loss).backward(retain_graph=self.retain_graph)
         # loss.backward(retain_graph=self.retain_graph)
 
         if self.clip_norm:
