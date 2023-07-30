@@ -158,7 +158,7 @@ class Model(object):
             loss = self.loss_cls.eval(train_x_dict, **kwargs)
 
         # backprop
-        self.scale(loss).backward(retain_graph=self.retain_graph)
+        self.scaler.scale(loss).backward(retain_graph=self.retain_graph)
         # self.scaler.scale(loss).backward()
         # loss.backward(retain_graph=self.retain_graph)
 
@@ -168,10 +168,10 @@ class Model(object):
             clip_grad_value_(self.distributions.parameters(), self.clip_value)
 
         # update params
-        self.scale.step(self.optimizer)
+        self.scaler.step(self.optimizer)
         # self.optimizer.step()
 
-        self.scale.update()
+        self.scaler.update()
 
         return loss
 
