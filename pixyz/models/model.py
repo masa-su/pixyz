@@ -107,6 +107,7 @@ class Model(object):
         self.retain_graph = retain_graph
         self.use_amp = use_amp
 
+        # set scaler for amp
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
 
     def __str__(self):
@@ -159,8 +160,6 @@ class Model(object):
 
         # backprop
         self.scaler.scale(loss).backward(retain_graph=self.retain_graph)
-        # self.scaler.scale(loss).backward()
-        # loss.backward(retain_graph=self.retain_graph)
 
         if self.clip_norm:
             clip_grad_norm_(self.distributions.parameters(), self.clip_norm)
@@ -169,7 +168,6 @@ class Model(object):
 
         # update params
         self.scaler.step(self.optimizer)
-        # self.optimizer.step()
 
         self.scaler.update()
 
