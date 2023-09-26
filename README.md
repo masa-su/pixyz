@@ -257,7 +257,6 @@ If you encounter some problems in using Pixyz, please let us know.
       volume = {0},
       number = {0},
       pages = {1-16},
-      year={2021},
       year = {2023},
       publisher = {Taylor & Francis},
       doi = {10.1080/01691864.2023.2244568}
