@@ -250,13 +250,17 @@ If you encounter some problems in using Pixyz, please let us know.
 
 ## Citation
 ```
-@misc{suzuki2021pixyz,
-      title={Pixyz: a library for developing deep generative models}, 
-      author={Masahiro Suzuki and Takaaki Kaneko and Yutaka Matsuo},
+@misc{suzuki2023pixyz,
+      title={Pixyz: a Python library for developing deep generative models}, 
+      author={Masahiro Suzuki, Takaaki Kaneko and Yutaka Matsuo},
+      journal = {Advanced Robotics},
+      volume = {0},
+      number = {0},
+      pages = {1-16},
       year={2021},
-      eprint={2107.13109},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+      year = {2023},
+      publisher = {Taylor & Francis},
+      doi = {10.1080/01691864.2023.2244568}
 }
 ```
 
