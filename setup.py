@@ -45,7 +45,7 @@ setup(
     ],
     extras_require={
         'dev': ['pytest',
-                'flake8==3.9.2'
+                'flake8==3.9.2',
                 'pytest-cov',
                 'pytest-flake8',
                 'sphinx',
