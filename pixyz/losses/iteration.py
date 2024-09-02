@@ -159,6 +159,9 @@ class IterativeLoss(Loss):
         loss = step_loss_sum
 
         # Restore original values
+        for key, value in self.update_value.items():
+            x_dict[key] = samples[key]
+
         x_dict.update(series_x_dict)
         x_dict.update(updated_x_dict)
         # TODO: x_dict contains no-updated variables.
